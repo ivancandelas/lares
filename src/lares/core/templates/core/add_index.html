@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Añadir - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Añadir</h1>
+<p class="mt-1 max-w-[52ch] text-sm text-soft">
+  Empieza por lo que más te costaría reponer o lo que más te cuesta recordar.
+</p>
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for t in tipos %}
+    <li><a href="{% url t.url t.arg %}" class="block py-3.5 text-[15px] hover:text-calm">{{ t.label }}</a></li>
+  {% endfor %}
+  <li><a href="{% url 'core:document-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Documento</a></li>
+  <li><a href="{% url 'core:party-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Persona u organización</a></li>
+  <li><a href="{% url 'core:account-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Cuenta bancaria</a></li>
+  <li><a href="{% url 'core:expense-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Gasto</a></li>
+  <li><a href="{% url 'core:rule-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Pago o trámite recurrente</a></li>
+  <li><a href="{% url 'core:location-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Ubicación</a></li>
+</ul>
+{% endblock %}

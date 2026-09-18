@@ -132,6 +132,7 @@ class Registry:
     def __init__(self):
         self.modules: dict[str, LaresModule] = {}
         self.resource_kinds: dict[str, object] = {}
+        self.resource_forms: dict[str, object] = {}
         self.document_types: dict[str, str] = {}
         self.link_roles: dict[str, LinkRole] = {}
         self.obligation_providers: dict[str, ObligationProvider] = {}
@@ -148,11 +149,19 @@ class Registry:
 
     # -- API que usan los modulos -------------------------------------------
 
-    def resource(self, model, kind: str | None = None):
+    def resource(self, model, kind: str | None = None, form=None):
+        """Registra un tipo de recurso y, opcionalmente, su formulario.
+
+        Con el formulario, el nucleo genera las pantallas de alta, edicion y
+        ficha sin que el modulo escriba una sola vista. Escribir un CRUD por
+        modulo es la forma mas rapida de que cada uno acabe pareciendo distinto.
+        """
         kind = kind or getattr(model, "resource_kind", None)
         if not kind:
             raise ImproperlyConfigured(f"{model} no declara resource_kind")
         self.resource_kinds[kind] = model
+        if form is not None:
+            self.resource_forms[kind] = form
         # Un tipo de recurso es automaticamente una fuente de sujetos: el motor
         # recorre las instancias activas del modelo concreto (no de Resource,
         # que por herencia multi-tabla no traeria los campos de la subclase).

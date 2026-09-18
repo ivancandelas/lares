@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Recurrentes - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Recurrentes</h1>
+  <a href="{% url 'core:rule-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
+<p class="mt-1 max-w-[52ch] text-sm text-soft">
+  Lo que se repite y programas tú: colegiaturas, recibos, cuotas. Lo que sale de
+  un coche o de un documento se genera solo.
+</p>
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for r in reglas %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <div class="text-[15px] {% if not r.is_active %}text-soft line-through{% endif %}">{{ r.label }}</div>
+        <div class="text-[13px] text-soft">
+          {% if r.amount %}{{ r.amount|floatformat:0 }} {{ r.currency }}{% endif %}
+          {% if r.counterparty %}, {{ r.counterparty }}{% endif %}
+        </div>
+      </div>
+      <form method="post" action="{% url 'core:rule-toggle' r.pk %}" class="shrink-0">
+        {% csrf_token %}
+        <button class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-calm hover:text-calm">
+          {% if r.is_active %}Pausar{% else %}Reanudar{% endif %}
+        </button>
+      </form>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">Nada programado todavía.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

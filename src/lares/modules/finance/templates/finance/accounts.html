@@ -2,7 +2,17 @@
 {% block title %}Dinero - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-light tracking-tight">Dinero</h1>
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-light tracking-tight">Dinero</h1>
+  <div class="flex gap-2">
+    <a href="{% url 'core:expense-new' %}"
+       class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Registrar gasto</a>
+    <a href="{% url 'core:resource-new' 'credit_card' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Añadir tarjeta</a>
+    <a href="{% url 'core:account-new' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Añadir cuenta</a>
+  </div>
+</div>
 
 <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
   <div>
@@ -27,7 +37,7 @@
     {% for c in cards %}
       <li class="flex items-baseline justify-between gap-4 py-4">
         <div class="min-w-0">
-          <div class="text-[15px]">{{ c }}</div>
+          <a href="{% url 'core:resource-detail' c.pk %}" class="text-[15px] hover:text-calm">{{ c }}</a>
           {% with linea=c.context_line %}
             {% if linea %}<div class="text-[13px] text-soft">{{ linea }}</div>{% endif %}
           {% endwith %}

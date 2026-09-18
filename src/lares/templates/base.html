@@ -58,7 +58,16 @@
         {% for item in nav_items %}
           <a href="{% url item.url_name %}" class="text-soft hover:text-ink">{{ item.label }}</a>
         {% endfor %}
+        <a href="{% url 'core:add' %}" class="ml-auto font-medium text-calm hover:text-ink">Añadir</a>
       </nav>
+    {% endif %}
+
+    {% if messages %}
+      <div class="pt-4">
+        {% for message in messages %}
+          <p class="border-l-2 border-calm bg-white px-3 py-2 text-sm">{{ message }}</p>
+        {% endfor %}
+      </div>
     {% endif %}
 
     <main class="flex-1 py-8">{% block content %}{% endblock %}</main>

@@ -9,21 +9,23 @@ class Vehicle(Resource):
 
     resource_kind = "vehicle"
 
-    make = models.CharField(max_length=60, blank=True)
-    model = models.CharField(max_length=60, blank=True)
-    year = models.PositiveIntegerField(null=True, blank=True)
+    make = models.CharField("marca", max_length=60, blank=True)
+    model = models.CharField("modelo", max_length=60, blank=True)
+    year = models.PositiveIntegerField("año", null=True, blank=True)
 
-    vin = models.CharField(max_length=24, blank=True, db_index=True)
-    plates = models.CharField(max_length=16, blank=True, db_index=True)
-    engine_number = models.CharField(max_length=40, blank=True)
+    vin = models.CharField("número de serie", max_length=24, blank=True, db_index=True)
+    plates = models.CharField("placas", max_length=16, blank=True, db_index=True)
+    engine_number = models.CharField("número de motor", max_length=40, blank=True)
 
-    odometer_km = models.PositiveIntegerField(null=True, blank=True)
-    odometer_at = models.DateField(null=True, blank=True)
-    avg_km_per_month = models.PositiveIntegerField(null=True, blank=True)
+    odometer_km = models.PositiveIntegerField("kilometraje", null=True, blank=True)
+    odometer_at = models.DateField("kilometraje tomado el", null=True, blank=True)
+    avg_km_per_month = models.PositiveIntegerField("kilómetros al mes", null=True, blank=True)
 
-    service_interval_km = models.PositiveIntegerField(null=True, blank=True, default=10000)
-    last_service_km = models.PositiveIntegerField(null=True, blank=True)
-    last_service_on = models.DateField(null=True, blank=True)
+    service_interval_km = models.PositiveIntegerField("servicio cada (km)", null=True,
+                                                      blank=True, default=10000)
+    last_service_km = models.PositiveIntegerField("último servicio a los (km)",
+                                                  null=True, blank=True)
+    last_service_on = models.DateField("último servicio el", null=True, blank=True)
 
     class Meta:
         verbose_name = "vehículo"

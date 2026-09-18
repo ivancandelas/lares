@@ -2,7 +2,11 @@
 {% block title %}Documentos - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-light tracking-tight">Documentos</h1>
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Documentos</h1>
+  <a href="{% url 'core:document-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
 <p class="mt-1 max-w-[52ch] text-sm text-soft">
   Lares guarda qué es cada documento y a qué pertenece. El archivo puede vivir
   aquí o en Paperless.
@@ -13,7 +17,7 @@
   {% for d in vencen %}
     <li class="flex items-baseline justify-between gap-4 py-3">
       <div class="min-w-0">
-        <div class="text-[15px]">{{ d.title }}</div>
+        <a href="{% url 'core:document-edit' d.pk %}" class="text-[15px] hover:text-calm">{{ d.title }}</a>
         {% if d.issuer %}<div class="text-[13px] text-soft">{{ d.issuer }}</div>{% endif %}
       </div>
       <span class="shrink-0 tabular-nums text-sm text-soft">{{ d.expires_on|date:"j M Y"|lower }}</span>
@@ -29,7 +33,7 @@
   <h2 class="mt-10 text-sm font-medium">Sin vencimiento</h2>
   <ul class="mt-1 divide-y divide-rule border-y border-rule">
     {% for d in sin_vencimiento %}
-      <li class="py-3 text-[15px]">{{ d.title }}</li>
+      <li class="py-3 text-[15px]"><a href="{% url 'core:document-edit' d.pk %}" class="hover:text-calm">{{ d.title }}</a></li>
     {% endfor %}
   </ul>
 {% endif %}

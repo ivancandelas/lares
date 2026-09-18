@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Personas - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Personas</h1>
+  <a href="{% url 'core:party-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
+<p class="mt-1 max-w-[52ch] text-sm text-soft">
+  Familia, contactos, proveedores, aseguradoras y bancos viven juntos: lo que
+  cambia es el papel que juegan, no la ficha.
+</p>
+
+<h2 class="mt-10 text-sm font-medium">Personas</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for p in personas %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <a href="{% url 'core:party-edit' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+      {% if p.is_self %}<span class="text-[13px] text-soft">tú</span>{% endif %}
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">Nadie todavía.</li>
+  {% endfor %}
+</ul>
+
+<h2 class="mt-10 text-sm font-medium">Organizaciones</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for p in organizaciones %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <a href="{% url 'core:party-edit' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+      {% if p.tax_id %}<span class="text-[13px] text-soft">{{ p.tax_id }}</span>{% endif %}
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">Ninguna todavía.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

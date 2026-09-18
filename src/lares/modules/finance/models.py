@@ -15,21 +15,23 @@ class CreditCard(Resource):
     resource_kind = "credit_card"
 
     issuer = models.ForeignKey(
-        "core.Party", null=True, blank=True, on_delete=models.SET_NULL,
-        related_name="issued_cards",
+        "core.Party", verbose_name="banco", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="issued_cards",
     )
     account = models.OneToOneField(
-        "core.Account", null=True, blank=True, on_delete=models.SET_NULL,
-        related_name="credit_card",
+        "core.Account", verbose_name="cuenta", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="credit_card",
     )
 
-    last_four = models.CharField(max_length=4, blank=True)
-    credit_limit = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
+    last_four = models.CharField("últimos 4 dígitos", max_length=4, blank=True)
+    credit_limit = models.DecimalField("límite", max_digits=16, decimal_places=2,
+                                       null=True, blank=True)
 
     # Dia del mes, no fecha: se repiten todos los meses.
-    cut_day = models.PositiveSmallIntegerField(null=True, blank=True)
-    due_day = models.PositiveSmallIntegerField(null=True, blank=True)
-    apr = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    cut_day = models.PositiveSmallIntegerField("día de corte", null=True, blank=True)
+    due_day = models.PositiveSmallIntegerField("día límite de pago", null=True, blank=True)
+    apr = models.DecimalField("tasa anual (%)", max_digits=5, decimal_places=2,
+                              null=True, blank=True)
 
     class Meta:
         verbose_name = "tarjeta"

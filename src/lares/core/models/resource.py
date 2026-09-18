@@ -11,6 +11,8 @@ comunes, lo que permite:
 El costo es un JOIN por consulta a una hija. Vale la pena. Ver ADR-0008.
 """
 
+import decimal
+
 from django.db import models
 
 from .base import HouseholdScopedModel
@@ -43,31 +45,36 @@ class Resource(HouseholdScopedModel):
         DISPOSED = "disposed", "Dado de baja"
 
     # Clave del tipo registrado por el modulo: "vehicle", "property", "policy".
-    kind = models.CharField(max_length=40, db_index=True)
+    kind = models.CharField("tipo", max_length=40, db_index=True)
 
-    name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    name = models.CharField("nombre", max_length=200)
+    description = models.TextField("descripción", blank=True)
+    status = models.CharField("estado", max_length=20, choices=Status.choices,
+                              default=Status.ACTIVE)
 
     owner = models.ForeignKey(
-        "core.Party", null=True, blank=True,
+        "core.Party", verbose_name="propietario", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="owned_resources",
     )
     # Quien lo usa o lo custodia, que no siempre es el propietario.
     custodian = models.ForeignKey(
-        "core.Party", null=True, blank=True, on_delete=models.SET_NULL, related_name="custody_of"
+        "core.Party", verbose_name="a cargo de", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="custody_of",
     )
     location = models.ForeignKey(
-        Location, null=True, blank=True, on_delete=models.SET_NULL, related_name="resources"
+        Location, verbose_name="ubicación", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="resources",
     )
 
-    acquired_on = models.DateField(null=True, blank=True)
-    disposed_on = models.DateField(null=True, blank=True)
+    acquired_on = models.DateField("adquirido el", null=True, blank=True)
+    disposed_on = models.DateField("dado de baja el", null=True, blank=True)
 
-    purchase_amount = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
-    current_value = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
-    valuation_date = models.DateField(null=True, blank=True)
-    currency = models.CharField(max_length=3, blank=True)
+    purchase_amount = models.DecimalField("lo que costó", max_digits=16,
+                                          decimal_places=2, null=True, blank=True)
+    current_value = models.DecimalField("valor actual", max_digits=16,
+                                        decimal_places=2, null=True, blank=True)
+    valuation_date = models.DateField("valorado el", null=True, blank=True)
+    currency = models.CharField("moneda", max_length=3, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -97,6 +104,31 @@ class Resource(HouseholdScopedModel):
             f"desde {self.acquired_on:%Y}" if self.acquired_on else "",
         ]
         return ", ".join(p for p in partes if p)
+
+    OCULTOS = {"id", "household", "created_at", "updated_at", "archived_at",
+               "extra", "kind", "resource_ptr", "description", "name"}
+
+    def facts(self) -> list:
+        """Los datos de la ficha, como pares etiqueta/valor.
+
+        Se derivan del modelo para que un modulo nuevo tenga ficha sin escribir
+        ninguna plantilla.
+        """
+        propios, heredados = [], []
+        for field in self._meta.fields:
+            if field.name in self.OCULTOS:
+                continue
+            valor = getattr(self, field.name, None)
+            if valor in (None, ""):
+                continue
+            if field.choices:
+                valor = getattr(self, f"get_{field.name}_display")()
+            elif isinstance(valor, decimal.Decimal):
+                valor = f"{valor:,.2f}".rstrip("0").rstrip(".")
+            par = (str(field.verbose_name).capitalize(), valor)
+            # Lo que define a un coche es la placa, no el estado del registro.
+            (propios if field.model is not Resource else heredados).append(par)
+        return propios + heredados
 
     def as_concrete(self):
         """Devuelve la instancia de la subclase real (Vehicle, Property...).

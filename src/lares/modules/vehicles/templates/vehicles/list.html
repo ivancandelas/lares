@@ -2,13 +2,17 @@
 {% block title %}Vehículos - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-light tracking-tight">Vehículos</h1>
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Vehículos</h1>
+  <a href="{% url 'core:resource-new' 'vehicle' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
 
 <ul class="mt-8 divide-y divide-rule border-y border-rule">
   {% for v in vehicles %}
     <li class="flex items-baseline justify-between gap-4 py-4">
       <div class="min-w-0">
-        <div class="text-[15px]">{{ v }}</div>
+        <a href="{% url 'core:resource-detail' v.pk %}" class="text-[15px] hover:text-calm">{{ v }}</a>
         {% with linea=v.context_line %}
           {% if linea %}<div class="text-[13px] text-soft">{{ linea }}</div>{% endif %}
         {% endwith %}

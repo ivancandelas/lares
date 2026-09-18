@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <h1 class="text-2xl font-light tracking-tight">{{ title }}</h1>
+
+  <form method="post" class="mt-8 space-y-5"
+        {% if multipart %}enctype="multipart/form-data"{% endif %}>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="border-l-2 border-overdue pl-3 text-sm text-overdue">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    {% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}" class="block text-sm text-soft">
+          {{ field.label }}{% if field.field.required %} <span class="text-soon">·</span>{% endif %}
+        </label>
+        <div class="mt-1">{{ field }}</div>
+        {% if field.help_text %}
+          <p class="mt-1 text-[13px] text-soft">{{ field.help_text }}</p>
+        {% endif %}
+        {% for error in field.errors %}
+          <p class="mt-1 text-[13px] text-overdue">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="flex items-center gap-4 pt-2">
+      <button type="submit"
+              class="rounded-sm bg-calm px-4 py-2.5 text-sm font-medium text-white hover:bg-ink">
+        {{ submit }}
+      </button>
+      <a href="{% if cancel_arg %}{% url cancel_url cancel_arg %}{% else %}{% url cancel_url %}{% endif %}"
+         class="text-sm text-soft hover:text-ink">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

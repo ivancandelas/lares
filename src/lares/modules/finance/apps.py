@@ -12,9 +12,10 @@ class FinanceModule(LaresModule):
 
     def register(self, reg: Registry) -> None:
         from . import checks, demo, obligations, widgets
+        from .forms import CreditCardForm
         from .models import CreditCard
 
-        reg.resource(CreditCard, kind="credit_card")
+        reg.resource(CreditCard, kind="credit_card", form=CreditCardForm)
 
         reg.link_role(LinkRole(
             key="paid_from", label="Se paga desde",

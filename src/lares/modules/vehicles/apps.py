@@ -19,9 +19,10 @@ class VehiclesModule(LaresModule):
 
     def register(self, reg: Registry) -> None:
         from . import checks, demo, obligations, widgets
+        from .forms import VehicleForm
         from .models import Vehicle
 
-        reg.resource(Vehicle, kind="vehicle")
+        reg.resource(Vehicle, kind="vehicle", form=VehicleForm)
 
         reg.link_role(LinkRole(
             key="maintained_by", label="Mantenido por",

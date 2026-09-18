@@ -2,7 +2,11 @@
 {% block title %}Patrimonio - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-light tracking-tight">Patrimonio</h1>
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Patrimonio</h1>
+  <a href="{% url 'core:add' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
 <p class="mt-1 max-w-[52ch] text-sm text-soft">
   Todo lo que tienes registrado, con lo que vale hoy y lo que todavía debes.
 </p>
@@ -30,7 +34,7 @@
     {% for r in recursos %}
       <li class="flex items-baseline justify-between gap-4 py-3">
         <div class="min-w-0">
-          <div class="text-[15px]">{{ r.name }}</div>
+          <a href="{% url 'core:resource-detail' r.pk %}" class="text-[15px] hover:text-calm">{{ r.name }}</a>
           {% with linea=r.context_line %}
             {% if linea %}<div class="text-[13px] text-soft">{{ linea }}</div>{% endif %}
           {% endwith %}
