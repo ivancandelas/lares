@@ -1,0 +1,19 @@
+<li class="flex items-baseline justify-between gap-4 py-4">
+  <div class="min-w-0">
+    <a href="{% url 'core:resource-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+    <div class="text-[13px] text-soft">{{ p.context_line }}</div>
+    <div class="text-[13px] {% if late %}text-overdue{% else %}text-soft{% endif %}">
+      Cubre:
+      {% for r in p.insured_resources %}{{ r.name }}{% if not forloop.last %}, {% endif %}
+      {% empty %}nada asociado todavía{% endfor %}
+    </div>
+  </div>
+  <div class="shrink-0 text-right">
+    {% if p.coverage_amount %}
+      <div class="tabular-nums text-sm">{{ p.coverage_amount|floatformat:0 }}</div>
+    {% endif %}
+    {% if p.premium %}
+      <div class="text-[13px] text-soft">prima {{ p.premium|floatformat:0 }}</div>
+    {% endif %}
+  </div>
+</li>
