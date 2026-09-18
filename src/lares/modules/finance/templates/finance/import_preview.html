@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Revisar la importación - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Esto es lo que trae</h1>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  De {{ cuenta.name }}. Todavía no se ha creado nada.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Nuevos</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{{ nuevos }}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Ya los tenías apuntados</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{{ encajan }}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Importados antes</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-soft">{{ conocidos }}</div>
+  </div>
+</div>
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for f in filas %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <div class="text-[15px] {% if f.status == 'known' %}text-soft{% endif %}">
+          {{ f.movement.description }}
+        </div>
+        <div class="text-[13px] text-soft">
+          {{ f.movement.date|date:"j \d\e F"|lower }}
+          {% if f.status == "match" %}
+            · encaja con «{{ f.entry.description }}», no se duplica
+          {% elif f.status == "known" %}
+            · ya estaba
+          {% endif %}
+        </div>
+      </div>
+      <span class="shrink-0 tabular-nums text-sm {% if f.movement.amount < 0 %}{% else %}text-calm{% endif %}">
+        {% money f.movement.amount cuenta.currency %}
+      </span>
+    </li>
+  {% endfor %}
+</ul>
+
+<form method="post" action="{% url 'finance:import-confirm' %}" class="mt-8 flex items-center gap-4">
+  {% csrf_token %}
+  <button class="rounded-sm bg-calm px-4 py-2.5 text-sm font-medium text-white hover:bg-ink">
+    Importar los {{ nuevos }} nuevos
+  </button>
+  <a href="{% url 'finance:import' %}" class="text-sm text-soft hover:text-ink">Empezar de nuevo</a>
+</form>
+
+<p class="mt-4 max-w-[56ch] text-[13px] text-soft">
+  Lo nuevo entra en «Sin clasificar». Es mejor que inventar una categoría: lo
+  primero se arregla en una tarde, lo segundo ensucia los informes para siempre.
+</p>
+{% endblock %}

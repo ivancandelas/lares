@@ -111,3 +111,90 @@ def merchant(request, pk):
     contexto["periods"] = [(k, v[0]) for k, v in spending.PERIODOS.items()]
     contexto["period"] = request.GET.get("periodo", "year")
     return render(request, "finance/merchant.html", contexto)
+
+
+# ---------------------------------------------------------------------------
+# Importar un estado de cuenta
+# ---------------------------------------------------------------------------
+
+
+def import_statement(request):
+    """Subir el archivo del banco y ver qué va a pasar antes de que pase."""
+    from . import importing, statements
+
+    cuentas = Account.objects.filter(
+        type__in=[Account.Type.ASSET, Account.Type.LIABILITY], is_active=True
+    )
+
+    if request.method == "POST" and request.FILES.get("file"):
+        archivo = request.FILES["file"]
+        cuenta = get_object_or_404(Account, pk=request.POST.get("account"))
+        contenido = archivo.read()
+        movimientos, cabeceras, mapa = statements.read(contenido, archivo.name)
+
+        if not movimientos:
+            messages.success(
+                request,
+                "No reconocí ningún movimiento en ese archivo. "
+                "Prueba con el CSV o el OFX que ofrece tu banco.",
+            )
+            return redirect("finance:import")
+
+        filas = importing.reconcile(request.household, cuenta, movimientos)
+        request.session["import_pending"] = {
+            "account": str(cuenta.pk),
+            "movements": [
+                {"date": str(m.date), "description": m.description,
+                 "amount": str(m.amount), "external_ref": m.external_ref}
+                for m in movimientos
+            ],
+        }
+        return render(request, "finance/import_preview.html", {
+            "cuenta": cuenta,
+            "filas": filas,
+            "nuevos": sum(1 for f in filas if f.status == "new"),
+            "encajan": sum(1 for f in filas if f.status == "match"),
+            "conocidos": sum(1 for f in filas if f.status == "known"),
+            "categorias": Account.objects.filter(type=Account.Type.EXPENSE),
+        })
+
+    return render(request, "finance/import.html", {"cuentas": cuentas})
+
+
+def import_confirm(request):
+    """Aplicar lo revisado. Nada se creó hasta este momento."""
+    import datetime as _dt
+    from decimal import Decimal as _D
+
+    from . import importing, statements
+
+    pendiente = request.session.get("import_pending")
+    if request.method != "POST" or not pendiente:
+        return redirect("finance:import")
+
+    cuenta = get_object_or_404(Account, pk=pendiente["account"])
+    movimientos = [
+        statements.Movement(
+            date=_dt.date.fromisoformat(m["date"]), description=m["description"],
+            amount=_D(m["amount"]), external_ref=m["external_ref"],
+        )
+        for m in pendiente["movements"]
+    ]
+    filas = importing.reconcile(request.household, cuenta, movimientos)
+
+    gasto = importing.default_category(request.household, _D("-1"))
+    ingreso = importing.default_category(request.household, _D("1"))
+    for fila in filas:
+        if fila.is_new:
+            fila.account_guess = gasto if fila.movement.amount < 0 else ingreso
+
+    resultado = importing.apply(request.household, cuenta, gasto, filas)
+    request.session.pop("import_pending", None)
+
+    messages.success(
+        request,
+        f"{resultado['created']} movimientos nuevos, "
+        f"{resultado['linked']} enlazados con lo que ya tenías y "
+        f"{resultado['known']} que ya estaban.",
+    )
+    return redirect("finance:accounts")
