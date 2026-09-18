@@ -125,8 +125,23 @@ def resource_detail(request, pk):
         "documentos": documentos,
         "obligaciones": pendientes,
         "editable": obj.kind in registry.resource_forms,
-        "tabs": registry.tabs_for(obj.kind),
+        "tabs": _render_tabs(obj, request),
     })
+
+
+def _render_tabs(obj, request) -> list:
+    """Bloques que aportan los módulos. Uno roto no tumba la ficha entera."""
+    from django.template.loader import render_to_string
+
+    salida = []
+    for tab in registry.tabs_for(obj.kind):
+        try:
+            datos = tab.provider(obj) if tab.provider else {}
+            html = render_to_string(tab.template, datos, request=request)
+        except Exception:
+            continue
+        salida.append({"key": tab.key, "label": tab.label, "html": html})
+    return salida
 
 
 # ---------------------------------------------------------------------------

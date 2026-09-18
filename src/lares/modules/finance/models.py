@@ -2,6 +2,8 @@ from django.db import models
 
 from lares.core.models import Resource
 
+from .models_provision import Provision  # noqa: F401  (lo descubre Django aquí)
+
 
 class CreditCard(Resource):
     """Una tarjeta es dos cosas a la vez, y conviene no confundirlas.

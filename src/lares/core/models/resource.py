@@ -201,10 +201,19 @@ class Resource(HouseholdScopedModel):
 
         Necesario porque una consulta sobre Resource devuelve Resource. Usarlo
         de a uno; para recorrer muchos, consultar el modelo concreto.
+
+        Usa `_base_manager` a proposito: con el manager por defecto, llamarlo
+        fuera de una peticion devolvia el padre en silencio, y todo lo que
+        depende del tipo concreto -el coste de tener algo, su historial de
+        mantenimiento- salia a cero sin que nada pareciera roto. El aislamiento
+        se mantiene filtrando por el hogar del propio recurso.
         """
         from ..registry import registry
 
         model = registry.resource_kinds.get(self.kind)
         if model is None or isinstance(self, model):
             return self
-        return model.objects.filter(pk=self.pk).first() or self
+        concreto = model._base_manager.filter(
+            pk=self.pk, household_id=self.household_id
+        ).first()
+        return concreto or self

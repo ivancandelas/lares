@@ -105,7 +105,10 @@ def test_el_fin_de_la_permanencia_avisa_con_mes_y_medio(scoped):
 
     aviso = Obligation.objects.get(source="subscriptions.commitment")
     assert min(aviso.remind_offsets) == -45
-    assert aviso.amount == Decimal("10788")     # lo que cuesta al año
+    # Sin importe: ese día no vence dinero, vence una atadura. Ponerle el coste
+    # anual lo colaría en las provisiones y en la proyección de flujo.
+    assert aviso.amount is None
+    assert Decimal(aviso.extra["yearly_cost"]) == Decimal("10788")
 
 
 @pytest.mark.django_db

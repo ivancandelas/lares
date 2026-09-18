@@ -1,6 +1,7 @@
-from lares.core.forms import ResourceForm
+from lares.core.forms import LaresForm, ResourceForm
 
 from .models import CreditCard
+from .models_provision import Provision
 
 
 class CreditCardForm(ResourceForm):
@@ -30,4 +31,33 @@ class CreditCardForm(ResourceForm):
         help_texts = {
             "last_four": "Nunca guardes el número completo.",
             "due_day": "De aquí sale el aviso de pago cada mes.",
+        }
+
+
+class ProvisionForm(LaresForm):
+    """Apartar no es mover dinero: es decir que ya tiene dueño."""
+
+    GROUPS = (
+        ("Para qué", ["name", "target_amount", "due_on"]),
+        ("Dónde está y cuánto llevas", ["account", "saved_amount", "is_active"]),
+        ("Nota", ["note"]),
+    )
+
+    class Meta:
+        model = Provision
+        fields = ["name", "target_amount", "due_on", "account", "saved_amount",
+                  "is_active", "note"]
+        labels = {
+            "name": "Para qué",
+            "target_amount": "Cuánto hace falta",
+            "due_on": "Para cuándo",
+            "account": "En qué cuenta está",
+            "saved_amount": "Cuánto llevas apartado",
+            "is_active": "Activa",
+            "note": "Nota",
+        }
+        help_texts = {
+            "target_amount": "Lo que costará cuando llegue.",
+            "due_on": "Con esto te digo cuánto apartar cada mes.",
+            "saved_amount": "No mueve dinero: solo deja de contarlo como disponible.",
         }

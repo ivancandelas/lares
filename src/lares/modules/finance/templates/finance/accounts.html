@@ -28,8 +28,17 @@
   </div>
   <div>
     <div class="text-[13px] text-soft">Queda</div>
-    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 neto %}</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 neto %}</div>
   </div>
+  {% if disponible.reserved %}
+    <div>
+      <div class="text-[13px] text-soft">Tuyo para gastar</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 disponible.available %}</div>
+      <div class="text-[13px] text-soft">
+        <a href="{% url 'finance:provisions' %}" class="hover:underline">{% money0 disponible.reserved %} apartados</a>
+      </div>
+    </div>
+  {% endif %}
 </div>
 
 {% if cards %}

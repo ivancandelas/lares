@@ -1,4 +1,11 @@
-from lares.core.registry import DashboardWidget, LaresModule, LinkRole, NavItem, Registry
+from lares.core.registry import (
+    DashboardWidget,
+    DetailTab,
+    LaresModule,
+    LinkRole,
+    NavItem,
+    Registry,
+)
 
 
 class FinanceModule(LaresModule):
@@ -11,7 +18,7 @@ class FinanceModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, widgets
+        from . import checks, demo, obligations, services, widgets
         from .forms import CreditCardForm
         from .models import CreditCard
 
@@ -31,7 +38,18 @@ class FinanceModule(LaresModule):
                     order=10, section="money"),
             NavItem("Entra y sale", "finance:spending", icon="pie",
                     order=15, section="money"),
+            NavItem("Dinero apartado", "finance:provisions", icon="lock",
+                    order=16, section="money"),
+            NavItem("¿Me alcanza?", "finance:cash-flow", icon="trend",
+                    order=17, section="money"),
         )
+        reg.tabs(DetailTab(
+            key="finance.cost",
+            label="Lo que te cuesta tenerlo",
+            template="finance/_cost.html",
+            provider=lambda recurso: services.cost_of(recurso),
+            order=10,
+        ))
         reg.widget(DashboardWidget(
             key="finance.cards",
             label="Tarjetas",

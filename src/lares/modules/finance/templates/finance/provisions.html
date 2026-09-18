@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Dinero apartado - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Dinero apartado</h1>
+  <a href="{% url 'finance:provision-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Apartar</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  El saldo del banco miente. Si parte de lo que hay ya tiene dueño —el predial de
+  enero, la colegiatura—, tu disponible real es otro.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">En cuentas</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 in_accounts %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Ya tiene dueño</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-soon">{% money0 reserved %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Tuyo para gastar</div>
+    <div class="mt-0.5 text-2xl font-light tabular-nums {% if available < 0 %}text-overdue{% else %}text-calm{% endif %}">
+      {% money0 available %}
+    </div>
+  </div>
+</div>
+
+{% if shortfall %}
+  <p class="mt-4 border-l-2 border-soon pl-4 text-[15px]">
+    Te faltan {% money0 shortfall %} por apartar para cubrir todo lo que viene.
+  </p>
+{% endif %}
+
+<h2 class="mt-10 text-sm font-medium">Apartado</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for p in provisions %}
+    <li class="py-4">
+      <div class="flex items-baseline justify-between gap-4">
+        <a href="{% url 'finance:provision-edit' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+        <span class="shrink-0 tabular-nums text-sm">
+          {% money0 p.saved_amount %} <span class="text-soft">de {% money0 p.target_amount %}</span>
+        </span>
+      </div>
+      <div class="mt-1.5 flex items-center gap-3">
+        <div class="h-1 flex-1 rounded-full bg-rule">
+          <div class="h-1 rounded-full bg-calm" style="width: {% widthratio p.progress 1 100 %}%"></div>
+        </div>
+        <span class="shrink-0 text-[13px] text-soft">
+          {% if p.due_on %}para {{ p.due_on|date:"j M Y"|lower }}{% endif %}
+          {% if p.monthly_needed %} · {% money0 p.monthly_needed %} al mes{% endif %}
+        </span>
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">
+      Nada apartado. Mira abajo lo que viene: casi siempre hay algo que conviene
+      ir juntando.
+    </li>
+  {% endfor %}
+</ul>
+
+{% if sugerencias %}
+  <h2 class="mt-10 text-sm font-medium">Lo que viene y convendría ir juntando</h2>
+  <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+    No hay que adivinar nada: ya sabes la fecha y el importe.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for o in sugerencias %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <div class="text-[15px]">{{ o.title }}</div>
+          <div class="text-[13px] text-soft">{{ o.due_on|date:"j \d\e F \d\e Y"|lower }}</div>
+        </div>
+        <div class="flex shrink-0 items-baseline gap-3">
+          <span class="tabular-nums text-sm">{% money0 o.amount o.currency %}</span>
+          <a href="{% url 'finance:provision-new' %}?de={{ o.dedupe_key|urlencode }}"
+             class="text-[13px] text-calm hover:underline">apartar</a>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

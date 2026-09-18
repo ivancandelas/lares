@@ -132,12 +132,17 @@ class NavItem:
 
 @dataclass(frozen=True)
 class DetailTab:
-    """Pestana que un modulo aporta a la ficha de otra entidad."""
+    """Bloque que un modulo anade a la ficha de otra entidad.
 
-    resource_kind: str
+    `provider(resource) -> dict` da el contexto; `resource_kind` vacio significa
+    "en la ficha de cualquier cosa".
+    """
+
     key: str
     label: str
     template: str
+    resource_kind: str = ""
+    provider: object = None
     order: int = 100
 
 
@@ -303,7 +308,8 @@ class Registry:
 
     def tabs_for(self, resource_kind: str):
         return sorted(
-            (t for t in self.detail_tabs if t.resource_kind == resource_kind),
+            (t for t in self.detail_tabs
+             if t.resource_kind in ("", resource_kind)),
             key=lambda t: (t.order, t.label),
         )
 

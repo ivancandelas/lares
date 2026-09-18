@@ -1,9 +1,17 @@
+from django import forms
+
 from lares.core.forms import ResourceForm
 
 from .models import Subscription
 
 
 class SubscriptionForm(ResourceForm):
+    # Sin esto, una dirección escrita sin protocolo acaba en http.
+    cancel_url = forms.URLField(
+        required=False, assume_scheme="https", label="Cómo se cancela",
+        help_text="El enlace exacto. Dentro de un año no lo vas a encontrar.",
+    )
+
     GROUPS = (
         ("Qué es", ["name", "service_kind", "provider", "plan", "started_on"]),
         ("Cuánto y cada cuánto", ["amount", "cycle", "charge_day", "paid_with",

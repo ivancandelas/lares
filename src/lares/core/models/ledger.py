@@ -123,6 +123,23 @@ class Posting(HouseholdScopedModel):
 
     memo = models.CharField(max_length=300, blank=True)
 
+    def save(self, *args, **kwargs):
+        """La dimension se guarda siempre contra el modelo concreto.
+
+        Con herencia multi-tabla, el mismo coche es `Resource` o `Vehicle`
+        segun como se consultara, y guardar unas veces uno y otras otro parte
+        el historial en dos: el coste de tener el coche saldria a cero sin que
+        nada pareciera roto.
+        """
+        if self.dimension_id and self.dimension_type_id:
+            objetivo = self.dimension
+            concreto = getattr(objetivo, "as_concrete", lambda: objetivo)()
+            if concreto is not None and concreto.__class__ is not objetivo.__class__:
+                self.dimension_type = ContentType.objects.get_for_model(
+                    concreto.__class__
+                )
+        super().save(*args, **kwargs)
+
     class Meta:
         indexes = [
             models.Index(fields=["household", "account"]),

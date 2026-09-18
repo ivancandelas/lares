@@ -8,4 +8,8 @@ urlpatterns = [
     path("dinero/", views.accounts, name="accounts"),
     path("dinero/en-que-se-va/", views.where_it_goes, name="spending"),
     path("dinero/con/<uuid:pk>/", views.merchant, name="merchant"),
+    path("dinero/apartado/", views.provisions, name="provisions"),
+    path("dinero/apartado/nuevo/", views.provision_new, name="provision-new"),
+    path("dinero/apartado/<uuid:pk>/", views.provision_edit, name="provision-edit"),
+    path("dinero/alcanza/", views.cash_flow, name="cash-flow"),
 ]

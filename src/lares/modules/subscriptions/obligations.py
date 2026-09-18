@@ -55,9 +55,11 @@ class CommitmentProvider(ObligationProvider):
             dedupe_key=f"sub:{sub.pk}:commitment:{sub.commitment_until:%Y-%m-%d}",
             title=f"Acaba la permanencia de {sub.name}",
             due_on=sub.commitment_until,
-            amount=sub.yearly_cost,
+            # Sin importe a propósito: ese día no vence dinero, vence una atadura.
+            # Ponerle el coste anual lo colaría en provisiones y proyecciones.
             currency=sub.currency or None,
             counterparty=sub.provider,
             severity="normal",
             remind_offsets=(-45, -15, -1),
+            payload={"yearly_cost": str(sub.yearly_cost or "")},
         )]

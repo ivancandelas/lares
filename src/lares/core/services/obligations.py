@@ -64,6 +64,9 @@ def _upsert(household, subject, provider, spec):
             "counterparty": spec.counterparty,
             "source": provider.key,
             "remind_offsets": list(spec.remind_offsets or DEFAULT_OFFSETS),
+            # Lo que el proveedor quiera arrastrar: el coste anual de una
+            # permanencia, el kilometraje objetivo de un servicio. Se descartaba.
+            "extra": dict(spec.payload or {}),
         },
     )
     return obligation, created

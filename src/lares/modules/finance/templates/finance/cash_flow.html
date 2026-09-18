@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}¿Me alcanza? - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">¿Me alcanza?</h1>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Lo que hay hoy, más lo que suele entrar, menos lo que ya sabes que vence. El
+  ingreso es una estimación: el promedio de los últimos tres meses.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Disponible hoy</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 start %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Entra al mes (estimado)</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 monthly_income %}</div>
+  </div>
+</div>
+
+{% if goes_negative %}
+  <p class="mt-4 border-l-2 border-overdue pl-4 text-[15px]">
+    Al ritmo actual te quedas corto en
+    <strong class="font-medium">{{ goes_negative.0.label|lower }}</strong>.
+    Conviene apartar ahora o mover algún pago.
+  </p>
+{% endif %}
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for m in months %}
+    <li class="py-4">
+      <div class="flex items-baseline justify-between gap-4">
+        <span class="text-[15px]">{{ m.label|lower }}</span>
+        <span class="shrink-0 tabular-nums text-[15px] {% if m.balance < 0 %}text-overdue{% endif %}">
+          {% money0 m.balance %}
+        </span>
+      </div>
+      <div class="mt-0.5 flex items-baseline justify-between gap-4 text-[13px] text-soft">
+        <span>
+          {% if m.items %}
+            {% for o in m.items %}{{ o.title }}{% if not forloop.last %} · {% endif %}{% endfor %}
+          {% else %}nada previsto{% endif %}
+        </span>
+        <span class="shrink-0 tabular-nums">−{% money0 m.outgo %}</span>
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+
+<p class="mt-6 max-w-[56ch] text-[13px] text-soft">
+  Solo cuenta lo que tiene fecha e importe registrados. Lo que no hayas
+  registrado no aparece aquí, y eso es lo que suele desviar la cuenta.
+</p>
+{% endblock %}
