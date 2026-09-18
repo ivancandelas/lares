@@ -50,6 +50,21 @@ class Account(HouseholdScopedModel):
     def __str__(self):
         return self.name
 
+    @property
+    def balance(self):
+        """Saldo real, sumado desde los apuntes.
+
+        No hay columna `saldo` a proposito: un saldo almacenado se desincroniza
+        del historial en cuanto se corrige un asiento, y entonces deja de poder
+        confiarse en ninguno de los dos.
+        """
+        from django.db.models import Sum
+
+        total = self.postings.aggregate(total=Sum("amount"))["total"] or 0
+        # Pasivos e ingresos viven en negativo en partida doble; se muestran
+        # en positivo porque nadie dice "debo menos catorce mil".
+        return -total if self.type in (self.Type.LIABILITY, self.Type.INCOME) else total
+
 
 class Entry(HouseholdScopedModel):
     """Asiento. Inmutable una vez contabilizado."""

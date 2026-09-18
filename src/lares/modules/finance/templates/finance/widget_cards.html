@@ -1,0 +1,12 @@
+<ul class="mt-2 space-y-1.5">
+  {% for c in cards %}
+    <li class="flex items-baseline justify-between gap-3 text-[14px]">
+      <span class="min-w-0 truncate">{{ c }}</span>
+      {% if c.account %}
+        <span class="shrink-0 tabular-nums text-[13px] text-soft">{{ c.account.balance|floatformat:0 }}</span>
+      {% endif %}
+    </li>
+  {% empty %}
+    <li class="text-[14px] text-soft">Ninguna tarjeta registrada.</li>
+  {% endfor %}
+</ul>

@@ -9,8 +9,12 @@ class CoreConfig(AppConfig):
     def ready(self):
         from . import receivers  # noqa: F401
         from .providers import DocumentExpiryProvider, UserRuleProvider
-        from .registry import registry
+        from .registry import NavItem, registry
 
+        registry.nav(
+            NavItem(label="Patrimonio", url_name="core:holdings", icon="box", order=10),
+            NavItem(label="Documentos", url_name="core:documents", icon="file", order=50),
+        )
         registry.subject_source("document", _expiring_documents)
         registry.subject_source("household", lambda household: [household])
         registry.obligations(DocumentExpiryProvider, UserRuleProvider)

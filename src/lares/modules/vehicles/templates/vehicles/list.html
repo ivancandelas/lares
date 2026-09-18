@@ -9,10 +9,9 @@
     <li class="flex items-baseline justify-between gap-4 py-4">
       <div class="min-w-0">
         <div class="text-[15px]">{{ v }}</div>
-        <div class="text-[13px] text-soft">
-          {{ v.plates }}{% if v.odometer_km %}, {{ v.odometer_km|floatformat:0 }} km{% endif %}
-          {% if v.owner %}, {{ v.owner }}{% endif %}
-        </div>
+        {% with linea=v.context_line %}
+          {% if linea %}<div class="text-[13px] text-soft">{{ linea }}</div>{% endif %}
+        {% endwith %}
       </div>
       {% if v.current_value %}
         <span class="shrink-0 tabular-nums text-sm text-soft">

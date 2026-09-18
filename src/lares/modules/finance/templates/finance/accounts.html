@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Dinero - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Dinero</h1>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">En cuentas</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{{ activos|floatformat:0 }}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Debes</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums {% if pasivos %}text-overdue{% endif %}">
+      {{ pasivos|floatformat:0 }}
+    </div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Queda</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{{ neto|floatformat:0 }}</div>
+  </div>
+</div>
+
+{% if cards %}
+  <h2 class="mt-10 text-sm font-medium">Tarjetas</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for c in cards %}
+      <li class="flex items-baseline justify-between gap-4 py-4">
+        <div class="min-w-0">
+          <div class="text-[15px]">{{ c }}</div>
+          {% with linea=c.context_line %}
+            {% if linea %}<div class="text-[13px] text-soft">{{ linea }}</div>{% endif %}
+          {% endwith %}
+        </div>
+        {% if c.account %}
+          <span class="shrink-0 tabular-nums text-sm">{{ c.account.balance|floatformat:0 }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% for tipo, cuentas in por_tipo.items %}
+  <h2 class="mt-10 text-sm font-medium">{{ tipo }}</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for c in cuentas %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <div class="text-[15px]">{{ c.name }}</div>
+          {% if c.institution %}
+            <div class="text-[13px] text-soft">{{ c.institution }}{% if c.last_four %}, ····{{ c.last_four }}{% endif %}</div>
+          {% endif %}
+        </div>
+        <span class="shrink-0 tabular-nums text-sm text-soft">{{ c.balance|floatformat:0 }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endfor %}
+
+{% if movimientos %}
+  <h2 class="mt-10 text-sm font-medium">Últimos movimientos</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for e in movimientos %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <div class="text-[15px]">{{ e.description }}</div>
+          <div class="text-[13px] text-soft">{{ e.date|date:"j \d\e F"|lower }}</div>
+        </div>
+        {% for p in e.postings.all %}
+          {% if p.amount > 0 %}
+            <span class="shrink-0 tabular-nums text-sm">{{ p.amount|floatformat:0 }}</span>
+          {% endif %}
+        {% endfor %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

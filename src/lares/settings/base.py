@@ -50,6 +50,7 @@ CORE_APPS = [
 LARES_MODULES = env.list(
     "LARES_MODULES",
     default=[
+        "lares.modules.finance.apps.FinanceModule",
         "lares.modules.tasks.apps.TasksModule",
         "lares.modules.vehicles.apps.VehiclesModule",
     ],

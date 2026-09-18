@@ -84,6 +84,20 @@ class Resource(HouseholdScopedModel):
             self.kind = getattr(self, "resource_kind", "") or ""
         super().save(*args, **kwargs)
 
+    def context_line(self) -> str:
+        """Los datos secundarios de la ficha, en una linea.
+
+        Se arma aqui y no en la plantilla porque encadenar `{% if %}` para
+        decidir si toca una coma deja espacios sueltos antes del signo, y el
+        resultado se lee mal.
+        """
+        partes = [
+            str(self.owner) if self.owner else "",
+            f"en {self.location}" if self.location else "",
+            f"desde {self.acquired_on:%Y}" if self.acquired_on else "",
+        ]
+        return ", ".join(p for p in partes if p)
+
     def as_concrete(self):
         """Devuelve la instancia de la subclase real (Vehicle, Property...).
 

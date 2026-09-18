@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Documentos - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Documentos</h1>
+<p class="mt-1 max-w-[52ch] text-sm text-soft">
+  Lares guarda qué es cada documento y a qué pertenece. El archivo puede vivir
+  aquí o en Paperless.
+</p>
+
+<h2 class="mt-10 text-sm font-medium">Con fecha de vencimiento</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for d in vencen %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <div class="text-[15px]">{{ d.title }}</div>
+        {% if d.issuer %}<div class="text-[13px] text-soft">{{ d.issuer }}</div>{% endif %}
+      </div>
+      <span class="shrink-0 tabular-nums text-sm text-soft">{{ d.expires_on|date:"j M Y"|lower }}</span>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">
+      Ninguno. En cuanto registres uno con vencimiento, el aviso se crea solo.
+    </li>
+  {% endfor %}
+</ul>
+
+{% if sin_vencimiento %}
+  <h2 class="mt-10 text-sm font-medium">Sin vencimiento</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for d in sin_vencimiento %}
+      <li class="py-3 text-[15px]">{{ d.title }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

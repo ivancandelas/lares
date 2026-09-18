@@ -25,9 +25,21 @@ class Vehicle(Resource):
     last_service_km = models.PositiveIntegerField(null=True, blank=True)
     last_service_on = models.DateField(null=True, blank=True)
 
+    class Meta:
+        verbose_name = "vehículo"
+        verbose_name_plural = "vehículos"
+
     def __str__(self):
         parts = [p for p in (self.make, self.model, str(self.year or "")) if p]
         return " ".join(parts) or self.name
+
+    def context_line(self) -> str:
+        partes = [
+            self.plates,
+            f"{self.odometer_km:,} km" if self.odometer_km else "",
+            str(self.owner) if self.owner else "",
+        ]
+        return ", ".join(p for p in partes if p)
 
     @property
     def last_plate_digit(self) -> int | None:
