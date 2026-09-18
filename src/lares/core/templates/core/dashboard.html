@@ -13,6 +13,29 @@
   <h1 class="text-2xl font-light tracking-tight">Esta semana</h1>
   <p class="mt-1 text-sm text-soft">{{ agenda.today|date:"l j \d\e F"|lower }}</p>
 
+  {# Mientras falte lo básico, lo urgente es llenarlo, no leer avisos. #}
+  {% if completeness.score < 70 %}
+    <section class="mt-8 border-y border-rule py-5">
+      <div class="flex items-baseline justify-between gap-4">
+        <h2 class="text-[15px] font-medium">Tu hogar está al {{ completeness.score }}%</h2>
+        <a href="{% url 'core:inbox' %}" class="text-sm text-calm hover:underline">Subir algo</a>
+      </div>
+      <div class="mt-3 h-1 w-full rounded-full bg-rule">
+        <div class="h-1 rounded-full bg-calm" style="width: {{ completeness.score }}%"></div>
+      </div>
+      {% if completeness.pending %}
+        <p class="mt-3 text-[13px] text-soft">Lo que más sumaría ahora:</p>
+        <ul class="mt-1 space-y-1">
+          {% for paso in completeness.pending|slice:":3" %}
+            <li class="text-[14px]">
+              <a href="{% url paso.url_name %}" class="text-calm hover:underline">{{ paso.label }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  {% endif %}
+
   {# Lo que el sistema sabe y tú no. Va primero por eso. #}
   {% if findings %}
     <section class="mt-8 border-l-2 border-overdue pl-4">

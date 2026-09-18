@@ -1,11 +1,15 @@
+from django.conf import settings
+from django.contrib.auth.decorators import login_not_required
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
+from django.urls import reverse
 
 from .models import Account, Document, Resource
 from .registry import registry
 from .services import search as search_service
 from .services.agenda import week_ahead
-from .services.checks import run_all as run_checks
+from .services.completeness import assess
 
 
 def dashboard(request):
@@ -17,9 +21,13 @@ def dashboard(request):
     de una lista de recordatorios.
     """
     household = getattr(request, "household", None)
+    completitud = assess(household) if household else None
     context = {
         "agenda": week_ahead(household) if household else None,
-        "findings": run_checks(household) if household else [],
+        # Los huecos ya vienen calculados dentro de la valoración: recalcularlos
+        # recorrería todo el inventario una segunda vez por cada carga.
+        "findings": completitud["gaps"] if completitud else [],
+        "completeness": completitud,
         "widgets": _render_widgets(household, request) if household else [],
     }
     return render(request, "core/dashboard.html", context)
@@ -60,6 +68,53 @@ def documents(request):
         "vencen": docs.filter(expires_on__isnull=False).order_by("expires_on"),
         "sin_vencimiento": docs.filter(expires_on__isnull=True),
     })
+
+
+@login_not_required
+def manifest(request):
+    """Manifiesto de la PWA.
+
+    El share_target es lo que hace que compartir una foto desde el móvil acabe
+    en la bandeja sin pasar por ningún menú.
+    """
+    return JsonResponse({
+        "name": settings.PRODUCT_NAME,
+        "short_name": settings.PRODUCT_NAME,
+        "description": settings.PRODUCT_TAGLINE,
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#FBFBF9",
+        "theme_color": "#17201C",
+        "lang": "es",
+        "icons": [],
+        "share_target": {
+            "action": reverse("core:inbox-share"),
+            "method": "POST",
+            "enctype": "multipart/form-data",
+            "params": {
+                "title": "title",
+                "text": "text",
+                "files": [{"name": "files", "accept": ["image/*", "application/pdf",
+                                                       "text/xml", "application/xml"]}],
+            },
+        },
+    }, content_type="application/manifest+json")
+
+
+@login_not_required
+def service_worker(request):
+    """Mínimo imprescindible: existir para que la app se pueda instalar.
+
+    No cachea nada todavía. Un service worker que cachea mal es peor que no
+    tenerlo: sirve datos viejos de un sistema cuyo valor es estar al día.
+    """
+    return HttpResponse(
+        "self.addEventListener('install', () => self.skipWaiting());\n"
+        "self.addEventListener('activate', e => e.waitUntil(clients.claim()));\n"
+        "self.addEventListener('fetch', () => {});\n",
+        content_type="application/javascript",
+    )
 
 
 def _kind_label(kind: str) -> str:

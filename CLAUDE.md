@@ -25,6 +25,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8010/
 
 - Corre en **:8010** (el 8000 está ocupado por otra app) con autoreload, así que
   el código se recarga solo; migraciones y semilla no.
+- **Los cambios en `.env` exigen reiniciar el proceso.** El autoreload hereda el
+  entorno del padre y `read_env` no pisa lo que ya está en `os.environ`.
 - Postgres del proyecto en **:5433** (el 5432 está ocupado).
 - Si el cambio añade pantallas o datos, verificar que se ven, no solo que
   responde 200.

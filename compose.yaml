@@ -31,6 +31,7 @@ services:
     environment:
       LARES_DATABASE_URL: postgres://lares:lares@db:5432/lares
       LARES_REDIS_URL: redis://redis:6379/0
+      LARES_MEDIA_ROOT: /data/media
     volumes:
       - ./src:/app/src
       - media_data:/data/media
@@ -47,6 +48,7 @@ services:
     environment:
       LARES_DATABASE_URL: postgres://lares:lares@db:5432/lares
       LARES_REDIS_URL: redis://redis:6379/0
+      LARES_MEDIA_ROOT: /data/media
     volumes:
       - ./src:/app/src
       - media_data:/data/media

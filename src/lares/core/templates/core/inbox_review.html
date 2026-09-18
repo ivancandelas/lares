@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Revisar - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <h1 class="text-2xl font-light tracking-tight">Revisar</h1>
+
+  <div class="mt-4 border-l-2 border-calm pl-4">
+    {% if propuesta %}
+      <p class="text-[15px]">Esto parece: <strong class="font-medium">{{ propuesta.label }}</strong></p>
+      <p class="mt-1 text-[13px] text-soft">
+        Reconocido por {{ propuesta.classifier }}. Corrige lo que haga falta antes de guardar.
+      </p>
+    {% else %}
+      <p class="text-[15px]">No he reconocido qué es esto.</p>
+      <p class="mt-1 text-[13px] text-soft">Dime tú de qué se trata y lo registro.</p>
+    {% endif %}
+    <p class="mt-2 text-[13px] text-soft">
+      Archivo: {{ item.original_name }}
+      {% if item.file %}
+        · <a href="{{ item.file.url }}" class="text-calm hover:underline">abrir</a>
+      {% endif %}
+    </p>
+  </div>
+
+  {% if propuesta.plan.cfdi.concepts %}
+    <h2 class="mt-8 text-sm font-medium">Lo que dice la factura</h2>
+    <ul class="mt-1 divide-y divide-rule border-y border-rule">
+      {% for c in propuesta.plan.cfdi.concepts %}
+        <li class="flex items-baseline justify-between gap-4 py-2 text-[14px]">
+          <span class="min-w-0">{{ c.description }}</span>
+          {% if c.amount %}<span class="shrink-0 tabular-nums text-soft">{{ c.amount }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <form method="post" class="mt-8 space-y-5">
+    {% csrf_token %}
+    {% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}" class="block text-sm text-soft">{{ field.label }}</label>
+        <div class="mt-1">{{ field }}</div>
+        {% if field.help_text %}<p class="mt-1 text-[13px] text-soft">{{ field.help_text }}</p>{% endif %}
+        {% for error in field.errors %}<p class="mt-1 text-[13px] text-overdue">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <div class="flex items-center gap-4 pt-2">
+      <button class="rounded-sm bg-calm px-4 py-2.5 text-sm font-medium text-white hover:bg-ink">
+        Guardar
+      </button>
+      <a href="{% url 'core:inbox' %}" class="text-sm text-soft hover:text-ink">Ahora no</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

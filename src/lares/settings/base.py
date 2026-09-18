@@ -132,7 +132,8 @@ DEFAULT_CURRENCY = env("LARES_DEFAULT_CURRENCY", default="MXN")
 STATIC_URL = "static/"
 STATIC_ROOT = PROJECT_ROOT / "staticfiles"
 MEDIA_URL = "media/"
-MEDIA_ROOT = env("LARES_MEDIA_ROOT", default=str(PROJECT_ROOT / "data" / "media"))
+# Vacío o sin definir: carpeta del proyecto. En Docker se pasa /data/media.
+MEDIA_ROOT = env("LARES_MEDIA_ROOT", default="") or str(PROJECT_ROOT / "data" / "media")
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Bandeja - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Bandeja</h1>
+<p class="mt-1 max-w-[52ch] text-sm text-soft">
+  Suelta aquí facturas, pólizas o recibos. Lares propone qué son; tú confirmas.
+</p>
+
+<form method="post" enctype="multipart/form-data" class="mt-8" x-data="{ over: false }"
+      @dragover.prevent="over = true" @dragleave.prevent="over = false"
+      @drop.prevent="over = false; $refs.input.files = $event.dataTransfer.files; $el.submit()">
+  {% csrf_token %}
+  <label :class="over ? 'border-calm bg-white' : 'border-rule'"
+         class="flex cursor-pointer flex-col items-center gap-2 rounded-sm border border-dashed px-6 py-10 text-center">
+    <span class="text-[15px]">Arrastra archivos aquí, o pulsa para elegirlos</span>
+    <span class="text-[13px] text-soft">
+      XML del SAT, PDF, fotos. Si ya lo subiste, no se duplica.
+    </span>
+    <input x-ref="input" type="file" name="files" multiple class="hidden"
+           @change="$el.form.submit()">
+  </label>
+</form>
+
+<h2 class="mt-10 text-sm font-medium">Sin revisar</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for item in pendientes %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <a href="{% url 'core:inbox-review' item.pk %}" class="text-[15px] hover:text-calm">
+          {{ item.suggestion.label|default:item.original_name }}
+        </a>
+        <div class="text-[13px] text-soft">
+          {{ item.original_name }}{% if item.suggestion %}, {{ item.suggestion.confidence_pct }}&nbsp;% de certeza{% endif %}
+        </div>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        <a href="{% url 'core:inbox-review' item.pk %}"
+           class="rounded-sm bg-calm px-2.5 py-1 text-[13px] font-medium text-white hover:bg-ink">Revisar</a>
+        <form method="post" action="{% url 'core:inbox-discard' item.pk %}">
+          {% csrf_token %}
+          <button class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-overdue hover:text-overdue">
+            Descartar
+          </button>
+        </form>
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">Nada pendiente de revisar.</li>
+  {% endfor %}
+</ul>
+
+{% if cerrados %}
+  <h2 class="mt-10 text-sm font-medium text-soft">Ya procesados</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for item in cerrados %}
+      <li class="flex items-baseline justify-between gap-4 py-2.5 text-[14px] text-soft">
+        <span class="min-w-0 truncate">{{ item.original_name }}</span>
+        <span class="shrink-0 text-[13px]">{{ item.get_status_display|lower }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

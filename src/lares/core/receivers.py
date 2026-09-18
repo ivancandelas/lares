@@ -1,9 +1,13 @@
 """Manejadores del nucleo sobre el bus de eventos."""
 
+import logging
+
 from django.db import transaction
 from django.dispatch import receiver
 
 from .models import Event, lares_event
+
+logger = logging.getLogger(__name__)
 
 
 @receiver(lares_event)
@@ -39,6 +43,13 @@ def notify_webhooks(sender, household, verb, subject=None, payload=None,
 
     datos = {"subject": str(getattr(subject, "pk", "")) or None,
              "summary": summary, **(payload or {})}
-    transaction.on_commit(
-        lambda: dispatch_webhooks.delay(str(household.pk), verb, datos)
-    )
+
+    def enviar():
+        try:
+            dispatch_webhooks.delay(str(household.pk), verb, datos)
+        except Exception:
+            # Si la cola no está disponible se pierde el aviso, no la operación.
+            # Subir una factura no puede fallar porque Redis esté caído.
+            logger.warning("No se pudo encolar el webhook de %s", verb, exc_info=True)
+
+    transaction.on_commit(enviar)

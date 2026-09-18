@@ -8,6 +8,7 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from . import receivers  # noqa: F401
+        from .classifiers import CfdiClassifier, KeywordClassifier
         from .providers import DocumentExpiryProvider, UserRuleProvider
         from .registry import NavItem, registry
 
@@ -16,10 +17,13 @@ class CoreConfig(AppConfig):
             NavItem(label="Documentos", url_name="core:documents", icon="file", order=50),
             NavItem(label="Personas", url_name="core:parties", icon="users", order=60),
             NavItem(label="Recurrentes", url_name="core:rules", icon="repeat", order=70),
+            NavItem(label="Bandeja", url_name="core:inbox", icon="inbox", order=5),
         )
         registry.subject_source("document", _expiring_documents)
         registry.subject_source("household", lambda household: [household])
         registry.obligations(DocumentExpiryProvider, UserRuleProvider)
+        # El CFDI va primero: está firmado, no se adivina.
+        registry.classifier(CfdiClassifier, KeywordClassifier)
 
 
 def _expiring_documents(household):

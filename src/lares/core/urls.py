@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import api, views, views_crud
+from . import api, views, views_crud, views_inbox
 
 app_name = "core"
 
@@ -10,6 +10,14 @@ urlpatterns = [
     path("patrimonio/", views.holdings, name="holdings"),
     path("documentos/", views.documents, name="documents"),
     path("buscar/", views.search, name="search"),
+
+    path("bandeja/", views_inbox.inbox, name="inbox"),
+    path("bandeja/<uuid:pk>/", views_inbox.inbox_review, name="inbox-review"),
+    path("bandeja/<uuid:pk>/descartar/", views_inbox.inbox_discard, name="inbox-discard"),
+    path("bandeja/compartir/", views_inbox.inbox_share, name="inbox-share"),
+
+    path("manifest.webmanifest", views.manifest, name="manifest"),
+    path("sw.js", views.service_worker, name="service-worker"),
 
     path("nuevo/", views_crud.add_index, name="add"),
     path("nuevo/<str:kind>/", views_crud.resource_new, name="resource-new"),

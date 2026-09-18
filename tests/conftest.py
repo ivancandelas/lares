@@ -18,3 +18,10 @@ def scoped(household):
 @pytest.fixture
 def me(scoped):
     return Party.objects.create(household=scoped, name="Titular", is_self=True)
+
+
+@pytest.fixture(autouse=True)
+def media_aislado(settings, tmp_path):
+    """Ninguna prueba escribe en el almacén real de archivos."""
+    settings.MEDIA_ROOT = str(tmp_path / "media")
+    return settings.MEDIA_ROOT

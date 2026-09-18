@@ -81,6 +81,23 @@ class Finding:
     action_url: str | None = None
 
 
+class Classifier:
+    """Reconoce que es un archivo que acaba de entrar."""
+
+    key: str = ""
+    label: str = ""
+
+    def classify(self, item):  # -> Proposal | None
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class Proposal:
+    label: str
+    plan: dict
+    confidence: float = 0.5
+
+
 @dataclass(frozen=True)
 class NavItem:
     label: str
@@ -146,6 +163,7 @@ class Registry:
         # "vehicle" -> los vehiculos activos; "document" -> los que vencen;
         # "household" -> el hogar mismo, para reglas que no cuelgan de nada.
         self.subject_sources: dict[str, object] = {}
+        self.classifiers: list = []
 
     # -- API que usan los modulos -------------------------------------------
 
@@ -206,6 +224,15 @@ class Registry:
 
     def connector(self, key: str, connector):
         self.connectors[key] = connector
+
+    def classifier(self, *classifiers):
+        """Reconocedores de lo que entra por la bandeja.
+
+        Cada uno mira un InboxItem y, si lo reconoce, devuelve una propuesta.
+        Nunca crea nada: eso lo decide la persona.
+        """
+        for c in classifiers:
+            self.classifiers.append(c() if isinstance(c, type) else c)
 
     def demo_seeder(self, fn):
         """Datos de ejemplo del modulo.

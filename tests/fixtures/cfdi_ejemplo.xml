@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4"
+                  xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital"
+                  Version="4.0" Serie="A" Folio="10432"
+                  Fecha="2026-09-12T11:24:03" Total="4750.00" SubTotal="4094.83"
+                  Moneda="MXN" TipoDeComprobante="I" LugarExpedicion="45050">
+  <cfdi:Emisor Rfc="AAA010101AAA" Nombre="Servicio Automotriz del Valle SA de CV"
+               RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="CAXI850101ABC" Nombre="IVAN CANDELAS"
+                 DomicilioFiscalReceptor="45050" UsoCFDI="G03"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="25174800" Cantidad="1" Descripcion="Servicio mayor 40,000 km"
+                   ValorUnitario="3200.00" Importe="3200.00"/>
+    <cfdi:Concepto ClaveProdServ="15121500" Cantidad="6" Descripcion="Aceite sintético 5W30"
+                   ValorUnitario="149.14" Importe="894.83"/>
+  </cfdi:Conceptos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital Version="1.1"
+                             UUID="A1B2C3D4-5E6F-4071-8A9B-0C1D2E3F4A5B"
+                             FechaTimbrado="2026-09-12T11:25:10"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>
