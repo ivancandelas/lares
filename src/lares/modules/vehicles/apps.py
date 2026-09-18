@@ -18,7 +18,7 @@ class VehiclesModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, obligations, widgets
+        from . import checks, demo, obligations, widgets
         from .models import Vehicle
 
         reg.resource(Vehicle, kind="vehicle")
@@ -41,6 +41,8 @@ class VehiclesModule(LaresModule):
         )
 
         reg.nav(NavItem(label="Vehiculos", url_name="vehicles:list", icon="car", order=30))
+
+        reg.demo_seeder(demo.seed)
 
         reg.widget(DashboardWidget(
             key="vehicles.upcoming",

@@ -8,7 +8,10 @@ from ..models import Obligation
 from ..scoping import use_household
 
 
-def week_ahead(household, horizon_days: int = 30) -> dict:
+# Un ano de horizonte: casi todo lo que administra un hogar es anual
+# (refrendo, verificacion, polizas, predial). Ver menos oculta justo lo
+# que el sistema existe para anticipar.
+def week_ahead(household, horizon_days: int = 365) -> dict:
     today = dt.date.today()
     with use_household(household):
         pending = Obligation.objects.filter(

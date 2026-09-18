@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: lares
       POSTGRES_PASSWORD: lares
       POSTGRES_DB: lares
+    ports:
+      - "5433:5432"          # para ejecutar runserver fuera de Docker
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,6 +18,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

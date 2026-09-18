@@ -140,6 +140,7 @@ class Registry:
         self.detail_tabs: list[DetailTab] = []
         self.widgets: list[DashboardWidget] = []
         self.connectors: dict[str, object] = {}
+        self.demo_seeders: list = []
 
     # -- API que usan los modulos -------------------------------------------
 
@@ -177,6 +178,14 @@ class Registry:
 
     def connector(self, key: str, connector):
         self.connectors[key] = connector
+
+    def demo_seeder(self, fn):
+        """Datos de ejemplo del modulo.
+
+        Existe para que `seed_demo` del nucleo no tenga que importar modulos:
+        cada uno siembra lo suyo. `fn(household) -> str` devuelve un resumen.
+        """
+        self.demo_seeders.append(fn)
 
     # -- API que usa el nucleo ----------------------------------------------
 
