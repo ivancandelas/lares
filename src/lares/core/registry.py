@@ -101,13 +101,23 @@ class Proposal:
     confidence: float = 0.5
 
 
+# Grupos del menú, en el orden en que se muestran. La agrupación no es estética:
+# trece entradas planas obligan a leerlas todas para encontrar una.
+NAV_GROUPS = [
+    ("main", ""),                    # se muestran sueltas, sin desplegable
+    ("holdings", "Patrimonio"),
+    ("money", "Dinero"),
+    ("more", "Más"),
+]
+
+
 @dataclass(frozen=True)
 class NavItem:
     label: str
     url_name: str
     icon: str = "circle"
     order: int = 100
-    section: str = "main"
+    section: str = "main"            # main | holdings | money | more
 
 
 @dataclass(frozen=True)
@@ -252,6 +262,15 @@ class Registry:
             (i for i in self.nav_items if i.section == section),
             key=lambda i: (i.order, i.label),
         )
+
+    def nav_grouped(self):
+        """El menú, listo para pintar: sueltas primero, luego los desplegables."""
+        salida = []
+        for clave, etiqueta in NAV_GROUPS:
+            items = self.nav_sorted(clave)
+            if items:
+                salida.append({"key": clave, "label": etiqueta, "items": items})
+        return salida
 
     def tabs_for(self, resource_kind: str):
         return sorted(

@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,200..700;1,400&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
   <script>
     // El color aquí codifica estado, no decora: vencido / inminente / en orden.
     tailwind.config = {
@@ -34,6 +35,7 @@
       *, *::before, *::after { animation: none !important; transition: none !important; }
     }
     :focus-visible { outline: 2px solid #2F6B4F; outline-offset: 2px; }
+    [x-cloak] { display: none !important; }
   </style>
 </head>
 <body class="h-full bg-paper font-sans text-ink antialiased">
@@ -55,12 +57,55 @@
     </header>
 
     {% if user.is_authenticated %}
-      <nav class="flex gap-5 border-b border-rule py-2.5 text-sm">
-        <a href="{% url 'core:dashboard' %}" class="text-soft hover:text-ink">Esta semana</a>
-        {% for item in nav_items %}
-          <a href="{% url item.url_name %}" class="text-soft hover:text-ink">{{ item.label }}</a>
+      {% comment %}
+        Trece entradas planas obligan a leerlas todas para encontrar una.
+        Sueltas lo de cada día; agrupado lo que se consulta de vez en cuando.
+      {% endcomment %}
+      <nav class="flex items-center gap-1 overflow-x-auto border-b border-rule py-1.5 text-sm"
+           x-data="{ open: null }" @keydown.escape="open = null">
+        <a href="{% url 'core:dashboard' %}"
+           class="shrink-0 rounded-sm px-2.5 py-1.5 hover:bg-white
+                  {% if current_url_name == 'core:dashboard' %}font-medium text-ink{% else %}text-soft{% endif %}">
+          Esta semana
+        </a>
+
+        {% for grupo in nav_groups %}
+          {% if grupo.key == "main" %}
+            {% for item in grupo.items %}
+              <a href="{% url item.url_name %}"
+                 class="shrink-0 rounded-sm px-2.5 py-1.5 hover:bg-white
+                        {% if current_url_name == item.url_name %}font-medium text-ink{% else %}text-soft{% endif %}">
+                {{ item.label }}{% if item.url_name == 'core:inbox' and inbox_pending %}
+                  <span class="ml-1 rounded-full bg-calm px-1.5 py-0.5 text-[11px] font-medium text-white tabular-nums">{{ inbox_pending }}</span>
+                {% endif %}
+              </a>
+            {% endfor %}
+          {% else %}
+            <div class="relative shrink-0" @click.outside="open = null">
+              <button type="button" @click="open = open === '{{ grupo.key }}' ? null : '{{ grupo.key }}'"
+                      :aria-expanded="open === '{{ grupo.key }}'"
+                      class="rounded-sm px-2.5 py-1.5 text-soft hover:bg-white hover:text-ink">
+                {{ grupo.label }}
+                <span aria-hidden="true" class="text-[10px]">▾</span>
+              </button>
+              <div x-show="open === '{{ grupo.key }}'" x-cloak
+                   class="absolute left-0 top-full z-10 mt-1 min-w-[13rem] rounded-sm border border-rule bg-white py-1 shadow-sm">
+                {% for item in grupo.items %}
+                  <a href="{% url item.url_name %}"
+                     class="block px-3 py-2 hover:bg-paper
+                            {% if current_url_name == item.url_name %}font-medium text-ink{% else %}text-soft{% endif %}">
+                    {{ item.label }}
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
         {% endfor %}
-        <a href="{% url 'core:add' %}" class="ml-auto font-medium text-calm hover:text-ink">Añadir</a>
+
+        <a href="{% url 'core:add' %}"
+           class="ml-auto shrink-0 rounded-sm px-2.5 py-1.5 font-medium text-calm hover:bg-white">
+          + Añadir
+        </a>
       </nav>
     {% endif %}
 

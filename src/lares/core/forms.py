@@ -245,9 +245,17 @@ class ExpenseForm(forms.Form):
     paid_from = forms.ModelChoiceField(queryset=Account.objects.none(),
                                        label="Pagado con")
     category = forms.ModelChoiceField(queryset=Account.objects.none(), label="Categoría")
+    merchant = forms.ModelChoiceField(
+        queryset=Party.objects.none(), required=False, label="En dónde o a quién",
+        help_text="Walmart, la escuela, el taller. Luego podrás ver cuánto llevas ahí.",
+    )
     about = forms.ModelChoiceField(
         queryset=Resource.objects.none(), required=False, label="Sobre qué",
         help_text="Asócialo a un coche o a la casa y sabrás cuánto te cuesta de verdad.",
+    )
+    for_whom = forms.ModelChoiceField(
+        queryset=Party.objects.none(), required=False, label="Para quién",
+        help_text="La mesada del hijo, lo de tu pareja. Es distinto del comercio.",
     )
 
     def __init__(self, *args, household=None, **kwargs):
@@ -267,6 +275,10 @@ class ExpenseForm(forms.Form):
             self.fields["about"].queryset = Resource._base_manager.filter(
                 household=household, archived_at__isnull=True
             )
+            partes = Party._base_manager.filter(household=household,
+                                                archived_at__isnull=True)
+            self.fields["merchant"].queryset = partes
+            self.fields["for_whom"].queryset = partes
 
     @transaction.atomic
     def save(self) -> Entry:
@@ -274,12 +286,14 @@ class ExpenseForm(forms.Form):
         entry = Entry.objects.create(
             household=self.household, date=data["date"],
             description=data["description"], source="manual",
+            counterparty=data.get("merchant"),
         )
         importe = data["amount"]
         # Dos apuntes que suman cero: el gasto carga, la cuenta abona.
         Posting.objects.create(
             household=self.household, entry=entry, account=data["category"],
             amount=importe, dimension=data.get("about"),
+            beneficiary=data.get("for_whom"),
         )
         Posting.objects.create(
             household=self.household, entry=entry, account=data["paid_from"],

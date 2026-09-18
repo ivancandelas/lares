@@ -85,3 +85,28 @@ def test_toda_ficha_de_recurso_responde(sesion, household):
     for recurso in recursos:
         respuesta = sesion.get(reverse("core:resource-detail", args=[recurso.pk]))
         assert respuesta.status_code == 200, f"{recurso.kind}: {recurso.name}"
+
+
+@pytest.mark.django_db
+def test_las_plantillas_no_dejan_comentarios_a_la_vista(sesion, household):
+    """Un `{# #}` de varias líneas no es un comentario: Django lo imprime tal cual."""
+    from django.core.management import call_command
+    from django.urls import reverse
+
+    call_command("seed_demo", verbosity=0)
+    rutas = ["core:dashboard", "core:holdings", "core:inbox", "finance:spending"]
+    for nombre in rutas:
+        contenido = sesion.get(reverse(nombre)).content.decode()
+        assert "{#" not in contenido, nombre
+        assert "#}" not in contenido, nombre
+        assert "{%" not in contenido, nombre
+
+
+@pytest.mark.django_db
+def test_la_pagina_carga_alpine(sesion, household):
+    """Los desplegables del menú dependen de él; sin el script quedan muertos."""
+    from django.urls import reverse
+
+    contenido = sesion.get(reverse("core:dashboard")).content.decode()
+    assert "alpinejs" in contenido
+    assert 'x-data="{ open: null }"' in contenido

@@ -42,25 +42,58 @@ def seed(household) -> str:
         ),
     )
 
+    mascotas, _ = Account.objects.get_or_create(
+        household=household, name="Gastos: mascotas", type=Account.Type.EXPENSE)
+    familia, _ = Account.objects.get_or_create(
+        household=household, name="Gastos: familia", type=Account.Type.EXPENSE)
+
+    walmart, _ = Party.objects.get_or_create(
+        household=household, name="Walmart", defaults={"kind": Party.Kind.ORGANIZATION})
+    pemex, _ = Party.objects.get_or_create(
+        household=household, name="Gasolinera Pemex Américas",
+        defaults={"kind": Party.Kind.ORGANIZATION})
+    veterinaria, _ = Party.objects.get_or_create(
+        household=household, name="Veterinaria San Ángel",
+        defaults={"kind": Party.Kind.ORGANIZATION})
+    hijo, _ = Party.objects.get_or_create(
+        household=household, name="Diego", defaults={"kind": Party.Kind.PERSON})
+    esposa, _ = Party.objects.get_or_create(
+        household=household, name="Mariana", defaults={"kind": Party.Kind.PERSON})
+
+    mazda = None
+    from lares.core.models.resource import Resource
+    mazda = Resource.objects.filter(household=household, name="Mazda CX-5").first()
+
     hoy = dt.date.today()
+    # (concepto, categoría, origen, importe, hace días, comercio, para quién, sobre qué)
     movimientos = [
         # El sueldo entra en la cuenta: sin ingreso, el saldo no significa nada.
-        ("Nómina de septiembre", nomina, sueldo, 42000, 3),
-        ("Gasolina", gasto_auto, tdc_account, 980, 6),
-        ("Supermercado", gasto_super, tdc_account, 2340, 4),
-        ("Servicio de agencia", gasto_auto, tdc_account, 4750, 12),
+        ("Nómina de septiembre", nomina, sueldo, 42000, 3, None, None, None),
+        ("Gasolina", gasto_auto, tdc_account, 980, 6, pemex, None, mazda),
+        ("Gasolina", gasto_auto, tdc_account, 1050, 34, pemex, None, mazda),
+        ("Despensa de la semana", gasto_super, tdc_account, 2340, 4, walmart, None, None),
+        ("Despensa de la semana", gasto_super, tdc_account, 1980, 11, walmart, None, None),
+        ("Despensa y limpieza", gasto_super, tdc_account, 2610, 25, walmart, None, None),
+        ("Servicio de agencia", gasto_auto, tdc_account, 4750, 12, None, None, mazda),
+        ("Croquetas y vacuna", mascotas, tdc_account, 1420, 9, veterinaria, None, None),
+        ("Baño y desparasitante", mascotas, tdc_account, 680, 40, veterinaria, None, None),
+        ("Mesada de Diego", familia, nomina, 1500, 2, None, hijo, None),
+        ("Mesada de Diego", familia, nomina, 1500, 32, None, hijo, None),
+        ("Zapatos para Diego", familia, tdc_account, 1890, 20, walmart, hijo, None),
+        ("Gasto de Mariana", familia, nomina, 4000, 5, None, esposa, None),
     ]
-    for concepto, gasto, origen, importe, hace_dias in movimientos:
+    for concepto, gasto, origen, importe, hace_dias, comercio, para, sobre in movimientos:
+        fecha = hoy - dt.timedelta(days=hace_dias)
         entry, creado = Entry.objects.get_or_create(
-            household=household, description=concepto,
-            date=hoy - dt.timedelta(days=hace_dias),
-            defaults={"source": "demo"},
+            household=household, description=concepto, date=fecha,
+            defaults={"source": "demo", "counterparty": comercio},
         )
         if not creado:
             continue
-        # Partida doble: el gasto carga, la tarjeta abona. Suman cero.
+        # Partida doble: el gasto carga, la cuenta abona. Suman cero.
         Posting.objects.create(household=household, entry=entry, account=gasto,
-                               amount=importe, currency="MXN")
+                               amount=importe, currency="MXN",
+                               beneficiary=para, dimension=sobre)
         Posting.objects.create(household=household, entry=entry, account=origen,
                                amount=-importe, currency="MXN")
 

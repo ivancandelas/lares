@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ party }} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">{{ party }}</h1>
+
+<nav class="mt-6 flex flex-wrap gap-1 border-y border-rule py-2 text-sm">
+  {% for clave, etiqueta in periods %}
+    <a href="?periodo={{ clave }}"
+       class="rounded-sm px-2.5 py-1 {% if clave == period %}bg-ink text-white{% else %}text-soft hover:bg-white{% endif %}">
+      {{ etiqueta }}
+    </a>
+  {% endfor %}
+</nav>
+
+<div class="mt-6">
+  <div class="text-[13px] text-soft">Llevas gastado</div>
+  <div class="mt-0.5 text-2xl font-light tabular-nums">{{ total|floatformat:0 }}</div>
+</div>
+
+{% include "finance/_breakdown.html" with titulo="En qué" filas=by_category %}
+
+<h2 class="mt-10 text-sm font-medium">Movimientos</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for p in entries %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <div class="text-[15px]">{{ p.entry.description }}</div>
+        <div class="text-[13px] text-soft">{{ p.entry.date|date:"j \d\e F Y"|lower }}, {{ p.account.name }}</div>
+      </div>
+      <span class="shrink-0 tabular-nums text-sm">{{ p.amount|floatformat:0 }}</span>
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

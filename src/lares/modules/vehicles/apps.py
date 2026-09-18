@@ -41,7 +41,8 @@ class VehiclesModule(LaresModule):
             checks.VehicleWithoutInvoice,
         )
 
-        reg.nav(NavItem(label="Vehículos", url_name="vehicles:list", icon="car", order=30))
+        reg.nav(NavItem("Vehículos", "vehicles:list", icon="car", order=20,
+                        section="holdings"))
 
         reg.demo_seeder(demo.seed)
 

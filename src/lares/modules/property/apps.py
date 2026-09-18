@@ -29,7 +29,8 @@ class PropertyModule(LaresModule):
         reg.check(checks.PropertyWithoutDeed, checks.PropertyWithoutInsurance,
                   checks.RentedWithoutDeposit, checks.PropertyWithoutServices)
         reg.demo_seeder(demo.seed)
-        reg.nav(NavItem(label="Inmuebles", url_name="property:list", icon="home", order=15))
+        reg.nav(NavItem("Inmuebles", "property:list", icon="home", order=10,
+                        section="holdings"))
         reg.widget(DashboardWidget(
             key="property.portfolio",
             label="Inmuebles",

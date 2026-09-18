@@ -28,8 +28,8 @@ class InsuranceModule(LaresModule):
         reg.check(checks.ExpiredPolicy, checks.PolicyCoversNothing,
                   checks.Underinsured)
         reg.demo_seeder(demo.seed)
-        reg.nav(NavItem(label="Seguros", url_name="insurance:list", icon="shield",
-                        order=35))
+        reg.nav(NavItem("Seguros", "insurance:list", icon="shield", order=40,
+                        section="holdings"))
         reg.widget(DashboardWidget(
             key="insurance.coverage",
             label="Pólizas vigentes",

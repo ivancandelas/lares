@@ -69,8 +69,15 @@ class Account(HouseholdScopedModel):
 class Entry(HouseholdScopedModel):
     """Asiento. Inmutable una vez contabilizado."""
 
-    date = models.DateField(db_index=True)
-    description = models.CharField(max_length=300)
+    date = models.DateField("fecha", db_index=True)
+    description = models.CharField("concepto", max_length=300)
+
+    # Donde se gasto o a quien se le pago: Walmart, la escuela, el casero.
+    # Con el RFC como clave, los CFDI se concilian solos contra esta parte.
+    counterparty = models.ForeignKey(
+        "core.Party", verbose_name="en dónde o a quién", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="entries",
+    )
     source = models.CharField(max_length=80, blank=True)     # "cfdi", "csv", "manual"
     external_ref = models.CharField(max_length=200, blank=True, db_index=True)
     document = models.ForeignKey(
@@ -99,12 +106,20 @@ class Posting(HouseholdScopedModel):
     amount = models.DecimalField(max_digits=16, decimal_places=2)
     currency = models.CharField(max_length=3, default="MXN")
 
-    # Dimension analitica: contra que recurso, obligacion, parte o proyecto.
+    # Sobre que: el Mazda, la casa, un proyecto. Permite calcular cuanto cuesta
+    # de verdad tener una cosa.
     dimension_type = models.ForeignKey(
         ContentType, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     dimension_id = models.UUIDField(null=True, blank=True)
     dimension = GenericForeignKey("dimension_type", "dimension_id")
+
+    # Para quien fue: la mesada del hijo, lo de la esposa, lo del sobrino.
+    # Es un eje distinto del comercio: puedes comprar en Walmart para tu hijo.
+    beneficiary = models.ForeignKey(
+        "core.Party", verbose_name="para quién", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="benefited_postings",
+    )
 
     memo = models.CharField(max_length=300, blank=True)
 
@@ -112,4 +127,5 @@ class Posting(HouseholdScopedModel):
         indexes = [
             models.Index(fields=["household", "account"]),
             models.Index(fields=["household", "dimension_type", "dimension_id"]),
+            models.Index(fields=["household", "beneficiary"]),
         ]

@@ -1,6 +1,7 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 
-from lares.core.models import Account, Entry
+from lares.core.models import Account, Entry, Party
+from lares.core.services import spending
 
 from .models import CreditCard
 
@@ -35,3 +36,18 @@ def accounts(request):
         "neto": activos - pasivos,
         "movimientos": Entry.objects.prefetch_related("postings__account")[:12],
     })
+
+
+def where_it_goes(request):
+    """En qué se va: por categoría, por comercio, por persona y por cosa."""
+    return render(request, "finance/spending.html",
+                  spending.report(request.household, request.GET.get("periodo", "quarter")))
+
+
+def merchant(request, pk):
+    party = get_object_or_404(Party, pk=pk)
+    contexto = spending.merchant_detail(request.household, party,
+                                        request.GET.get("periodo", "year"))
+    contexto["periods"] = [(k, v[0]) for k, v in spending.PERIODOS.items()]
+    contexto["period"] = request.GET.get("periodo", "year")
+    return render(request, "finance/merchant.html", contexto)

@@ -15,7 +15,7 @@ class TasksModule(LaresModule):
 
         reg.check(checks.OverdueTasks)
         reg.demo_seeder(demo.seed)
-        reg.nav(NavItem(label="Tareas", url_name="tasks:list", icon="check", order=20))
+        reg.nav(NavItem("Tareas", "tasks:list", icon="check", order=20, section="main"))
         reg.widget(DashboardWidget(
             key="tasks.open",
             label="Tareas abiertas",

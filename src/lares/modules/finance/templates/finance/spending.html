@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}En qué se va - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">En qué se va</h1>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Cuatro preguntas distintas sobre el mismo gasto: en qué, dónde, para quién y
+  sobre qué cosa. Casi ninguna app las separa, y por eso no responden ninguna.
+</p>
+
+<nav class="mt-6 flex flex-wrap gap-1 border-y border-rule py-2 text-sm">
+  {% for clave, etiqueta in periods %}
+    <a href="?periodo={{ clave }}"
+       class="rounded-sm px-2.5 py-1 {% if clave == period %}bg-ink text-white{% else %}text-soft hover:bg-white{% endif %}">
+      {{ etiqueta }}
+    </a>
+  {% endfor %}
+</nav>
+
+<div class="mt-6">
+  <div class="text-[13px] text-soft">{{ period_label }}</div>
+  <div class="mt-0.5 text-2xl font-light tabular-nums">{{ total|floatformat:0 }}</div>
+</div>
+
+{% include "finance/_breakdown.html" with titulo="En qué" filas=by_category nota="La categoría: gasolina, supermercado, mascotas." %}
+{% include "finance/_breakdown.html" with titulo="Dónde" filas=by_merchant nota="El comercio o la persona a la que le pagas." %}
+{% include "finance/_breakdown.html" with titulo="Para quién" filas=by_person nota="La mesada del hijo, lo de tu pareja. Lo que no lleva nombre es del hogar." %}
+{% include "finance/_breakdown.html" with titulo="Sobre qué cosa" filas=by_thing nota="Lo que de verdad te cuesta tener el coche o la casa." %}
+{% endblock %}

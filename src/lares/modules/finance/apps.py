@@ -26,7 +26,12 @@ class FinanceModule(LaresModule):
         reg.obligations(obligations.CardPaymentProvider)
         reg.check(checks.CardWithoutStatement, checks.CardOverLimit)
         reg.demo_seeder(demo.seed)
-        reg.nav(NavItem(label="Dinero", url_name="finance:accounts", icon="wallet", order=40))
+        reg.nav(
+            NavItem("Cuentas y tarjetas", "finance:accounts", icon="wallet",
+                    order=10, section="money"),
+            NavItem("En qué se va", "finance:spending", icon="pie",
+                    order=15, section="money"),
+        )
         reg.widget(DashboardWidget(
             key="finance.cards",
             label="Tarjetas",

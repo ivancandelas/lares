@@ -20,7 +20,8 @@ class BelongingsModule(LaresModule):
         reg.check(checks.ValuableWithoutInvoice, checks.WarrantyWithoutProof,
                   checks.StaleValuable)
         reg.demo_seeder(demo.seed)
-        reg.nav(NavItem(label="Objetos", url_name="belongings:list", icon="box", order=25))
+        reg.nav(NavItem("Objetos", "belongings:list", icon="box", order=30,
+                        section="holdings"))
         reg.widget(DashboardWidget(
             key="belongings.warranties",
             label="Garantías por vencer",

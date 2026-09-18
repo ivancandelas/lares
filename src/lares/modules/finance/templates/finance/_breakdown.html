@@ -1,0 +1,30 @@
+{% comment %}
+  Una barra proporcional dice más que un porcentaje: se ve de un vistazo cuánto
+  pesa lo primero frente a todo lo demás.
+{% endcomment %}
+<h2 class="mt-10 text-sm font-medium">{{ titulo }}</h2>
+{% if nota %}<p class="mt-1 max-w-[52ch] text-[13px] text-soft">{{ nota }}</p>{% endif %}
+<ul class="mt-2 divide-y divide-rule border-y border-rule">
+  {% for fila in filas %}
+    <li class="py-3">
+      <div class="flex items-baseline justify-between gap-4">
+        {% if fila.url %}
+          <a href="{{ fila.url }}" class="min-w-0 truncate text-[15px] hover:text-calm">{{ fila.label }}</a>
+        {% else %}
+          <span class="min-w-0 truncate text-[15px]">{{ fila.label }}</span>
+        {% endif %}
+        <span class="shrink-0 tabular-nums text-sm">{{ fila.total|floatformat:0 }}</span>
+      </div>
+      <div class="mt-1.5 flex items-center gap-3">
+        <div class="h-1 flex-1 rounded-full bg-rule">
+          <div class="h-1 rounded-full bg-calm" style="width: {% widthratio fila.share 1 100 %}%"></div>
+        </div>
+        <span class="w-24 shrink-0 text-right text-[13px] tabular-nums text-soft">
+          {% widthratio fila.share 1 100 %}%, {{ fila.count }} mov.
+        </span>
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">Nada todavía.</li>
+  {% endfor %}
+</ul>
