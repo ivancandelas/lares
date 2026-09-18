@@ -7,10 +7,13 @@ rapida de que cada pantalla acabe pareciendose a otra cosa.
 
 from __future__ import annotations
 
+import datetime as dt
+
 from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
+from . import related
 from .forms import (
     AccountForm,
     DisposalForm,
@@ -116,6 +119,8 @@ def resource_detail(request, pk):
     )
     return render(request, "core/resource_detail.html", {
         "obj": obj,
+        "enlaces": registry.links_for(obj),
+        "prestado_a": related.borrower_of(obj),
         "facts": obj.facts(),
         "documentos": documentos,
         "obligaciones": pendientes,
@@ -179,6 +184,57 @@ def party_list(request):
         "personas": Party.objects.filter(kind=Party.Kind.PERSON),
         "organizaciones": Party.objects.filter(kind=Party.Kind.ORGANIZATION),
     })
+
+
+def party_detail(request, pk):
+    """La ficha de una persona u organización, con lo que cuelga de ella."""
+    party = get_object_or_404(Party, pk=pk)
+    return render(request, "core/party_detail.html", {
+        "party": party,
+        "enlaces": registry.links_for(party),
+        "prestados": related.lent_to(party),
+    })
+
+
+def resource_lend(request, pk):
+    """Prestar una cosa: «¿a quién le presté el taladro?»."""
+    from django.contrib.contenttypes.models import ContentType
+
+    base = get_object_or_404(Resource, pk=pk)
+    obj = base.as_concrete()
+
+    if request.method == "POST" and request.POST.get("party"):
+        destinatario = get_object_or_404(Party, pk=request.POST["party"])
+        Link.objects.get_or_create(
+            household=request.household,
+            source_type=ContentType.objects.get_for_model(obj.__class__),
+            source_id=obj.pk, role=related.LENT_TO,
+            target_type=ContentType.objects.get_for_model(Party),
+            target_id=destinatario.pk, valid_to=None,
+            defaults={"valid_from": dt.date.today()},
+        )
+        messages.success(request, f"{obj} está con {destinatario}.")
+        return redirect("core:resource-detail", pk=obj.pk)
+
+    return render(request, "core/lend.html", {
+        "obj": obj,
+        "personas": Party.objects.filter(kind=Party.Kind.PERSON),
+    })
+
+
+def resource_return(request, pk):
+    from django.contrib.contenttypes.models import ContentType
+
+    base = get_object_or_404(Resource, pk=pk)
+    obj = base.as_concrete()
+    # No se borra la arista: se cierra. El préstamo pasado es historial.
+    Link.objects.filter(
+        role=related.LENT_TO,
+        source_type=ContentType.objects.get_for_model(obj.__class__),
+        source_id=obj.pk, valid_to__isnull=True,
+    ).update(valid_to=dt.date.today())
+    messages.success(request, f"{obj} está de vuelta.")
+    return redirect("core:resource-detail", pk=obj.pk)
 
 
 def party_new(request):

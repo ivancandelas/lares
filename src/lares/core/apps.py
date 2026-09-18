@@ -41,6 +41,9 @@ class CoreConfig(AppConfig):
         # El CFDI va primero: está firmado, no se adivina.
         registry.classifier(CfdiClassifier, KeywordClassifier)
 
+        from .related import for_party
+        registry.related(for_party)
+
         # Las reglas que cambian por estado y por año viven en packs/*.yaml.
         # Cambiar una fecha no debería exigir un despliegue.
         packs.register(registry)

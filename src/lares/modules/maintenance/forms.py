@@ -39,6 +39,12 @@ class SubjectMixin:
 class MaintenancePlanForm(SubjectMixin, LaresForm):
     subject = SubjectMixin.subject
 
+    GROUPS = (
+        ("Qué y de qué", ["title", "subject"]),
+        ("Cada cuánto", ["basis", "every_months", "every_km", "last_done_on"]),
+        ("Quién y cuánto", ["preferred_provider", "estimated_cost", "is_active"]),
+    )
+
     class Meta:
         model = MaintenancePlan
         fields = ["title", "basis", "every_months", "every_km", "last_done_on",
@@ -61,6 +67,12 @@ class MaintenancePlanForm(SubjectMixin, LaresForm):
 
 class WorkOrderForm(SubjectMixin, LaresForm):
     subject = SubjectMixin.subject
+
+    GROUPS = (
+        ("Qué se hizo", ["title", "subject", "done_on", "plan"]),
+        ("Quién y cuánto", ["provider", "cost", "currency", "odometer_km"]),
+        ("Garantía y notas", ["warranty_until", "notes"]),
+    )
 
     class Meta:
         model = WorkOrder

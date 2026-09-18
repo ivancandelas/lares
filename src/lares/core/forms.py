@@ -30,7 +30,14 @@ INPUT = ("w-full rounded-sm border border-rule bg-white px-3 py-2 "
 
 
 class LaresForm(forms.ModelForm):
-    """Base con el aspecto ya resuelto y las fechas como selector nativo."""
+    """Base con el aspecto ya resuelto y las fechas como selector nativo.
+
+    `GROUPS` parte el formulario en bloques con titulo. Veinticinco campos
+    seguidos son un muro: agrupados se rellenan sin leerlos todos, y el titulo
+    dice cuando un bloque no aplica ("Solo si vives de renta").
+    """
+
+    GROUPS: tuple = ()
 
     def __init__(self, *args, household=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,6 +63,24 @@ class LaresForm(forms.ModelForm):
                 f.name == "household" for f in queryset.model._meta.fields
             ):
                 field.queryset = queryset.model._base_manager.filter(household=household)
+
+    def groups(self):
+        """[(titulo, [campos])] para la plantilla. Sin GROUPS, un solo bloque."""
+        if not self.GROUPS:
+            return [("", list(self))]
+
+        por_nombre = {campo.name: campo for campo in self}
+        salida, usados = [], set()
+        for titulo, nombres in self.GROUPS:
+            campos = [por_nombre[n] for n in nombres if n in por_nombre]
+            if campos:
+                salida.append((titulo, campos))
+                usados.update(c.name for c in campos)
+        # Lo que no se listó no se pierde: va al final.
+        sobrantes = [c for c in self if c.name not in usados]
+        if sobrantes:
+            salida.append(("Otros datos", sobrantes))
+        return salida
 
     def save(self, commit=True):
         obj = super().save(commit=False)
@@ -110,6 +135,13 @@ class LocationForm(LaresForm):
 class DocumentForm(LaresForm):
     """Un documento suelto no sirve: lo que importa es a qué pertenece."""
 
+    GROUPS = (
+        ("Qué es", ["title", "doc_type", "file", "attach_to"]),
+        ("Fechas", ["issued_on", "expires_on"]),
+        ("Importe y emisor", ["issuer", "amount", "currency"]),
+        ("Privacidad", ["confidentiality"]),
+    )
+
     attach_to = forms.ModelChoiceField(
         queryset=Resource.objects.none(), required=False,
         label="Pertenece a", help_text="El coche, la casa o la tarjeta a la que se refiere.",
@@ -161,6 +193,11 @@ class DocumentForm(LaresForm):
 
 class ObligationRuleForm(LaresForm):
     """Reglas propias sin pedirle JSON a nadie."""
+
+    GROUPS = (
+        ("Qué", ["label", "amount", "currency", "counterparty"]),
+        ("Cada cuánto", ["periodicity", "day", "month", "on_date"]),
+    )
 
     PERIODICIDAD = [
         ("monthly", "Cada mes"),

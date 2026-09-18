@@ -4,6 +4,15 @@ from .models import Vehicle
 
 
 class VehicleForm(ResourceForm):
+    GROUPS = (
+        ("Qué coche es", ["name", "make", "model", "year", "plates", "vin"]),
+        ("De quién y dónde", ["owner", "location", "acquired_on"]),
+        ("Uso y mantenimiento", ["odometer_km", "avg_km_per_month",
+                                 "service_interval_km", "last_service_km",
+                                 "last_service_on"]),
+        ("Cuánto vale", ["purchase_amount", "current_value", "currency", "status"]),
+    )
+
     class Meta:
         model = Vehicle
         fields = [

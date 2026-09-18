@@ -4,6 +4,18 @@ from .models import Property, Service
 
 
 class PropertyForm(ResourceForm):
+    GROUPS = (
+        ("Qué es y cómo lo tienes", ["name", "property_type", "tenure", "use"]),
+        ("Dónde está", ["address", "city", "subdivision", "land_m2", "built_m2"]),
+        ("Solo si es tuyo", ["owner", "acquired_on", "purchase_amount",
+                             "current_value", "currency", "cadastral_id",
+                             "deed_number", "deed_date", "ownership_share",
+                             "predial_month", "predial_amount"]),
+        ("Solo si vives de renta", ["landlord", "rent_amount", "rent_due_day",
+                                    "deposit_amount", "lease_ends_on"]),
+        ("Notas", ["status", "description"]),
+    )
+
     class Meta:
         model = Property
         fields = ["name", "property_type", "tenure", "use", "address", "city",
@@ -52,6 +64,13 @@ class PropertyForm(ResourceForm):
 
 
 class ServiceForm(ResourceForm):
+    GROUPS = (
+        ("Qué servicio", ["name", "service_kind", "property_ref", "provider",
+                          "contract_number"]),
+        ("Cuándo y cuánto", ["cycle", "due_day", "typical_amount", "currency",
+                             "status"]),
+    )
+
     class Meta:
         model = Service
         fields = ["name", "service_kind", "property_ref", "provider",

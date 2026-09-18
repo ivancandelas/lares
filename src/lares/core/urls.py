@@ -39,7 +39,10 @@ urlpatterns = [
 
     path("personas/", views_crud.party_list, name="parties"),
     path("personas/nueva/", views_crud.party_new, name="party-new"),
+    path("personas/<uuid:pk>/", views_crud.party_detail, name="party-detail"),
     path("personas/<uuid:pk>/editar/", views_crud.party_edit, name="party-edit"),
+    path("r/<uuid:pk>/prestar/", views_crud.resource_lend, name="resource-lend"),
+    path("r/<uuid:pk>/devolver/", views_crud.resource_return, name="resource-return"),
 
     path("documentos/nuevo/", views_crud.document_new, name="document-new"),
     path("documentos/<uuid:pk>/editar/", views_crud.document_edit, name="document-edit"),

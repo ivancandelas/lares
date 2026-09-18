@@ -4,6 +4,15 @@ from .models import Belonging
 
 
 class BelongingForm(ResourceForm):
+    GROUPS = (
+        ("Qué es", ["name", "category", "brand", "model_name", "serial_number"]),
+        ("De quién y dónde", ["owner", "location", "acquired_on"]),
+        ("Cuánto vale", ["purchase_amount", "current_value", "appraised_value",
+                         "appraised_on", "currency"]),
+        ("Garantía", ["warranty_until", "warranty_note"]),
+        ("Notas", ["status", "description"]),
+    )
+
     class Meta:
         model = Belonging
         fields = ["name", "category", "brand", "model_name", "serial_number",

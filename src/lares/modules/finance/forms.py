@@ -4,6 +4,12 @@ from .models import CreditCard
 
 
 class CreditCardForm(ResourceForm):
+    GROUPS = (
+        ("Qué tarjeta es", ["name", "issuer", "last_four", "owner"]),
+        ("Fechas y límite", ["credit_limit", "cut_day", "due_day", "apr"]),
+        ("Dónde viven sus movimientos", ["account", "currency", "status"]),
+    )
+
     class Meta:
         model = CreditCard
         fields = ["name", "issuer", "account", "last_four", "credit_limit",

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load money %}
-{% block title %}En qué se va - {{ product_name }}{% endblock %}
+{% block title %}Entra y sale - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-light tracking-tight">En qué se va</h1>
+<h1 class="text-2xl font-light tracking-tight">Entra y sale</h1>
 <p class="mt-1 max-w-[56ch] text-sm text-soft">
-  Cuatro preguntas distintas sobre el mismo gasto: en qué, dónde, para quién y
-  sobre qué cosa. Casi ninguna app las separa, y por eso no responden ninguna.
+  De dónde viene el dinero y a dónde va. Cada gasto se mira por cuatro lados:
+  en qué, dónde, para quién y sobre qué cosa.
 </p>
 
 <nav class="mt-6 flex flex-wrap gap-1 border-y border-rule py-2 text-sm">
@@ -18,10 +18,28 @@
   {% endfor %}
 </nav>
 
-<div class="mt-6">
-  <div class="text-[13px] text-soft">{{ period_label }}</div>
-  <div class="mt-0.5 text-2xl font-light tabular-nums">{% money0 total %}</div>
+<div class="mt-6 flex flex-wrap gap-x-12 gap-y-4">
+  <div>
+    <div class="text-[13px] text-soft">Entró</div>
+    <div class="mt-0.5 text-2xl font-light tabular-nums text-calm">{% money0 total_in %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Salió</div>
+    <div class="mt-0.5 text-2xl font-light tabular-nums">{% money0 total %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Diferencia</div>
+    <div class="mt-0.5 text-2xl font-light tabular-nums {% if balance < 0 %}text-overdue{% endif %}">
+      {% money0 balance %}
+    </div>
+  </div>
 </div>
+
+<h2 class="mt-12 border-t border-rule pt-8 text-[15px] font-medium">De dónde entra</h2>
+{% include "finance/_breakdown.html" with titulo="Por concepto" filas=in_by_category nota="Sueldo, rentas que cobras, ventas." %}
+{% include "finance/_breakdown.html" with titulo="Por quién" filas=in_by_source nota="Quién te paga." %}
+
+<h2 class="mt-12 border-t border-rule pt-8 text-[15px] font-medium">A dónde va</h2>
 
 {% include "finance/_breakdown.html" with titulo="En qué" filas=by_category nota="La categoría: gasolina, supermercado, mascotas." %}
 {% include "finance/_breakdown.html" with titulo="Dónde" filas=by_merchant nota="El comercio o la persona a la que le pagas." %}

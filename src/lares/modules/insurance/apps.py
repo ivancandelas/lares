@@ -27,6 +27,8 @@ class InsuranceModule(LaresModule):
         reg.obligations(obligations.RenewalProvider, obligations.PremiumProvider)
         reg.check(checks.ExpiredPolicy, checks.PolicyCoversNothing,
                   checks.Underinsured)
+        from .related import for_party as insurance_links
+        reg.related(insurance_links)
         reg.demo_seeder(demo.seed)
         reg.nav(NavItem("Seguros", "insurance:list", icon="shield", order=40,
                         section="holdings"))

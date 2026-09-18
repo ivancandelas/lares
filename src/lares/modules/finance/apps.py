@@ -29,7 +29,7 @@ class FinanceModule(LaresModule):
         reg.nav(
             NavItem("Cuentas y tarjetas", "finance:accounts", icon="wallet",
                     order=10, section="money"),
-            NavItem("En qué se va", "finance:spending", icon="pie",
+            NavItem("Entra y sale", "finance:spending", icon="pie",
                     order=15, section="money"),
         )
         reg.widget(DashboardWidget(

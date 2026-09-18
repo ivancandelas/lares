@@ -112,6 +112,16 @@ NAV_GROUPS = [
 
 
 @dataclass(frozen=True)
+class RelatedLink:
+    """Un enlace con su cuenta: «3 estados de cuenta», «$18,430 gastados»."""
+
+    label: str
+    count: int
+    url: str
+    hint: str = ""
+
+
+@dataclass(frozen=True)
 class NavItem:
     label: str
     url_name: str
@@ -177,6 +187,7 @@ class Registry:
         # "household" -> el hogar mismo, para reglas que no cuelgan de nada.
         self.subject_sources: dict[str, object] = {}
         self.classifiers: list = []
+        self.related_providers: list = []
 
     # -- API que usan los modulos -------------------------------------------
 
@@ -237,6 +248,24 @@ class Registry:
 
     def connector(self, key: str, connector):
         self.connectors[key] = connector
+
+    def related(self, fn):
+        """Enlaces a lo que cuelga de una entidad.
+
+        `fn(entidad) -> list[RelatedLink]`. Es lo que convierte una ficha en un
+        punto de partida: entras en BBVA y ves sus estados de cuenta; entras en
+        Diego y ves que le prestaste la guitarra.
+        """
+        self.related_providers.append(fn)
+
+    def links_for(self, entity) -> list:
+        salida = []
+        for fn in self.related_providers:
+            try:
+                salida.extend(fn(entity) or [])
+            except Exception:
+                logger.exception("Un proveedor de enlaces falló para %s", entity)
+        return [link for link in salida if link.count] or []
 
     def classifier(self, *classifiers):
         """Reconocedores de lo que entra por la bandeja.

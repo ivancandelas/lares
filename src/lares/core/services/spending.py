@@ -45,15 +45,26 @@ def _gastos(desde: dt.date | None):
     return qs.filter(entry__date__gte=desde) if desde else qs
 
 
-def _rows(qs, campo: str, etiqueta_vacia: str, campo_id: str | None = None) -> list[Row]:
+def _ingresos(desde: dt.date | None):
+    """En partida doble un ingreso vive en negativo; se muestra en positivo.
+
+    Nadie dice "gané menos cuarenta y dos mil".
+    """
+    qs = Posting.objects.filter(account__type=Account.Type.INCOME, amount__lt=0)
+    return qs.filter(entry__date__gte=desde) if desde else qs
+
+
+def _rows(qs, campo: str, etiqueta_vacia: str, campo_id: str | None = None,
+          negativo: bool = False) -> list[Row]:
     campos = [campo] + ([campo_id] if campo_id else [])
     datos = (
         qs.values(*campos)
         .annotate(total=Sum("amount"), n=Count("id"))
-        .order_by("-total")
+        .order_by("total" if negativo else "-total")
     )
     filas = [
-        Row(label=d[campo] or etiqueta_vacia, total=d["total"], count=d["n"],
+        Row(label=d[campo] or etiqueta_vacia,
+            total=-d["total"] if negativo else d["total"], count=d["n"],
             key=d.get(campo_id) if campo_id else None)
         for d in datos if d["total"]
     ]
@@ -72,11 +83,22 @@ def report(household, periodo: str = "quarter") -> dict:
         qs = _gastos(desde)
         total = qs.aggregate(t=Sum("amount"))["t"] or 0
 
+        entradas = _ingresos(desde)
+        total_entra = -(entradas.aggregate(t=Sum("amount"))["t"] or 0)
+
         return {
             "period": periodo,
             "period_label": etiqueta,
             "periods": [(k, v[0]) for k, v in PERIODOS.items()],
             "total": total,
+            "total_in": total_entra,
+            "balance": total_entra - total,
+            "in_by_category": _rows(entradas, "account__name", "Sin clasificar",
+                                    negativo=True),
+            "in_by_source": _linked(
+                _rows(entradas, "entry__counterparty__name", "Sin registrar",
+                      "entry__counterparty_id", negativo=True)
+            ),
             "by_category": _rows(qs, "account__name", "Sin categoría"),
             "by_merchant": _linked(
                 _rows(qs, "entry__counterparty__name", "Sin registrar",

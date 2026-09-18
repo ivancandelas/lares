@@ -22,6 +22,13 @@ class PolicyForm(ResourceForm):
         help_text="El coche, la casa, la guitarra. Puedes elegir varios.",
     )
 
+    GROUPS = (
+        ("Qué póliza es", ["name", "branch", "policy_number", "insurer", "agent"]),
+        ("Qué cubre", ["covers", "coverage_amount", "deductible", "beneficiaries"]),
+        ("Cuánto y cuándo", ["premium", "premium_cycle", "premium_day",
+                             "starts_on", "ends_on", "currency", "status"]),
+    )
+
     class Meta:
         model = Policy
         fields = ["name", "branch", "policy_number", "insurer", "agent",

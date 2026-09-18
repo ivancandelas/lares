@@ -25,3 +25,13 @@ def media_aislado(settings, tmp_path):
     """Ninguna prueba escribe en el almacén real de archivos."""
     settings.MEDIA_ROOT = str(tmp_path / "media")
     return settings.MEDIA_ROOT
+
+
+@pytest.fixture
+def sesion_admin(client, django_user_model, household):
+    """Cliente autenticado, para las pruebas que pasan por una vista."""
+    user = django_user_model.objects.create_user(
+        username="ivan", email="ivan@example.com", password="x"
+    )
+    client.force_login(user)
+    return client

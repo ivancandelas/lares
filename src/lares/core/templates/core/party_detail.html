@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ party }} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-start justify-between gap-4">
+  <div class="min-w-0">
+    <h1 class="text-2xl font-light tracking-tight">{{ party.name }}</h1>
+    <p class="mt-1 text-sm text-soft">
+      {{ party.get_kind_display }}{% if party.tax_id %}, {{ party.tax_id }}{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'core:party-edit' party.pk %}"
+     class="shrink-0 rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+    Editar
+  </a>
+</div>
+
+{% include "core/_related.html" %}
+
+{% if prestados %}
+  <h2 class="mt-10 text-sm font-medium">Tiene prestado</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for r in prestados %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <a href="{% url 'core:resource-detail' r.pk %}" class="text-[15px] hover:text-calm">{{ r.name }}</a>
+        <form method="post" action="{% url 'core:resource-return' r.pk %}">
+          {% csrf_token %}
+          <button class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-calm hover:text-calm">
+            Me lo devolvió
+          </button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% if party.notes %}
+  <p class="mt-8 max-w-[60ch] leading-relaxed">{{ party.notes }}</p>
+{% endif %}
+
+{% if not enlaces and not prestados %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Todavía no hay nada asociado. En cuanto registres un gasto, un documento o
+    una póliza con esta parte, aparecerá aquí.
+  </p>
+{% endif %}
+{% endblock %}

@@ -2,35 +2,46 @@
 {% block title %}{{ title }} - {{ product_name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-lg">
+<div class="max-w-2xl">
   <h1 class="text-2xl font-light tracking-tight">{{ title }}</h1>
 
-  <form method="post" class="mt-8 space-y-5"
+  <form method="post" class="mt-8"
         {% if multipart %}enctype="multipart/form-data"{% endif %}>
     {% csrf_token %}
 
     {% if form.non_field_errors %}
-      <div class="border-l-2 border-overdue pl-3 text-sm text-overdue">
+      <div class="mb-6 border-l-2 border-overdue pl-3 text-sm text-overdue">
         {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
       </div>
     {% endif %}
 
-    {% for field in form %}
-      <div>
-        <label for="{{ field.id_for_label }}" class="block text-sm text-soft">
-          {{ field.label }}{% if field.field.required %} <span class="text-soon">·</span>{% endif %}
-        </label>
-        <div class="mt-1">{{ field }}</div>
-        {% if field.help_text %}
-          <p class="mt-1 text-[13px] text-soft">{{ field.help_text }}</p>
+    {% for titulo, campos in form.groups %}
+      <fieldset class="mb-8">
+        {% if titulo %}
+          <legend class="mb-3 w-full border-b border-rule pb-1.5 text-sm font-medium">
+            {{ titulo }}
+          </legend>
         {% endif %}
-        {% for error in field.errors %}
-          <p class="mt-1 text-[13px] text-overdue">{{ error }}</p>
-        {% endfor %}
-      </div>
+        <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+          {% for field in campos %}
+            <div{% if field.field.widget.input_type == "textarea" or field.name == "description" or field.name == "notes" %} class="sm:col-span-2"{% endif %}>
+              <label for="{{ field.id_for_label }}" class="block text-sm text-soft">
+                {{ field.label }}{% if field.field.required %} <span class="text-soon" title="obligatorio">·</span>{% endif %}
+              </label>
+              <div class="mt-1">{{ field }}</div>
+              {% if field.help_text %}
+                <p class="mt-1 text-[13px] leading-snug text-soft">{{ field.help_text }}</p>
+              {% endif %}
+              {% for error in field.errors %}
+                <p class="mt-1 text-[13px] text-overdue">{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </fieldset>
     {% endfor %}
 
-    <div class="flex items-center gap-4 pt-2">
+    <div class="flex items-center gap-4 border-t border-rule pt-5">
       <button type="submit"
               class="rounded-sm bg-calm px-4 py-2.5 text-sm font-medium text-white hover:bg-ink">
         {{ submit }}

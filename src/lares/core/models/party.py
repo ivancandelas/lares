@@ -17,7 +17,7 @@ from .base import HouseholdScopedModel
 class Party(HouseholdScopedModel):
     class Kind(models.TextChoices):
         PERSON = "person", "Persona"
-        ORGANIZATION = "organization", "Organizacion"
+        ORGANIZATION = "organization", "Organización"
 
     kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.PERSON)
     name = models.CharField(max_length=200)

@@ -1,0 +1,17 @@
+{% comment %}
+  Los enlaces de una ficha. Sin tarjetas ni iconos: una fila de enlaces con su
+  número delante se lee de un vistazo y no compite con el contenido.
+{% endcomment %}
+{% if enlaces %}
+  <ul class="mt-6 flex flex-wrap gap-x-6 gap-y-2 border-y border-rule py-3">
+    {% for e in enlaces %}
+      <li>
+        <a href="{{ e.url }}" class="group inline-flex items-baseline gap-1.5">
+          <span class="tabular-nums text-[15px] font-medium group-hover:text-calm">{{ e.count }}</span>
+          <span class="text-[13px] text-soft group-hover:text-calm">{{ e.label }}</span>
+          {% if e.hint %}<span class="text-[13px] text-soft">· {{ e.hint }}</span>{% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

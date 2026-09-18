@@ -30,6 +30,19 @@
         </button>
       </form>
     {% else %}
+      {% if prestado_a %}
+        <form method="post" action="{% url 'core:resource-return' obj.pk %}">
+          {% csrf_token %}
+          <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+            Me lo devolvieron
+          </button>
+        </form>
+      {% else %}
+        <a href="{% url 'core:resource-lend' obj.pk %}"
+           class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+          Prestar
+        </a>
+      {% endif %}
       <form method="post" action="{% url 'core:resource-verify' obj.pk %}">
         {% csrf_token %}
         <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
@@ -43,6 +56,14 @@
     {% endif %}
   </div>
 </div>
+
+{% if prestado_a %}
+  <p class="mt-4 border-l-2 border-soon pl-4 text-[15px]">
+    Lo tiene <a href="{% url 'core:party-detail' prestado_a.pk %}" class="text-calm hover:underline">{{ prestado_a }}</a>.
+  </p>
+{% endif %}
+
+{% include "core/_related.html" %}
 
 {% if obj.status == "disposed" %}
   <p class="mt-4 border-l-2 border-soft pl-4 text-[15px] text-soft">

@@ -22,6 +22,8 @@ class MaintenanceModule(LaresModule):
         )
         reg.obligations(obligations.MaintenanceProvider)
         reg.check(checks.OverdueMaintenance, checks.WorkWithoutProvider)
+        from .related import for_party as maintenance_links
+        reg.related(maintenance_links)
         reg.demo_seeder(demo.seed)
         reg.nav(
             NavItem("Mantenimiento", "maintenance:list", icon="wrench", order=50,

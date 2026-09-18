@@ -16,7 +16,7 @@
 <ul class="mt-1 divide-y divide-rule border-y border-rule">
   {% for p in personas %}
     <li class="flex items-baseline justify-between gap-4 py-3">
-      <a href="{% url 'core:party-edit' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+      <a href="{% url 'core:party-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
       {% if p.is_self %}<span class="text-[13px] text-soft">tú</span>{% endif %}
     </li>
   {% empty %}
@@ -28,7 +28,7 @@
 <ul class="mt-1 divide-y divide-rule border-y border-rule">
   {% for p in organizaciones %}
     <li class="flex items-baseline justify-between gap-4 py-3">
-      <a href="{% url 'core:party-edit' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+      <a href="{% url 'core:party-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
       {% if p.tax_id %}<span class="text-[13px] text-soft">{{ p.tax_id }}</span>{% endif %}
     </li>
   {% empty %}
