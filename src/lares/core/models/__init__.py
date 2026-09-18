@@ -16,6 +16,7 @@ from .base import HouseholdScopedModel, TimestampedModel
 from .documents import Document
 from .events import Event, lares_event
 from .graph import Link
+from .integrations import ApiKey, Webhook, WebhookDelivery
 from .ledger import Account, Entry, Posting
 from .obligations import Obligation, ObligationRule, Reminder
 from .party import ContactPoint, Party
@@ -31,5 +32,6 @@ __all__ = [
     "Document",
     "ObligationRule", "Obligation", "Reminder",
     "Event", "lares_event",
+    "ApiKey", "Webhook", "WebhookDelivery",
     "Account", "Entry", "Posting",
 ]

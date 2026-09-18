@@ -6,7 +6,7 @@ Todas son idempotentes: se pueden reintentar sin efectos secundarios.
 from celery import shared_task
 
 from .models import Household
-from .services import checks, notify, obligations
+from .services import checks, notify, obligations, webhooks
 
 
 @shared_task
@@ -32,3 +32,12 @@ def run_checks():
         str(h.pk): len(checks.run_all(h))
         for h in Household.objects.all()
     }
+
+
+@shared_task
+def dispatch_webhooks(household_id, verb, payload):
+    household = Household.objects.filter(pk=household_id).first()
+    if not household:
+        return {"delivered": 0}
+    entregas = webhooks.deliver(household, verb, payload)
+    return {"delivered": sum(1 for e in entregas if e.ok), "attempted": len(entregas)}
