@@ -1,3 +1,4 @@
+{% load money %}
 <li class="flex items-baseline justify-between gap-4 py-4">
   <div class="min-w-0">
     <a href="{% url 'core:resource-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
@@ -7,14 +8,14 @@
   <div class="shrink-0 text-right">
     {% if p.is_mine %}
       {% if p.current_value %}
-        <div class="tabular-nums text-sm">{{ p.current_value|floatformat:0 }}</div>
+        <div class="tabular-nums text-sm">{% money0 p.current_value p.currency %}</div>
       {% endif %}
       {% if p.ownership_share %}
         <div class="text-[13px] text-soft">tu {{ p.ownership_share|floatformat:0 }}%</div>
       {% endif %}
     {% else %}
       {% if p.rent_amount %}
-        <div class="tabular-nums text-sm">{{ p.rent_amount|floatformat:0 }} al mes</div>
+        <div class="tabular-nums text-sm">{% money p.rent_amount p.currency %} al mes</div>
       {% endif %}
       {% if p.lease_ends_on %}
         <div class="text-[13px] text-soft">hasta {{ p.lease_ends_on|date:"j M Y"|lower }}</div>

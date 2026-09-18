@@ -27,10 +27,15 @@ def mazda(scoped, me):
 
 @pytest.mark.django_db
 def test_genera_obligaciones_del_modulo(scoped, mazda):
-    result = obligations.materialize(scoped, HOY)
-    assert result["created"] == 4
+    """El módulo aporta lo que depende del vehículo; el pack, lo que depende de la ley."""
+    obligations.materialize(scoped, HOY)
     fuentes = set(Obligation.objects.values_list("source", flat=True))
-    assert fuentes == {"vehicles.verificacion", "vehicles.refrendo", "vehicles.service"}
+
+    # De la placa y del odómetro: solo el módulo sabe leerlos.
+    assert {"vehicles.verificacion", "vehicles.service"} <= fuentes
+    # Del pack de jurisdicción: una fecha fija al año.
+    assert "packs.vehicle" in fuentes
+    assert Obligation.objects.filter(title__startswith="Refrendo").exists()
 
 
 @pytest.mark.django_db

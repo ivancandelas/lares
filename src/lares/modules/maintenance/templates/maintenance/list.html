@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Mantenimiento - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -33,7 +34,7 @@
           <div class="text-[13px] text-soon">nunca registrado</div>
         {% endif %}
         {% if p.estimated_cost %}
-          <div class="tabular-nums text-[13px] text-soft">~{{ p.estimated_cost|floatformat:0 }}</div>
+          <div class="tabular-nums text-[13px] text-soft">~{% money0 p.estimated_cost %}</div>
         {% endif %}
       </div>
     </li>
@@ -56,7 +57,7 @@
         </div>
       </div>
       <div class="shrink-0 text-right">
-        {% if w.cost %}<div class="tabular-nums text-sm">{{ w.cost|floatformat:0 }}</div>{% endif %}
+        {% if w.cost %}<div class="tabular-nums text-sm">{% money w.cost w.currency %}</div>{% endif %}
         {% if w.warranty_until %}
           <div class="text-[13px] text-soft">garantía a {{ w.warranty_until|date:"j M Y"|lower }}</div>
         {% endif %}

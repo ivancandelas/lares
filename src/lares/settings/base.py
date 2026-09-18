@@ -150,6 +150,8 @@ CELERY_BEAT_SCHEDULE = {
 LANGUAGE_CODE = env("LARES_LANGUAGE_CODE", default="es-mx")
 TIME_ZONE = env("LARES_TIME_ZONE", default="America/Mexico_City")
 USE_I18N = True
+# Sin esto, un importe se imprime "410000" y hay que contar dígitos para leerlo.
+USE_THOUSAND_SEPARATOR = True
 USE_TZ = True
 
 DEFAULT_COUNTRY = env("LARES_DEFAULT_COUNTRY", default="MX")

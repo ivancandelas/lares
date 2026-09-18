@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Dinero - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -17,17 +18,17 @@
 <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
   <div>
     <div class="text-[13px] text-soft">En cuentas</div>
-    <div class="mt-0.5 text-xl font-light tabular-nums">{{ activos|floatformat:0 }}</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 activos %}</div>
   </div>
   <div>
     <div class="text-[13px] text-soft">Debes</div>
     <div class="mt-0.5 text-xl font-light tabular-nums {% if pasivos %}text-overdue{% endif %}">
-      {{ pasivos|floatformat:0 }}
+      {% money0 pasivos %}
     </div>
   </div>
   <div>
     <div class="text-[13px] text-soft">Queda</div>
-    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{{ neto|floatformat:0 }}</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 neto %}</div>
   </div>
 </div>
 
@@ -43,7 +44,7 @@
           {% endwith %}
         </div>
         {% if c.account %}
-          <span class="shrink-0 tabular-nums text-sm">{{ c.account.balance|floatformat:0 }}</span>
+          <span class="shrink-0 tabular-nums text-sm">{% money0 c.account.balance c.account.currency %}</span>
         {% endif %}
       </li>
     {% endfor %}
@@ -61,7 +62,7 @@
             <div class="text-[13px] text-soft">{{ c.institution }}{% if c.last_four %}, ····{{ c.last_four }}{% endif %}</div>
           {% endif %}
         </div>
-        <span class="shrink-0 tabular-nums text-sm text-soft">{{ c.balance|floatformat:0 }}</span>
+        <span class="shrink-0 tabular-nums text-sm text-soft">{% money0 c.balance c.currency %}</span>
       </li>
     {% endfor %}
   </ul>
@@ -78,7 +79,7 @@
         </div>
         {% for p in e.postings.all %}
           {% if p.amount > 0 %}
-            <span class="shrink-0 tabular-nums text-sm">{{ p.amount|floatformat:0 }}</span>
+            <span class="shrink-0 tabular-nums text-sm">{% money p.amount p.currency %}</span>
           {% endif %}
         {% endfor %}
       </li>

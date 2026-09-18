@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Patrimonio - {{ product_name }}{% if ajenos %}
   <h2 class="mt-12 text-sm font-medium">Administras, pero no son tuyos</h2>
   <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
@@ -45,17 +46,17 @@
 <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
   <div>
     <div class="text-[13px] text-soft">Bienes</div>
-    <div class="mt-0.5 text-xl font-light tabular-nums">{{ valor_total|floatformat:0 }}</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 valor_total %}</div>
   </div>
   <div>
     <div class="text-[13px] text-soft">Deuda</div>
     <div class="mt-0.5 text-xl font-light tabular-nums {% if deuda %}text-overdue{% endif %}">
-      {{ deuda|floatformat:0 }}
+      {% money0 deuda %}
     </div>
   </div>
   <div>
     <div class="text-[13px] text-soft">Patrimonio neto</div>
-    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{{ neto|floatformat:0 }}</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 neto %}</div>
   </div>
 </div>
 
@@ -71,7 +72,7 @@
           {% endwith %}
         </div>
         {% if r.current_value %}
-          <span class="shrink-0 tabular-nums text-sm text-soft">{{ r.current_value|floatformat:0 }}</span>
+          <span class="shrink-0 tabular-nums text-sm text-soft">{% money0 r.current_value r.currency %}</span>
         {% endif %}
       </li>
     {% endfor %}

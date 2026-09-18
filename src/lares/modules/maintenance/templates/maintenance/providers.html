@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Proveedores - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -19,7 +20,7 @@
         </div>
       </div>
       {% if p.total %}
-        <span class="shrink-0 tabular-nums text-sm">{{ p.total|floatformat:0 }}</span>
+        <span class="shrink-0 tabular-nums text-sm">{% money0 p.total %}</span>
       {% endif %}
     </li>
   {% empty %}

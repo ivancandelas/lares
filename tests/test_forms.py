@@ -52,7 +52,8 @@ def test_dar_de_alta_un_coche_genera_sus_vencimientos(sesion, household):
         # Del dato "placas" salen solas la verificación y el refrendo.
         fuentes = set(Obligation.objects.values_list("source", flat=True))
         assert "vehicles.verificacion" in fuentes
-        assert "vehicles.refrendo" in fuentes
+        # El refrendo lo aporta el pack de jurisdicción, no el módulo.
+        assert Obligation.objects.filter(title__startswith="Refrendo").exists()
 
 
 @pytest.mark.django_db

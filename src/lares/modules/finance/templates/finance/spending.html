@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}En qué se va - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -19,7 +20,7 @@
 
 <div class="mt-6">
   <div class="text-[13px] text-soft">{{ period_label }}</div>
-  <div class="mt-0.5 text-2xl font-light tabular-nums">{{ total|floatformat:0 }}</div>
+  <div class="mt-0.5 text-2xl font-light tabular-nums">{% money0 total %}</div>
 </div>
 
 {% include "finance/_breakdown.html" with titulo="En qué" filas=by_category nota="La categoría: gasolina, supermercado, mascotas." %}

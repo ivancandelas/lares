@@ -95,9 +95,10 @@ def test_el_fin_del_contrato_avisa_con_tres_meses(scoped, casa_rentada):
 
 @pytest.mark.django_db
 def test_el_predial_lo_paga_el_dueno_no_el_inquilino(scoped, casa_rentada, depto):
+    """El predial viene del pack, con `only_if: {is_mine: true}`."""
     obligations.materialize(scoped, HOY)
 
-    prediales = Obligation.objects.filter(source="property.predial")
+    prediales = Obligation.objects.filter(title__startswith="Predial")
     assert prediales.exists()
     for p in prediales:
         assert "Chapalita" in p.title          # nunca el que rentas

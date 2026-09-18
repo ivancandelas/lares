@@ -1,3 +1,4 @@
+{% load money %}
 <li class="flex items-baseline justify-between gap-4 py-4">
   <div class="min-w-0">
     <a href="{% url 'core:resource-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
@@ -10,10 +11,10 @@
   </div>
   <div class="shrink-0 text-right">
     {% if p.coverage_amount %}
-      <div class="tabular-nums text-sm">{{ p.coverage_amount|floatformat:0 }}</div>
+      <div class="tabular-nums text-sm">{% money0 p.coverage_amount p.currency %}</div>
     {% endif %}
     {% if p.premium %}
-      <div class="text-[13px] text-soft">prima {{ p.premium|floatformat:0 }}</div>
+      <div class="text-[13px] text-soft">prima {% money0 p.premium p.currency %}</div>
     {% endif %}
   </div>
 </li>

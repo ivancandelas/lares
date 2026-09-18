@@ -1,3 +1,4 @@
+{% load money %}
 {# Fila de la línea temporal. La fecha manda: es lo que se escanea. #}
 <li class="relative flex gap-5">
   <div class="w-11 shrink-0 pt-4 text-right tabular-nums">
@@ -17,7 +18,7 @@
     <div class="flex items-baseline justify-between gap-4">
       <span class="text-[15px] leading-snug">{{ o.title }}</span>
       {% if o.amount %}
-        <span class="shrink-0 tabular-nums text-sm text-soft">{{ o.amount|floatformat:0 }} {{ o.currency }}</span>
+        <span class="shrink-0 tabular-nums text-sm text-soft">{% money o.amount o.currency %}</span>
       {% endif %}
     </div>
     <div class="mt-1 text-[13px] text-soft">

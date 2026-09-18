@@ -1,3 +1,4 @@
+{% load money %}
 <li class="flex items-baseline justify-between gap-4 py-3">
   <div class="min-w-0">
     <a href="{% url 'core:resource-detail' b.pk %}" class="text-[15px] hover:text-calm">{{ b.name }}</a>
@@ -8,7 +9,7 @@
   </div>
   <div class="shrink-0 text-right">
     {% if b.appraised_value or b.current_value %}
-      <div class="tabular-nums text-sm">{{ b.appraised_value|default:b.current_value|floatformat:0 }}</div>
+      <div class="tabular-nums text-sm">{% money0 b.appraised_value|default:b.current_value b.currency %}</div>
     {% endif %}
     {% if b.warranty_until %}
       <div class="text-[13px] text-soft">garantía a {{ b.warranty_until|date:"j M Y"|lower }}</div>

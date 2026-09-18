@@ -1,9 +1,10 @@
+{% load money %}
 <ul class="mt-2 space-y-1.5">
   {% for c in cards %}
     <li class="flex items-baseline justify-between gap-3 text-[14px]">
       <span class="min-w-0 truncate">{{ c }}</span>
       {% if c.account %}
-        <span class="shrink-0 tabular-nums text-[13px] text-soft">{{ c.account.balance|floatformat:0 }}</span>
+        <span class="shrink-0 tabular-nums text-[13px] text-soft">{% money0 c.account.balance c.account.currency %}</span>
       {% endif %}
     </li>
   {% empty %}

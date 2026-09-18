@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}{{ obj }} - {{ product_name }}{% if tabs %}
   {% for tab in tabs %}
     {% include tab.template %}
@@ -89,7 +90,7 @@
         <div class="text-[13px] text-soft">
           {% if d.doc_type %}{{ d.doc_type }}{% endif %}
           {% if d.issued_on %}, del {{ d.issued_on|date:"j M Y"|lower }}{% endif %}
-          {% if d.amount %}, {{ d.amount|floatformat:0 }} {{ d.currency }}{% endif %}
+          {% if d.amount %}, {% money d.amount d.currency %}{% endif %}
         </div>
       </div>
       <div class="shrink-0 text-right">

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Recurrentes - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -18,7 +19,7 @@
       <div class="min-w-0">
         <div class="text-[15px] {% if not r.is_active %}text-soft line-through{% endif %}">{{ r.label }}</div>
         <div class="text-[13px] text-soft">
-          {% if r.amount %}{{ r.amount|floatformat:0 }} {{ r.currency }}{% endif %}
+          {% if r.amount %}{% money r.amount r.currency %}{% endif %}
           {% if r.counterparty %}, {{ r.counterparty }}{% endif %}
         </div>
       </div>

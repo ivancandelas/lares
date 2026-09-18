@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}{{ party }} - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -15,7 +16,7 @@
 
 <div class="mt-6">
   <div class="text-[13px] text-soft">Llevas gastado</div>
-  <div class="mt-0.5 text-2xl font-light tabular-nums">{{ total|floatformat:0 }}</div>
+  <div class="mt-0.5 text-2xl font-light tabular-nums">{% money0 total %}</div>
 </div>
 
 {% include "finance/_breakdown.html" with titulo="En qué" filas=by_category %}
@@ -28,7 +29,7 @@
         <div class="text-[15px]">{{ p.entry.description }}</div>
         <div class="text-[13px] text-soft">{{ p.entry.date|date:"j \d\e F Y"|lower }}, {{ p.account.name }}</div>
       </div>
-      <span class="shrink-0 tabular-nums text-sm">{{ p.amount|floatformat:0 }}</span>
+      <span class="shrink-0 tabular-nums text-sm">{% money p.amount p.currency %}</span>
     </li>
   {% endfor %}
 </ul>

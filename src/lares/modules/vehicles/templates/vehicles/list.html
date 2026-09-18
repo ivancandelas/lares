@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 {% block title %}Vehículos - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -19,7 +20,7 @@
       </div>
       {% if v.current_value %}
         <span class="shrink-0 tabular-nums text-sm text-soft">
-          {{ v.current_value|floatformat:0 }} {{ v.currency }}
+          {% money0 v.current_value v.currency %}
         </span>
       {% endif %}
     </li>
