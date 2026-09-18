@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Préstamos - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Préstamos</h1>
+  <a href="{% url 'core:resource-new' 'loan' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Los que te dieron y los que diste. Cuando debes llega un recibo cada mes;
+  cuando te deben no llega nada, y por eso se olvidan.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Te deben</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 total_por_cobrar %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Debes</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums {% if total_por_pagar %}text-overdue{% endif %}">
+      {% money0 total_por_pagar %}
+    </div>
+  </div>
+</div>
+
+{% if me_deben %}
+  <h2 class="mt-10 text-sm font-medium">Te deben</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for l in me_deben %}{% include "loans/_row.html" with l=l %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if debo %}
+  <h2 class="mt-10 text-sm font-medium">Debes</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for l in debo %}{% include "loans/_row.html" with l=l %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if not me_deben and not debo %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Ninguno registrado. Si le prestaste dinero a alguien, este es el sitio: es lo
+    que más fácil se evapora.
+  </p>
+{% endif %}
+
+{% if cerrados %}
+  <h2 class="mt-10 text-sm font-medium text-soft">Cerrados</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for l in cerrados %}
+      <li class="flex items-baseline justify-between gap-4 py-3 text-soft">
+        <a href="{% url 'loans:detail' l.pk %}" class="text-[15px] hover:text-calm">{{ l.name }}</a>
+        <span class="text-[13px]">{{ l.get_state_display|lower }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

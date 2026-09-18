@@ -1,0 +1,21 @@
+{% load money %}
+<li class="py-4">
+  <div class="flex items-baseline justify-between gap-4">
+    <a href="{% url 'loans:detail' l.pk %}" class="min-w-0 text-[15px] hover:text-calm">{{ l.name }}</a>
+    <span class="shrink-0 tabular-nums text-sm">
+      {% money0 l.outstanding l.currency %}
+      <span class="text-soft">de {% money0 l.principal l.currency %}</span>
+    </span>
+  </div>
+  <div class="mt-1.5 flex items-center gap-3">
+    <div class="h-1 flex-1 rounded-full bg-rule">
+      <div class="h-1 rounded-full bg-calm" style="width: {% widthratio l.progress 1 100 %}%"></div>
+    </div>
+    <span class="shrink-0 text-[13px] text-soft">
+      {{ l.context_line }}
+      {% if l.months_silent >= 4 %}
+        <span class="text-soon">· {{ l.months_silent }} meses sin movimiento</span>
+      {% endif %}
+    </span>
+  </div>
+</li>
