@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import (
     AccountForm,
+    DisposalForm,
     DocumentForm,
     ExpenseForm,
     LocationForm,
@@ -128,6 +129,51 @@ def resource_detail(request, pk):
 # ---------------------------------------------------------------------------
 
 
+def resource_dispose(request, pk):
+    """Dar de baja: vendido, perdido, robado, regalado."""
+    base = get_object_or_404(Resource, pk=pk)
+    obj = base.as_concrete()
+
+    form = DisposalForm(request.POST or None, instance=obj, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"{obj}: {obj.disposal_line.lower()}.")
+        return redirect("core:resource-detail", pk=obj.pk)
+
+    return render(request, "core/form.html", {
+        "form": form, "title": f"Dar de baja: {obj}", "submit": "Dar de baja",
+        "cancel_url": "core:resource-detail", "cancel_arg": obj.pk,
+    })
+
+
+def resource_verify(request, pk):
+    """«Sí, sigo teniéndolo.»
+
+    Es lo que evita que el inventario envejezca hasta volverse ficción, que es
+    el destino de todos los inventarios domésticos.
+    """
+    import datetime as dt
+
+    base = get_object_or_404(Resource, pk=pk)
+    Resource.objects.filter(pk=base.pk).update(verified_on=dt.date.today())
+    messages.success(request, "Comprobado. Vuelvo a preguntarte dentro de un año.")
+    return redirect("core:resource-detail", pk=base.pk)
+
+
+def resource_restore(request, pk):
+    """Deshacer una baja puesta por error."""
+    base = get_object_or_404(Resource, pk=pk)
+    obj = base.as_concrete()
+    obj.status = Resource.Status.ACTIVE
+    obj.disposal_reason = ""
+    obj.disposed_on = None
+    obj.disposal_amount = None
+    obj.save()
+    _refresh(request.household)
+    messages.success(request, "De vuelta en tu patrimonio.")
+    return redirect("core:resource-detail", pk=obj.pk)
+
+
 def party_list(request):
     return render(request, "core/parties.html", {
         "personas": Party.objects.filter(kind=Party.Kind.PERSON),
@@ -151,15 +197,34 @@ def party_edit(request, pk):
 
 
 def document_new(request):
+    """Alta de documento.
+
+    Acepta `?para=<uuid>` para llegar desde la ficha de un coche o una casa con
+    el destino ya elegido: adjuntar la factura de algo es lo que más veces se
+    hace, y no debería costar tres clics de navegación.
+    """
+    destino = request.GET.get("para")
+    inicial = {"attach_to": destino} if destino else {}
+
     form = DocumentForm(request.POST or None, request.FILES or None,
-                        household=request.household)
+                        initial=inicial, household=request.household)
     if request.method == "POST" and form.is_valid():
         doc = form.save()
         _refresh(request.household)
         messages.success(request, f"«{doc.title}» guardado.")
+        adjuntado = form.cleaned_data.get("attach_to")
+        if adjuntado:
+            return redirect("core:resource-detail", pk=adjuntado.pk)
         return redirect("core:documents")
+
+    titulo = "Nuevo documento"
+    if destino:
+        recurso = Resource.objects.filter(pk=destino).first()
+        if recurso:
+            titulo = f"Documento de {recurso.name}"
+
     return render(request, "core/form.html", {
-        "form": form, "title": "Nuevo documento", "submit": "Guardar",
+        "form": form, "title": titulo, "submit": "Guardar",
         "cancel_url": "core:documents", "multipart": True,
     })
 

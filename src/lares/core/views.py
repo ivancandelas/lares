@@ -53,8 +53,10 @@ def holdings(request):
             type=Account.Type.LIABILITY, is_active=True
         )
     )
+    idos = Resource.objects.filter(status=Resource.Status.DISPOSED).order_by("-disposed_on")
     return render(request, "core/holdings.html", {
         "grupos": grupos,
+        "idos": idos[:20],
         "total": len(recursos),
         "valor_total": valor_total,
         "deuda": deuda,

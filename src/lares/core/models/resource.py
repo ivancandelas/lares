@@ -40,9 +40,25 @@ class Resource(HouseholdScopedModel):
 
     class Status(models.TextChoices):
         PLANNED = "planned", "Planeado"
-        ACTIVE = "active", "Activo"
-        SUSPENDED = "suspended", "Suspendido"
-        DISPOSED = "disposed", "Dado de baja"
+        ACTIVE = "active", "Lo tengo"
+        SUSPENDED = "suspended", "En pausa"
+        DISPOSED = "disposed", "Ya no lo tengo"
+
+    class Disposal(models.TextChoices):
+        """Por qué dejó de estar contigo.
+
+        La pregunta que de verdad se hace la gente no es "¿qué tengo?" sino
+        "¿todavía lo tengo?". Un activo no se borra cuando sale de tu vida:
+        cambia de estado y conserva su historia.
+        """
+
+        SOLD = "sold", "Vendido"
+        LOST = "lost", "Perdido"
+        STOLEN = "stolen", "Robado"
+        GIVEN = "given", "Regalado"
+        SCRAPPED = "scrapped", "Desechado"
+        RETURNED = "returned", "Devuelto"
+        TRANSFERRED = "transferred", "Traspasado"
 
     # Clave del tipo registrado por el modulo: "vehicle", "property", "policy".
     kind = models.CharField("tipo", max_length=40, db_index=True)
@@ -68,6 +84,18 @@ class Resource(HouseholdScopedModel):
 
     acquired_on = models.DateField("adquirido el", null=True, blank=True)
     disposed_on = models.DateField("dado de baja el", null=True, blank=True)
+    disposal_reason = models.CharField("qué pasó", max_length=20,
+                                       choices=Disposal.choices, blank=True)
+    disposed_to = models.ForeignKey(
+        "core.Party", verbose_name="a quién", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="received_resources",
+    )
+    disposal_amount = models.DecimalField("importe", max_digits=16, decimal_places=2,
+                                          null=True, blank=True)
+    disposal_note = models.CharField("nota", max_length=300, blank=True)
+
+    # Última vez que alguien confirmó que sigue donde dice que está.
+    verified_on = models.DateField("comprobado el", null=True, blank=True)
 
     purchase_amount = models.DecimalField("lo que costó", max_digits=16,
                                           decimal_places=2, null=True, blank=True)
@@ -91,6 +119,32 @@ class Resource(HouseholdScopedModel):
             self.kind = getattr(self, "resource_kind", "") or ""
         super().save(*args, **kwargs)
 
+    def dispose(self, reason, on_date=None, to=None, amount=None, note=""):
+        """Da de baja sin borrar. El historial es parte del valor."""
+        import datetime as _dt
+
+        self.status = self.Status.DISPOSED
+        self.disposal_reason = reason
+        self.disposed_on = on_date or _dt.date.today()
+        self.disposed_to = to
+        self.disposal_amount = amount
+        self.disposal_note = note
+        self.save()
+        return self
+
+    @property
+    def disposal_line(self) -> str:
+        if self.status != self.Status.DISPOSED:
+            return ""
+        partes = [self.get_disposal_reason_display() if self.disposal_reason else "Dado de baja"]
+        if self.disposed_on:
+            partes.append(f"el {self.disposed_on:%d/%m/%Y}")
+        if self.disposed_to:
+            partes.append(f"a {self.disposed_to}")
+        if self.disposal_amount:
+            partes.append(f"por {self.disposal_amount:,.0f}")
+        return " ".join(partes)
+
     def context_line(self) -> str:
         """Los datos secundarios de la ficha, en una linea.
 
@@ -106,7 +160,9 @@ class Resource(HouseholdScopedModel):
         return ", ".join(p for p in partes if p)
 
     OCULTOS = {"id", "household", "created_at", "updated_at", "archived_at",
-               "extra", "kind", "resource_ptr", "description", "name"}
+               "extra", "kind", "resource_ptr", "description", "name",
+               "disposal_reason", "disposed_on", "disposed_to", "disposal_amount",
+               "disposal_note"}
 
     def facts(self) -> list:
         """Los datos de la ficha, como pares etiqueta/valor.

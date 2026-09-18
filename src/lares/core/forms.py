@@ -376,3 +376,41 @@ class WatchFolderConnectorForm(ConnectorForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields.pop("secret", None)       # una carpeta no tiene contraseña
+
+
+class DisposalForm(LaresForm):
+    """Dar de baja algo sin borrarlo.
+
+    Un activo no desaparece cuando sale de tu vida: cambia de estado y conserva
+    su historia. Y si se vendió, el importe permite que el patrimonio se corrija
+    solo en vez de arrastrar algo que ya no tienes.
+    """
+
+    class Meta:
+        model = Resource
+        fields = ["disposal_reason", "disposed_on", "disposed_to",
+                  "disposal_amount", "disposal_note"]
+        labels = {
+            "disposal_reason": "Qué pasó",
+            "disposed_on": "Cuándo",
+            "disposed_to": "A quién",
+            "disposal_amount": "Importe",
+            "disposal_note": "Nota",
+        }
+        help_texts = {
+            "disposed_to": "Solo si lo vendiste, lo regalaste o lo traspasaste.",
+            "disposal_amount": "Lo que te pagaron, si aplica.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["disposal_reason"].required = True
+        self.fields["disposed_on"].required = True
+        self.fields["disposed_on"].initial = dt.date.today()
+
+    def save(self, commit=True):
+        recurso = super().save(commit=False)
+        recurso.status = Resource.Status.DISPOSED
+        if commit:
+            recurso.save()
+        return recurso

@@ -1,5 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Patrimonio - {{ product_name }}{% endblock %}
+{% block title %}Patrimonio - {{ product_name }}{% if idos %}
+  <h2 class="mt-12 text-sm font-medium text-soft">Ya no los tienes</h2>
+  <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+    No se borran: se quedan con su historia, y lo que se vendió ya no cuenta en
+    tu patrimonio.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for r in idos %}
+      <li class="flex items-baseline justify-between gap-4 py-3 text-soft">
+        <a href="{% url 'core:resource-detail' r.pk %}" class="text-[15px] hover:text-calm">{{ r.name }}</a>
+        <span class="shrink-0 text-[13px]">{{ r.disposal_line }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="flex items-baseline justify-between gap-4">
@@ -51,4 +66,19 @@
     la casa, los coches, los equipos caros.
   </p>
 {% endfor %}
+{% if idos %}
+  <h2 class="mt-12 text-sm font-medium text-soft">Ya no los tienes</h2>
+  <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+    No se borran: se quedan con su historia, y lo que se vendió ya no cuenta en
+    tu patrimonio.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for r in idos %}
+      <li class="flex items-baseline justify-between gap-4 py-3 text-soft">
+        <a href="{% url 'core:resource-detail' r.pk %}" class="text-[15px] hover:text-calm">{{ r.name }}</a>
+        <span class="shrink-0 text-[13px]">{{ r.disposal_line }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
 {% endblock %}

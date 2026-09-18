@@ -33,6 +33,9 @@ urlpatterns = [
     path("nuevo/<str:kind>/", views_crud.resource_new, name="resource-new"),
     path("r/<uuid:pk>/", views_crud.resource_detail, name="resource-detail"),
     path("r/<uuid:pk>/editar/", views_crud.resource_edit, name="resource-edit"),
+    path("r/<uuid:pk>/baja/", views_crud.resource_dispose, name="resource-dispose"),
+    path("r/<uuid:pk>/comprobar/", views_crud.resource_verify, name="resource-verify"),
+    path("r/<uuid:pk>/recuperar/", views_crud.resource_restore, name="resource-restore"),
 
     path("personas/", views_crud.party_list, name="parties"),
     path("personas/nueva/", views_crud.party_new, name="party-new"),

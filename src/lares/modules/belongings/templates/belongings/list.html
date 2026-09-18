@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Objetos - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Objetos</h1>
+  <a href="{% url 'core:resource-new' 'belonging' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Solo lo que tiene garantía o factura, se puede vender, habría que reclamar a un
+  seguro, o duele perder. Una escoba no entra por ninguna.
+</p>
+
+{% if valiosos %}
+  <h2 class="mt-10 text-sm font-medium">De valor</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for b in valiosos %}{% include "belongings/_row.html" with b=b %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if resto %}
+  <h2 class="mt-10 text-sm font-medium">Lo demás</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for b in resto %}{% include "belongings/_row.html" with b=b %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if not valiosos and not resto %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Nada registrado. Empieza por lo que más te costaría reponer o por lo que
+    todavía está en garantía.
+  </p>
+{% endif %}
+
+{% if idos %}
+  <h2 class="mt-10 text-sm font-medium text-soft">Ya no los tienes</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for b in idos %}
+      <li class="flex items-baseline justify-between gap-4 py-3 text-soft">
+        <a href="{% url 'core:resource-detail' b.pk %}" class="text-[15px] hover:text-calm">{{ b.name }}</a>
+        <span class="shrink-0 text-[13px]">{{ b.disposal_line }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}
