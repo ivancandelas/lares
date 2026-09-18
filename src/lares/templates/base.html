@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ product_name }}{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+  <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+</head>
+<body class="h-full bg-stone-50 text-stone-900 antialiased">
+  <div class="mx-auto flex min-h-full max-w-6xl flex-col">
+    <header class="flex items-center justify-between px-4 py-4">
+      <a href="/" class="text-lg font-semibold tracking-tight">{{ product_name }}</a>
+      <span class="text-sm text-stone-500">{{ current_household.name|default:"" }}</span>
+    </header>
+
+    <nav class="flex gap-1 overflow-x-auto border-y border-stone-200 px-2 py-2 text-sm">
+      {% for item in nav_items %}
+        <a href="{% url item.url_name %}"
+           class="whitespace-nowrap rounded-md px-3 py-1.5 hover:bg-stone-200">{{ item.label }}</a>
+      {% empty %}
+        <span class="px-3 py-1.5 text-stone-400">Sin modulos instalados</span>
+      {% endfor %}
+    </nav>
+
+    <main class="flex-1 px-4 py-6">{% block content %}{% endblock %}</main>
+
+    <footer class="px-4 py-6 text-xs text-stone-400">{{ product_tagline }}</footer>
+  </div>
+</body>
+</html>

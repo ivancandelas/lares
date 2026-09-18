@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Vehiculos - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold tracking-tight">Vehiculos</h1>
+<ul class="mt-4 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+  {% for v in vehicles %}
+    <li class="px-4 py-3">
+      <div class="font-medium">{{ v }}</div>
+      <div class="text-sm text-stone-500">{{ v.plates }}{% if v.odometer_km %} - {{ v.odometer_km }} km{% endif %}</div>
+    </li>
+  {% empty %}
+    <li class="px-4 py-3 text-sm text-stone-500">Sin vehiculos registrados.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

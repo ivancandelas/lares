@@ -1,0 +1,5 @@
+<ul class="mt-2 space-y-1 text-sm">
+  {% for o in obligations %}
+    <li class="flex justify-between"><span>{{ o.title }}</span><span class="text-stone-500">{{ o.due_on }}</span></li>
+  {% endfor %}
+</ul>

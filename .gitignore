@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Django
+*.sqlite3
+/media/
+/staticfiles/
+
+# Entorno
+.env
+.env.*
+!.env.example
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+
+# Datos locales
+/data/
+/backups/
+
+# La documentación se versiona en su propio repositorio.
+/docs/

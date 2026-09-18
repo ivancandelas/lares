@@ -1,0 +1,43 @@
+[project]
+name = "lares"
+version = "0.0.1"
+description = "Lares - plataforma de gestion de recursos personales y del hogar (Personal Resource Planning, self-hosted)."
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.1,<6.0",
+    "psycopg[binary]>=3.2",
+    "django-environ>=0.11",
+    "django-allauth>=65.0",
+    "celery>=5.4",
+    "redis>=5.0",
+    "django-celery-beat>=2.7",
+    "pillow>=11.0",
+    "python-dateutil>=2.9",
+    "pyyaml>=6.0",
+    "whitenoise>=6.7",
+    "gunicorn>=23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "ruff>=0.7",
+    "django-debug-toolbar>=4.4",
+    "factory-boy>=3.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+# Las migraciones las genera Django; no se revisan a mano.
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "lares.settings.dev"
+python_files = ["test_*.py"]
+pythonpath = ["src"]

@@ -1,0 +1,250 @@
+"""Sistema de modulos de Lares.
+
+Un modulo (addon) es una app de Django que declara `LaresModule` como AppConfig.
+El nucleo no conoce autos, polizas ni escuelas: solo conoce las siete primitivas
+del dominio y los puntos de extension de este archivo.
+
+Regla de oro: un modulo NUNCA importa modelos de otro modulo. Depende del nucleo
+y escucha eventos. Si necesita datos de otro, falta una primitiva en el nucleo.
+
+Ver docs/03-module-system.md y docs/08-module-authoring.md
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+
+from django.apps import AppConfig
+from django.core.exceptions import ImproperlyConfigured
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Contratos de los puntos de extension
+# ---------------------------------------------------------------------------
+
+
+class ObligationProvider:
+    """Genera obligaciones para una entidad.
+
+    Debe ser una funcion pura: mismas entradas -> mismas salidas. El nucleo se
+    encarga de materializar, deduplicar (por `dedupe_key`) y notificar, para que
+    el proveedor pueda re-ejecutarse cuantas veces haga falta sin duplicar nada.
+    """
+
+    key: str = ""
+    label: str = ""
+    applies_to: str = ""          # clave de tipo de recurso, p.ej. "vehicle"
+
+    def generate(self, subject, on_date):  # -> list[ObligationSpec]
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class ObligationSpec:
+    dedupe_key: str
+    title: str
+    due_on: object
+    severity: str = "normal"      # low | normal | high | critical
+    amount: object | None = None
+    currency: str | None = None
+    remind_offsets: tuple[int, ...] = (-30, -15, -7, -1)
+    payload: dict = field(default_factory=dict)
+
+
+class Check:
+    """Detector de huecos: 'tienes un auto sin poliza asociada'.
+
+    Corre de forma programada y devuelve hallazgos. Es lo que convierte el
+    sistema en algo que te avisa de lo que NO registraste, que es mas valioso
+    que recordarte lo que si.
+    """
+
+    key: str = ""
+    label: str = ""
+    severity: str = "normal"
+
+    def run(self, household):  # -> list[Finding]
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class Finding:
+    check: str
+    title: str
+    detail: str = ""
+    severity: str = "normal"
+    subject_type: str | None = None
+    subject_id: object | None = None
+    action_url: str | None = None
+
+
+@dataclass(frozen=True)
+class NavItem:
+    label: str
+    url_name: str
+    icon: str = "circle"
+    order: int = 100
+    section: str = "main"
+
+
+@dataclass(frozen=True)
+class DetailTab:
+    """Pestana que un modulo aporta a la ficha de otra entidad."""
+
+    resource_kind: str
+    key: str
+    label: str
+    template: str
+    order: int = 100
+
+
+@dataclass(frozen=True)
+class DashboardWidget:
+    key: str
+    label: str
+    template: str
+    provider: object          # callable(household) -> dict de contexto
+    order: int = 100
+    size: str = "md"          # sm | md | lg
+
+
+@dataclass(frozen=True)
+class LinkRole:
+    """Arista tipada del grafo."""
+
+    key: str
+    label: str
+    inverse_key: str
+    inverse_label: str
+    from_kinds: tuple[str, ...] = ()
+    to_kinds: tuple[str, ...] = ()
+
+
+# ---------------------------------------------------------------------------
+# Registro
+# ---------------------------------------------------------------------------
+
+
+class Registry:
+    def __init__(self):
+        self.modules: dict[str, LaresModule] = {}
+        self.resource_kinds: dict[str, object] = {}
+        self.document_types: dict[str, str] = {}
+        self.link_roles: dict[str, LinkRole] = {}
+        self.obligation_providers: dict[str, ObligationProvider] = {}
+        self.checks: dict[str, Check] = {}
+        self.nav_items: list[NavItem] = []
+        self.detail_tabs: list[DetailTab] = []
+        self.widgets: list[DashboardWidget] = []
+        self.connectors: dict[str, object] = {}
+
+    # -- API que usan los modulos -------------------------------------------
+
+    def resource(self, model, kind: str | None = None):
+        kind = kind or getattr(model, "resource_kind", None)
+        if not kind:
+            raise ImproperlyConfigured(f"{model} no declara resource_kind")
+        self.resource_kinds[kind] = model
+        return model
+
+    def document_type(self, key: str, label: str):
+        self.document_types[key] = label
+
+    def link_role(self, role: LinkRole):
+        self.link_roles[role.key] = role
+
+    def obligations(self, *providers):
+        for provider in providers:
+            instance = provider() if isinstance(provider, type) else provider
+            self.obligation_providers[instance.key] = instance
+
+    def check(self, *checks):
+        for chk in checks:
+            instance = chk() if isinstance(chk, type) else chk
+            self.checks[instance.key] = instance
+
+    def nav(self, *items):
+        self.nav_items.extend(items)
+
+    def tabs(self, *tabs):
+        self.detail_tabs.extend(tabs)
+
+    def widget(self, *widgets):
+        self.widgets.extend(widgets)
+
+    def connector(self, key: str, connector):
+        self.connectors[key] = connector
+
+    # -- API que usa el nucleo ----------------------------------------------
+
+    def nav_sorted(self, section: str = "main"):
+        return sorted(
+            (i for i in self.nav_items if i.section == section),
+            key=lambda i: (i.order, i.label),
+        )
+
+    def tabs_for(self, resource_kind: str):
+        return sorted(
+            (t for t in self.detail_tabs if t.resource_kind == resource_kind),
+            key=lambda t: (t.order, t.label),
+        )
+
+    def widgets_sorted(self):
+        return sorted(self.widgets, key=lambda w: (w.order, w.label))
+
+    def providers_for(self, resource_kind: str):
+        return [
+            p for p in self.obligation_providers.values()
+            if p.applies_to in ("", resource_kind)
+        ]
+
+
+registry = Registry()
+
+
+# ---------------------------------------------------------------------------
+# AppConfig base de un modulo
+# ---------------------------------------------------------------------------
+
+
+class LaresModule(AppConfig):
+    """Clase base de todo addon de Lares."""
+
+    # Evita que Django la considere candidata a AppConfig de una app.
+    default = False
+
+    # Metadatos del modulo
+    label_verbose: str = ""
+    version: str = "0.0.1"
+    depends: tuple[str, ...] = ()
+    icon: str = "package"
+    tier: str = "core"       # core | standard | optional  (ver catalogo de features)
+
+    def ready(self):
+        self._check_dependencies()
+        registry.modules[self.name] = self
+        self.register(registry)
+        self.connect_signals()
+        logger.debug("Modulo Lares registrado: %s v%s", self.name, self.version)
+
+    # -- a implementar por cada modulo --------------------------------------
+
+    def register(self, reg: Registry) -> None:
+        """Declara aqui los puntos de extension que aporta el modulo."""
+
+    def connect_signals(self) -> None:
+        """Suscribe manejadores al bus de eventos del nucleo."""
+
+    # -- interno -------------------------------------------------------------
+
+    def _check_dependencies(self):
+        from django.apps import apps
+
+        for dep in self.depends:
+            if not apps.is_installed(dep):
+                raise ImproperlyConfigured(
+                    f"El modulo '{self.name}' requiere '{dep}', que no esta en INSTALLED_APPS."
+                )
