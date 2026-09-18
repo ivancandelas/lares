@@ -33,7 +33,8 @@ class FinanceModule(LaresModule):
         reg.calculation("net_worth", services.net_worth)
         reg.obligations(obligations.CardPaymentProvider)
         reg.check(checks.CardWithoutStatement, checks.CardOverLimit,
-                  checks.CannotPayInFull, checks.BudgetPace)
+                  checks.CannotPayInFull, checks.BudgetPace,
+                  checks.InstallmentsCommitted, checks.InstallmentInterest)
         reg.demo_seeder(demo.seed)
         reg.nav(
             NavItem("Cuentas y tarjetas", "finance:accounts", icon="wallet",

@@ -1,8 +1,14 @@
+import datetime as dt
+
+from django import forms
+from django.db import transaction
+
 from lares.core.forms import LaresForm, ResourceForm
 from lares.core.models import Account
 
 from .models import CreditCard
 from .models_budget import Budget
+from .models_installment import InstallmentPlan
 from .models_provision import Provision
 
 
@@ -86,3 +92,87 @@ class BudgetForm(LaresForm):
             self.fields["account"].queryset = Account._base_manager.filter(
                 household=self.household, type=Account.Type.EXPENSE, is_active=True
             )
+
+
+class InstallmentPlanForm(LaresForm):
+    """Registrar una compra a meses.
+
+    El asiento se hace por el total: la deuda existe desde el primer dia. Lo
+    que el modelo anade es saber que parte de ese saldo todavia no te exigen.
+    """
+
+    GROUPS = (
+        ("Qué compraste", ["description", "merchant", "card", "category"]),
+        ("Cómo quedó", ["total_amount", "months", "first_charge_on",
+                        "interest_free", "installment_amount"]),
+    )
+
+    category = forms.ModelChoiceField(
+        queryset=Account.objects.none(), label="Categoría del gasto",
+        help_text="En qué se contabiliza: electrónica, muebles, viajes.",
+    )
+
+    class Meta:
+        model = InstallmentPlan
+        fields = ["description", "merchant", "card", "total_amount", "months",
+                  "first_charge_on", "interest_free", "installment_amount"]
+        labels = {
+            "description": "Qué compraste",
+            "merchant": "Dónde",
+            "card": "Con qué tarjeta",
+            "total_amount": "Total de la compra",
+            "months": "En cuántos meses",
+            "first_charge_on": "Primer cargo",
+            "interest_free": "Sin intereses",
+            "installment_amount": "Mensualidad que te cobran",
+        }
+        help_texts = {
+            "total_amount": "El precio completo, no la mensualidad.",
+            "months": "Los meses sin intereses que te dieron.",
+            "first_charge_on": "El corte en el que aparece el primer cargo.",
+            "installment_amount": "Solo si hay intereses. Déjalo vacío en meses "
+                                  "sin intereses y lo calculo yo.",
+        }
+
+    def clean(self):
+        datos = super().clean()
+        if not datos.get("interest_free") and not datos.get("installment_amount"):
+            self.add_error(
+                "installment_amount",
+                "Con intereses hace falta la mensualidad: no es el total entre "
+                "los meses.",
+            )
+        return datos
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.household:
+            self.fields["category"].queryset = Account._base_manager.filter(
+                household=self.household, type=Account.Type.EXPENSE, is_active=True
+            )
+        self.fields["first_charge_on"].initial = dt.date.today()
+
+    @transaction.atomic
+    def save(self, commit=True):
+        plan = super().save(commit=False)
+        plan.household = self.household
+        if not commit:
+            return plan
+
+        from lares.core.models import Entry, Posting
+
+        asiento = Entry.objects.create(
+            household=self.household, date=plan.first_charge_on,
+            description=f"{plan.description} ({plan.months} meses)",
+            source="installments", counterparty=plan.merchant,
+        )
+        # El total, no la mensualidad: es deuda desde el primer dia.
+        Posting.objects.create(household=self.household, entry=asiento,
+                               account=self.cleaned_data["category"],
+                               amount=plan.total_amount)
+        Posting.objects.create(household=self.household, entry=asiento,
+                               account=plan.card.account,
+                               amount=-plan.total_amount)
+        plan.entry = asiento
+        plan.save()
+        return plan

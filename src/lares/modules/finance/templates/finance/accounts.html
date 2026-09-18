@@ -47,13 +47,20 @@
     {% for c in cards %}
       <li class="flex items-baseline justify-between gap-4 py-4">
         <div class="min-w-0">
-          <a href="{% url 'core:resource-detail' c.pk %}" class="text-[15px] hover:text-calm">{{ c }}</a>
+          <a href="{% url 'finance:card' c.pk %}" class="text-[15px] hover:text-calm">{{ c }}</a>
           {% with linea=c.context_line %}
             {% if linea %}<div class="text-[13px] text-soft">{{ linea }}</div>{% endif %}
           {% endwith %}
         </div>
         {% if c.account %}
-          <span class="shrink-0 tabular-nums text-sm">{% money0 c.account.balance c.account.currency %}</span>
+          <div class="shrink-0 text-right">
+            <div class="tabular-nums text-sm">{% money0 c.account.balance c.account.currency %}</div>
+            {% if c.deferred %}
+              <div class="text-[13px] text-soft">
+                pagar {% money0 c.no_interest_payment c.currency %}
+              </div>
+            {% endif %}
+          </div>
         {% endif %}
       </li>
     {% endfor %}

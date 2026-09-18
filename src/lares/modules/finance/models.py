@@ -3,6 +3,7 @@ from django.db import models
 from lares.core.models import Resource
 
 from .models_budget import Budget  # noqa: F401  (lo descubre Django aquí)
+from .models_installment import InstallmentPlan  # noqa: F401
 from .models_provision import Provision  # noqa: F401
 
 
@@ -117,15 +118,42 @@ class CreditCard(Resource):
         return -total       # un pasivo se muestra en positivo
 
     @property
+    def deferred(self):
+        """Lo que debes a meses y todavia no te exigen.
+
+        El saldo de la tarjeta incluye el total de cada compra a meses, porque
+        es deuda desde el primer dia. Pero el banco solo te cobra una
+        mensualidad por corte: el resto no entra en el pago de este mes.
+        """
+        from decimal import Decimal
+
+        corte = self.last_cut()
+        if not corte:
+            return Decimal(0)
+        planes = self.installment_plans.filter(is_active=True)
+        return sum((p.deferred_at(corte) for p in planes), Decimal(0))
+
+    @property
+    def monthly_installments(self):
+        """Lo que se te va cada mes en compras a meses, hasta que acaben."""
+        from decimal import Decimal
+
+        planes = [p for p in self.installment_plans.filter(is_active=True)
+                  if not p.is_finished]
+        return sum((p.installment for p in planes), Decimal(0))
+
+    @property
     def no_interest_payment(self):
         """Lo que hay que pagar para no generar intereses.
 
-        Es el saldo AL CORTE, no el de hoy. Pagar el de hoy incluye compras que
-        todavia no vencen, y pagar de menos genera intereses sobre todo el
-        periodo, no solo sobre la diferencia.
+        Es el saldo AL CORTE menos lo diferido a meses. Pagar el saldo entero
+        adelantaria mensualidades que nadie te ha pedido; pagar de menos genera
+        intereses sobre todo el periodo, no solo sobre la diferencia.
         """
         corte = self.last_cut()
-        return self.balance_at(corte) if corte else None
+        if not corte:
+            return None
+        return self.balance_at(corte) - self.deferred
 
     @property
     def after_cut(self):

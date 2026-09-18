@@ -5,7 +5,7 @@ from lares.core.models import Account, Entry, Party
 from lares.core.services import spending
 
 from . import services
-from .forms import BudgetForm, ProvisionForm
+from .forms import BudgetForm, InstallmentPlanForm, ProvisionForm
 from .models import CreditCard
 from .models_budget import Budget
 from .models_provision import Provision
@@ -90,6 +90,34 @@ def provision_edit(request, pk):
     return render(request, "core/form.html", {
         "form": form, "title": provision.name, "submit": "Guardar cambios",
         "cancel_url": "finance:provisions",
+    })
+
+
+def card_detail(request, pk):
+    """El estado real de una tarjeta: lo que debes y lo que te toca pagar."""
+    tarjeta = get_object_or_404(CreditCard, pk=pk)
+    planes = [p for p in tarjeta.installment_plans.filter(is_active=True)]
+    return render(request, "finance/card.html", {
+        "card": tarjeta,
+        "planes": sorted(planes, key=lambda p: p.is_finished),
+        "corte": tarjeta.last_cut(),
+        "vence": tarjeta.next_due(),
+    })
+
+
+def installment_new(request):
+    form = InstallmentPlanForm(request.POST or None, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        plan = form.save()
+        messages.success(
+            request,
+            f"Registrado: {plan.installment:,.0f} al mes durante {plan.months} meses.",
+        )
+        return redirect("finance:card", pk=plan.card_id)
+
+    return render(request, "core/form.html", {
+        "form": form, "title": "Registrar una compra a meses",
+        "submit": "Registrar", "cancel_url": "finance:accounts",
     })
 
 

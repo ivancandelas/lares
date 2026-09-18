@@ -122,3 +122,72 @@ class BudgetPace(Check):
                 severity=self.severity,
             ))
         return hallazgos
+
+
+class InstallmentsCommitted(Check):
+    """Lo que ya esta comprometido en mensualidades.
+
+    Una compra a meses no duele el dia que se hace: duele los once meses
+    siguientes, cuando ya nadie se acuerda de por que.
+    """
+
+    key = "finance.installments"
+    label = "Comprometido en compras a meses"
+    severity = "low"
+
+    def run(self, household):
+        import datetime as dt
+
+        hallazgos = []
+        for card in CreditCard.objects.filter(status=CreditCard.Status.ACTIVE):
+            planes = [p for p in card.installment_plans.filter(is_active=True)
+                      if not p.is_finished]
+            if not planes:
+                continue
+            mensual = sum(p.installment for p in planes)
+            hasta = max(p.ends_on for p in planes)
+            meses = max(
+                (hasta.year - dt.date.today().year) * 12
+                + (hasta.month - dt.date.today().month), 0
+            )
+            hallazgos.append(Finding(
+                check=self.key,
+                title=f"{mensual:,.0f} al mes comprometidos en {card}",
+                detail=(f"{len(planes)} compra(s) a meses, hasta "
+                        f"{hasta:%m/%Y}: {meses} meses más."),
+                severity=self.severity,
+                subject_type="credit_card", subject_id=card.pk,
+            ))
+        return hallazgos
+
+
+class InstallmentInterest(Check):
+    """Lo que cuesta pagar a plazos.
+
+    Los meses sin intereses son gratis; los que llevan intereses no, y la
+    diferencia casi nunca se ve en el momento de comprar porque el banco solo
+    ensena la mensualidad.
+    """
+
+    key = "finance.installment_interest"
+    label = "Intereses en una compra a meses"
+    severity = "normal"
+
+    def run(self, household):
+        from .models_installment import InstallmentPlan
+
+        hallazgos = []
+        for plan in InstallmentPlan.objects.filter(is_active=True):
+            if plan.is_finished or plan.interest_total <= 0:
+                continue
+            hallazgos.append(Finding(
+                check=self.key,
+                title=f"{plan.description} te cuesta "
+                      f"{plan.interest_total:,.0f} de intereses",
+                detail=(f"Precio {plan.total_amount:,.0f} y acabarás pagando "
+                        f"{plan.total_to_pay:,.0f}: un "
+                        f"{plan.interest_share:.0%} más."),
+                severity=self.severity,
+                subject_type="credit_card", subject_id=plan.card_id,
+            ))
+        return hallazgos

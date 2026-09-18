@@ -462,6 +462,15 @@ def _fixed_monthly(household) -> Decimal:
         except ImportError:
             pass
 
+        from .models import CreditCard
+
+        # Una compra a meses es un pago fijo mas, aunque no sea una suscripcion.
+        total += sum(
+            (c.monthly_installments for c in CreditCard.objects.filter(
+                status=CreditCard.Status.ACTIVE)),
+            Decimal(0),
+        )
+
         from lares.core.models.resource import Resource
 
         for recurso in Resource.objects.filter(status=Resource.Status.ACTIVE,
