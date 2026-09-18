@@ -56,6 +56,7 @@ LARES_MODULES = env.list(
         "lares.modules.insurance.apps.InsuranceModule",
         "lares.modules.maintenance.apps.MaintenanceModule",
         "lares.modules.property.apps.PropertyModule",
+        "lares.modules.subscriptions.apps.SubscriptionsModule",
         "lares.modules.tasks.apps.TasksModule",
         "lares.modules.vehicles.apps.VehiclesModule",
     ],
@@ -152,6 +153,9 @@ TIME_ZONE = env("LARES_TIME_ZONE", default="America/Mexico_City")
 USE_I18N = True
 # Sin esto, un importe se imprime "410000" y hay que contar dígitos para leerlo.
 USE_THOUSAND_SEPARATOR = True
+# Django 6 cambiará el esquema por defecto de los URLField; adelantarlo
+# evita que una dirección sin protocolo acabe en http.
+FORMS_URLFIELD_ASSUME_HTTPS = True
 USE_TZ = True
 
 DEFAULT_COUNTRY = env("LARES_DEFAULT_COUNTRY", default="MX")

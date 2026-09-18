@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Lo que tienes contratado - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Lo que tienes contratado</h1>
+  <a href="{% url 'core:resource-new' 'subscription' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Streaming, servidores, gimnasio, la cuenta de tus hijos. Nadie cancela lo que
+  no recuerda tener.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Al año</div>
+    <div class="mt-0.5 text-2xl font-light tabular-nums">{% money0 anual %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Al mes</div>
+    <div class="mt-0.5 text-2xl font-light tabular-nums">{% money0 mensual %}</div>
+  </div>
+  {% if anual_ajenas %}
+    <div>
+      <div class="text-[13px] text-soft">De cuentas que no son tuyas</div>
+      <div class="mt-0.5 text-2xl font-light tabular-nums text-soon">{% money0 anual_ajenas %}</div>
+    </div>
+  {% endif %}
+</div>
+
+{% for tipo, subs in por_tipo %}
+  <h2 class="mt-10 text-sm font-medium">{{ tipo }}</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for s in subs %}
+      <li class="flex items-baseline justify-between gap-4 py-4">
+        <div class="min-w-0">
+          <a href="{% url 'core:resource-detail' s.pk %}" class="text-[15px] hover:text-calm">{{ s }}</a>
+          <div class="text-[13px] text-soft">{{ s.context_line }}</div>
+          {% if not s.is_mine_to_cancel %}
+            <div class="text-[13px] text-soon">La cuenta no es tuya; el cargo sí.</div>
+          {% endif %}
+          {% if s.price_rise %}
+            <div class="text-[13px] text-soon">
+              Subió {% money0 s.price_rise s.currency %} por cargo
+            </div>
+          {% endif %}
+          {% if s.commitment_until %}
+            <div class="text-[13px] text-soft">
+              Permanencia hasta {{ s.commitment_until|date:"j M Y"|lower }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="shrink-0 text-right">
+          {% if s.amount %}
+            <div class="tabular-nums text-sm">{% money s.amount s.currency %}</div>
+            <div class="text-[13px] text-soft">{% money0 s.yearly_cost s.currency %} al año</div>
+          {% endif %}
+          {% if s.cancel_url and s.is_mine_to_cancel %}
+            <a href="{{ s.cancel_url }}" rel="noopener noreferrer" target="_blank"
+               class="text-[13px] text-calm hover:underline">cancelar</a>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% empty %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Nada registrado. Empieza por mirar los cargos que se repiten en tu tarjeta:
+    casi siempre hay alguno que no recordabas.
+  </p>
+{% endfor %}
+
+{% if canceladas %}
+  <h2 class="mt-10 text-sm font-medium text-soft">Dadas de baja</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for s in canceladas %}
+      <li class="flex items-baseline justify-between gap-4 py-3 text-soft">
+        <span class="text-[15px]">{{ s.name }}</span>
+        <span class="text-[13px]">{{ s.disposal_line }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}
