@@ -51,7 +51,20 @@ def inbox_review(request, pk):
         "item": item,
         "form": form,
         "propuesta": item.suggestion,
+        "vista": _preview_of(item),
     })
+
+
+def _preview_of(item):
+    """El archivo crudo de la bandeja, listo para mirarlo al lado del formulario."""
+    import mimetypes
+
+    if not item.file:
+        return ""
+    tipo = item.mime_type or mimetypes.guess_type(item.file.name)[0] or ""
+    if tipo == "application/pdf":
+        return "pdf"
+    return "image" if tipo.startswith("image/") else ""
 
 
 def inbox_reclassify(request, pk):

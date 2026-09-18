@@ -28,7 +28,10 @@ class HouseholdMiddleware:
 
     def _resolve(self, request):
         if settings.TENANCY_MODE == "single":
-            return Household.objects.first()
+            # El mas antiguo, no el primero por nombre: `Household` ordena por
+            # nombre, asi que crear un segundo hogar llamado "Casa ajena" movia
+            # la instalacion entera a otro sitio sin que nada avisara.
+            return Household.objects.order_by("created_at").first()
 
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:

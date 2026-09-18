@@ -5,8 +5,9 @@ from lares.core.models import Account, Entry, Party
 from lares.core.services import spending
 
 from . import services
-from .forms import ProvisionForm
+from .forms import BudgetForm, ProvisionForm
 from .models import CreditCard
+from .models_budget import Budget
 from .models_provision import Provision
 
 # La partida doble es una decision interna: nadie quiere leer "Pasivo" en la
@@ -89,6 +90,38 @@ def provision_edit(request, pk):
     return render(request, "core/form.html", {
         "form": form, "title": provision.name, "submit": "Guardar cambios",
         "cancel_url": "finance:provisions",
+    })
+
+
+def budgets(request):
+    """Cuánto has puesto de tope y a qué ritmo vas."""
+    return render(request, "finance/budgets.html",
+                  services.budgets(request.household))
+
+
+def budget_new(request):
+    form = BudgetForm(request.POST or None, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Presupuesto guardado.")
+        return redirect("finance:budgets")
+    return render(request, "core/form.html", {
+        "form": form, "title": "Poner un tope a una categoría",
+        "submit": "Guardar", "cancel_url": "finance:budgets",
+    })
+
+
+def budget_edit(request, pk):
+    presupuesto = get_object_or_404(Budget, pk=pk)
+    form = BudgetForm(request.POST or None, instance=presupuesto,
+                      household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Cambios guardados.")
+        return redirect("finance:budgets")
+    return render(request, "core/form.html", {
+        "form": form, "title": str(presupuesto.account), "submit": "Guardar cambios",
+        "cancel_url": "finance:budgets",
     })
 
 

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Topes de gasto - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Topes de gasto</h1>
+  <a href="{% url 'finance:budget-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Poner un tope</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Un tope solo sirve si avisa a tiempo. Saber el 31 que te pasaste no cambia
+  nada; saberlo el 12, sí. Por eso lo que importa es el ritmo.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Presupuestado</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 planned %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Gastado</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 spent %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Del mes va</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% widthratio elapsed 1 100 %}%</div>
+  </div>
+</div>
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for l in lines %}
+    <li class="py-4">
+      <div class="flex items-baseline justify-between gap-4">
+        <a href="{% url 'finance:budget-edit' l.budget.pk %}" class="text-[15px] hover:text-calm">
+          {{ l.budget.account.name }}
+        </a>
+        <span class="shrink-0 tabular-nums text-sm {% if l.over %}text-overdue{% elif l.ahead %}text-soon{% endif %}">
+          {% money0 l.spent %} <span class="text-soft">de {% money0 l.planned %}</span>
+        </span>
+      </div>
+      <div class="mt-1.5 flex items-center gap-3">
+        <div class="relative h-1 flex-1 rounded-full bg-rule">
+          <div class="h-1 rounded-full {% if l.over %}bg-overdue{% elif l.ahead %}bg-soon{% else %}bg-calm{% endif %}"
+               style="width: {% if l.used > 1 %}100{% else %}{% widthratio l.used 1 100 %}{% endif %}%"></div>
+          {# La marca del mes: si la barra la pasa, vas rápido. #}
+          <span class="absolute top-[-3px] h-[7px] w-px bg-ink"
+                style="left: {% widthratio elapsed 1 100 %}%"></span>
+        </div>
+        <span class="w-40 shrink-0 text-right text-[13px] text-soft">
+          {% if l.over %}te pasaste por {% money0 l.remaining|cut:"-" %}
+          {% elif l.ahead %}acabarías en {% money0 l.projected %}
+          {% else %}quedan {% money0 l.remaining %}{% endif %}
+        </span>
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">
+      Ningún tope puesto. Empieza por la categoría donde más se te va sin darte
+      cuenta: normalmente el supermercado.
+    </li>
+  {% endfor %}
+</ul>
+
+{% if unbudgeted %}
+  <p class="mt-6 max-w-[56ch] text-[13px] text-soft">
+    Este mes llevas {% money0 unbudgeted %} en categorías sin tope. No es cero:
+    es lo que no estás mirando.
+  </p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% comment %}
+  Visor incrustado. El navegador ya sabe mostrar PDF e imágenes: lo único que
+  hay que hacer bien es servir el archivo con las cabeceras correctas y con el
+  ámbito de hogar puesto.
+{% endcomment %}
+{% if kind == "pdf" %}
+  <iframe src="{% url 'core:document-preview' doc.pk %}#view=FitH"
+          title="{{ doc.title }}" loading="lazy"
+          class="mt-2 h-[28rem] w-full rounded-sm border border-rule bg-white"></iframe>
+{% elif kind == "image" %}
+  <a href="{% url 'core:document-preview' doc.pk %}" target="_blank" rel="noopener">
+    <img src="{% url 'core:document-preview' doc.pk %}" alt="{{ doc.title }}"
+         loading="lazy"
+         class="mt-2 max-h-[28rem] w-full rounded-sm border border-rule bg-white object-contain">
+  </a>
+{% elif doc.file %}
+  <p class="mt-2 text-[13px] text-soft">
+    Este tipo de archivo no se puede ver aquí.
+    <a href="{{ doc.file.url }}" class="text-calm hover:underline">Descargar</a>.
+  </p>
+{% endif %}

@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% load money %}
-{% block title %}{{ obj }} - {{ product_name }}{% for tab in tabs %}
+{% block title %}{{ obj }} - {{ product_name }}{% for v in documentos_vista %}
+  {% if v.kind %}
+    <details class="mt-4">
+      <summary class="cursor-pointer text-[13px] text-soft hover:text-calm">
+        Ver {{ v.doc.title }}
+      </summary>
+      {% include "core/_preview.html" with doc=v.doc kind=v.kind %}
+    </details>
+  {% endif %}
+{% endfor %}
+
+{% for tab in tabs %}
   <h2 class="mt-10 text-sm font-medium">{{ tab.label }}</h2>
   {{ tab.html }}
 {% endfor %}
@@ -118,7 +129,8 @@
           <div class="text-[13px] text-soft">vence {{ d.expires_on|date:"j M Y"|lower }}</div>
         {% endif %}
         {% if d.file %}
-          <a href="{{ d.file.url }}" class="text-[13px] text-calm hover:underline">abrir</a>
+          <a href="{% url 'core:document-preview' d.pk %}" target="_blank" rel="noopener"
+             class="text-[13px] text-calm hover:underline">ver</a>
         {% endif %}
       </div>
     </li>
@@ -129,6 +141,17 @@
     </li>
   {% endfor %}
 </ul>
+{% for v in documentos_vista %}
+  {% if v.kind %}
+    <details class="mt-4">
+      <summary class="cursor-pointer text-[13px] text-soft hover:text-calm">
+        Ver {{ v.doc.title }}
+      </summary>
+      {% include "core/_preview.html" with doc=v.doc kind=v.kind %}
+    </details>
+  {% endif %}
+{% endfor %}
+
 {% for tab in tabs %}
   <h2 class="mt-10 text-sm font-medium">{{ tab.label }}</h2>
   {{ tab.html }}

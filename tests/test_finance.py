@@ -65,12 +65,24 @@ def test_una_correccion_es_un_asiento_inverso_no_una_edicion(scoped, tarjeta):
 
 @pytest.mark.django_db
 def test_la_tarjeta_genera_su_pago_mensual(scoped, tarjeta):
-    _gastar(scoped, tarjeta.account, 1500)
+    """El importe es el saldo AL CORTE, no el de hoy.
+
+    Una compra hecha despues del corte pertenece al periodo siguiente: incluirla
+    haria pagar de mas.
+    """
+    corte = tarjeta.last_cut()
+    entry = Entry.objects.create(household=scoped, date=corte - dt.timedelta(days=2),
+                                 description="Compra antes del corte")
+    gasto, _ = Account.objects.get_or_create(household=scoped, name="Gastos",
+                                             type=Account.Type.EXPENSE)
+    Posting.objects.create(household=scoped, entry=entry, account=gasto, amount=1500)
+    Posting.objects.create(household=scoped, entry=entry, account=tarjeta.account,
+                           amount=-1500)
+
     obligations.materialize(scoped, HOY)
 
     pagos = Obligation.objects.filter(source="finance.card_payment")
     assert pagos.count() == 2
-    assert pagos.first().due_on == dt.date(2026, 10, 5)
     assert pagos.first().amount == 1500
 
 

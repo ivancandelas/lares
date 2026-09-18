@@ -136,6 +136,57 @@ def calendar_settings(request):
     })
 
 
+PREVISUALIZABLES = {
+    "application/pdf": "pdf",
+    "image/jpeg": "image", "image/png": "image", "image/gif": "image",
+    "image/webp": "image", "image/heic": "image",
+}
+
+
+def document_preview(request, pk):
+    """Sirve un documento para verlo, sin descargarlo.
+
+    Bajar un archivo para comprobar si es el que buscabas deja copias por todas
+    partes y rompe el hilo de lo que estabas haciendo.
+
+    Lo que importa aqui no es el visor -el navegador ya sabe mostrar PDF e
+    imagenes- sino que la consulta pase por el manager con ambito de hogar: un
+    documento de una casa no debe abrirse desde otra ni conociendo su
+    identificador.
+    """
+    from django.http import FileResponse
+
+    from .models import Document
+
+    documento = get_object_or_404(Document, pk=pk)
+    if not documento.file:
+        raise Http404("Ese documento no tiene archivo.")
+
+    respuesta = FileResponse(documento.file.open("rb"))
+    tipo = documento.mime_type or _guess_type(documento.file.name)
+    respuesta["Content-Type"] = tipo
+    # inline: el navegador lo muestra en vez de descargarlo.
+    respuesta["Content-Disposition"] = f'inline; filename="{documento.file.name.split("/")[-1]}"'
+    # Un documento ajeno no debe poder incrustarse desde otro sitio.
+    respuesta["X-Frame-Options"] = "SAMEORIGIN"
+    respuesta["Content-Security-Policy"] = "sandbox; frame-ancestors 'self'"
+    return respuesta
+
+
+def _guess_type(nombre: str) -> str:
+    import mimetypes
+
+    return mimetypes.guess_type(nombre)[0] or "application/octet-stream"
+
+
+def preview_kind(documento) -> str:
+    """Cómo se puede mostrar: incrustado, como imagen, o de ninguna manera."""
+    if not documento.file:
+        return ""
+    tipo = documento.mime_type or _guess_type(documento.file.name)
+    return PREVISUALIZABLES.get(tipo, "")
+
+
 def onboarding(request):
     """Qué falta y por dónde seguir.
 

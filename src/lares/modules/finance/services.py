@@ -252,3 +252,93 @@ def cash_flow(household, months: int = 6) -> dict:
         "worst": min(salida, key=lambda m: m.balance) if salida else None,
         "goes_negative": [m for m in salida if m.balance < 0],
     }
+
+
+# ---------------------------------------------------------------------------
+# Presupuestos
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class BudgetLine:
+    budget: object
+    planned: Decimal
+    spent: Decimal
+    month_elapsed: float
+
+    @property
+    def remaining(self) -> Decimal:
+        return self.planned - self.spent
+
+    @property
+    def used(self) -> float:
+        return float(self.spent / self.planned) if self.planned else 0.0
+
+    @property
+    def over(self) -> bool:
+        return self.spent > self.planned
+
+    @property
+    def ahead(self) -> bool:
+        """Gastas más rápido que el mes: es lo que avisa a tiempo.
+
+        Saber el 31 que te pasaste no cambia nada; saberlo el 12, sí.
+        """
+        return not self.over and self.used > self.month_elapsed + 0.15
+
+    @property
+    def projected(self) -> Decimal:
+        """A este ritmo, cómo acaba el mes."""
+        if self.month_elapsed <= 0:
+            return self.spent
+        return (self.spent / Decimal(str(self.month_elapsed))).quantize(Decimal("1"))
+
+
+def budgets(household, on_date: dt.date | None = None) -> dict:
+    from .models_budget import Budget
+
+    hoy = on_date or dt.date.today()
+    primero = hoy.replace(day=1)
+    siguiente = (primero + dt.timedelta(days=32)).replace(day=1)
+    dias_mes = (siguiente - primero).days
+    transcurrido = hoy.day / dias_mes
+
+    with use_household(household):
+        activos = list(Budget.objects.filter(is_active=True).select_related("account"))
+        gastado = {
+            d["account_id"]: d["total"]
+            for d in Posting.objects.filter(
+                account__type=Account.Type.EXPENSE, amount__gt=0,
+                entry__date__gte=primero, entry__date__lt=siguiente,
+            ).values("account_id").annotate(total=Sum("amount"))
+        }
+
+    lineas = [
+        BudgetLine(budget=b, planned=b.amount,
+                   spent=gastado.get(b.account_id, Decimal(0)),
+                   month_elapsed=transcurrido)
+        for b in activos
+    ]
+    lineas.sort(key=lambda line: -line.used)
+
+    return {
+        "lines": lineas,
+        "month": primero,
+        "elapsed": transcurrido,
+        "planned": sum(line.planned for line in lineas),
+        "spent": sum(line.spent for line in lineas),
+        "over": [line for line in lineas if line.over],
+        "ahead": [line for line in lineas if line.ahead],
+        # Lo que se gasta sin presupuesto no es cero: es lo que no estás mirando.
+        "unbudgeted": _unbudgeted(household, primero, siguiente,
+                                  {b.account_id for b in activos}),
+    }
+
+
+def _unbudgeted(household, desde, hasta, con_presupuesto: set) -> Decimal:
+    with use_household(household):
+        total = Posting.objects.filter(
+            account__type=Account.Type.EXPENSE, amount__gt=0,
+            entry__date__gte=desde, entry__date__lt=hasta,
+        ).exclude(account_id__in=con_presupuesto).aggregate(t=Sum("amount"))["t"]
+    return total or Decimal(0)

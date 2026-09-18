@@ -18,16 +18,25 @@ class CardPaymentProvider(ObligationProvider):
     def generate(self, card, on_date: dt.date):
         if not card.due_day:
             return []
-        saldo = card.account.balance if card.account else None
+
+        # El importe correcto es el saldo AL CORTE, no el de hoy: el de hoy
+        # incluye compras que todavia no vencen, y pagar de menos genera
+        # intereses sobre todo el periodo.
+        pngi = card.no_interest_payment if card.cut_day else None
+        if pngi is None and card.account:
+            pngi = card.account.balance
+
         return [
             ObligationSpec(
                 dedupe_key=f"card:{card.pk}:payment:{due:%Y-%m}",
                 title=f"Pago de {card}",
                 due_on=due,
                 severity="high",
-                amount=saldo if saldo and saldo > 0 else None,
+                amount=pngi if pngi and pngi > 0 else None,
                 currency=card.currency or None,
+                counterparty=card.issuer,
                 remind_offsets=(-7, -3, -1),
+                payload={"kind": "no_interest"},
             )
             for due in next_occurrences({"monthly": {"day": card.due_day}}, on_date, count=2)
         ]

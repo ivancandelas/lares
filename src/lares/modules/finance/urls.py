@@ -12,6 +12,9 @@ urlpatterns = [
     path("dinero/apartado/nuevo/", views.provision_new, name="provision-new"),
     path("dinero/apartado/<uuid:pk>/", views.provision_edit, name="provision-edit"),
     path("dinero/alcanza/", views.cash_flow, name="cash-flow"),
+    path("dinero/topes/", views.budgets, name="budgets"),
+    path("dinero/topes/nuevo/", views.budget_new, name="budget-new"),
+    path("dinero/topes/<uuid:pk>/", views.budget_edit, name="budget-edit"),
     path("dinero/importar/", views.import_statement, name="import"),
     path("dinero/importar/confirmar/", views.import_confirm, name="import-confirm"),
 ]

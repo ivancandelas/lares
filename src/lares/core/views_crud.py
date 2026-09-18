@@ -117,8 +117,13 @@ def resource_detail(request, pk):
         subject_type=ctype, subject_id=obj.pk,
         status__in=[Obligation.Status.PENDING, Obligation.Status.OVERDUE],
     )
+    from .views import preview_kind
+
     return render(request, "core/resource_detail.html", {
         "obj": obj,
+        "documentos_vista": [
+            {"doc": d, "kind": preview_kind(d)} for d in documentos
+        ],
         "enlaces": registry.links_for(obj),
         "prestado_a": related.borrower_of(obj),
         "facts": obj.facts(),

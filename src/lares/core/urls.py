@@ -35,6 +35,7 @@ urlpatterns = [
     path("calendario/<str:token>.ics", views.calendar_feed, name="calendar-feed"),
     path("o/<uuid:pk>.ics", views.obligation_ics, name="obligation-ics"),
 
+    path("d/<uuid:pk>/ver/", views.document_preview, name="document-preview"),
     path("empezar/", views.onboarding, name="onboarding"),
 
     path("manifest.webmanifest", views.manifest, name="manifest"),

@@ -6,7 +6,10 @@ from lares.core.scoping import use_household
 
 @pytest.fixture
 def household(db):
-    return Household.objects.create(name="Casa de prueba", slug="casa-prueba")
+    # El slug coincide con el que calcularia `seed_demo`, para que las
+    # pruebas que siembran datos usen este mismo hogar y no creen otro.
+    return Household.objects.create(name="Casa de prueba",
+                                    slug="casa-de-prueba")
 
 
 @pytest.fixture

@@ -31,13 +31,16 @@ class FinanceModule(LaresModule):
         ))
 
         reg.obligations(obligations.CardPaymentProvider)
-        reg.check(checks.CardWithoutStatement, checks.CardOverLimit)
+        reg.check(checks.CardWithoutStatement, checks.CardOverLimit,
+                  checks.CannotPayInFull, checks.BudgetPace)
         reg.demo_seeder(demo.seed)
         reg.nav(
             NavItem("Cuentas y tarjetas", "finance:accounts", icon="wallet",
                     order=10, section="money"),
             NavItem("Entra y sale", "finance:spending", icon="pie",
                     order=15, section="money"),
+            NavItem("Topes de gasto", "finance:budgets", icon="gauge",
+                    order=14, section="money"),
             NavItem("Dinero apartado", "finance:provisions", icon="lock",
                     order=16, section="money"),
             NavItem("¿Me alcanza?", "finance:cash-flow", icon="trend",

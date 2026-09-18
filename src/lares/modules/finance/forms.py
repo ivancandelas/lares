@@ -1,6 +1,8 @@
 from lares.core.forms import LaresForm, ResourceForm
+from lares.core.models import Account
 
 from .models import CreditCard
+from .models_budget import Budget
 from .models_provision import Provision
 
 
@@ -61,3 +63,26 @@ class ProvisionForm(LaresForm):
             "due_on": "Con esto te digo cuánto apartar cada mes.",
             "saved_amount": "No mueve dinero: solo deja de contarlo como disponible.",
         }
+
+
+class BudgetForm(LaresForm):
+    class Meta:
+        model = Budget
+        fields = ["account", "amount", "is_active", "note"]
+        labels = {
+            "account": "En qué",
+            "amount": "Cuánto al mes",
+            "is_active": "Activo",
+            "note": "Nota",
+        }
+        help_texts = {
+            "account": "Una categoría de gasto: supermercado, gasolina, mascotas.",
+            "amount": "Te aviso cuando gastes más rápido que el mes, no el día 31.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.household:
+            self.fields["account"].queryset = Account._base_manager.filter(
+                household=self.household, type=Account.Type.EXPENSE, is_active=True
+            )

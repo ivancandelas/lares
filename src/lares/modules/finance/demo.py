@@ -97,5 +97,20 @@ def seed(household) -> str:
         Posting.objects.create(household=household, entry=entry, account=origen,
                                amount=-importe, currency="MXN")
 
+    _seed_budgets(household, {"super": gasto_super, "auto": gasto_auto,
+                              "mascotas": mascotas, "familia": familia})
+
     return f"cuentas: {Account.objects.count()}, tarjetas: {CreditCard.objects.count()}, " \
            f"saldo tarjeta: {tdc_account.balance:,.0f} MXN (nómina: {nomina.name})"
+
+
+def _seed_budgets(household, cuentas):
+    """Topes de ejemplo, uno de ellos ya pasado de ritmo."""
+    from .models_budget import Budget
+
+    topes = [(cuentas["super"], 8000), (cuentas["auto"], 5000),
+             (cuentas["mascotas"], 1500), (cuentas["familia"], 9000)]
+    for cuenta, importe in topes:
+        Budget.objects.get_or_create(
+            household=household, account=cuenta, defaults={"amount": importe}
+        )

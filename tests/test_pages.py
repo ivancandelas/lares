@@ -61,7 +61,7 @@ def test_las_pantallas_tambien_responden_con_datos(sesion, household):
     """Una lista vacía y una con datos recorren ramas distintas de la plantilla."""
     from django.core.management import call_command
 
-    call_command("seed_demo", verbosity=0)
+    call_command("seed_demo", name=household.name, verbosity=0)
     for item in registry.nav_items:
         respuesta = sesion.get(reverse(item.url_name))
         assert respuesta.status_code == 200, item.url_name
@@ -71,14 +71,13 @@ def test_las_pantallas_tambien_responden_con_datos(sesion, household):
 def test_toda_ficha_de_recurso_responde(sesion, household):
     from django.core.management import call_command
 
-    from lares.core.models import Household, Resource
+    from lares.core.models import Resource
     from lares.core.scoping import use_household
 
-    call_command("seed_demo", verbosity=0)
-    # seed_demo crea su propio hogar; en modo mono-hogar el middleware resuelve
-    # el primero por nombre, que es justamente ese.
-    demo = Household.objects.order_by("name").first()
-    with use_household(demo):
+    # Se siembra sobre el hogar de la prueba, que es el que resuelve el
+    # middleware: el mas antiguo.
+    call_command("seed_demo", name=household.name, verbosity=0)
+    with use_household(household):
         recursos = list(Resource.objects.all())
 
     assert recursos
@@ -93,7 +92,7 @@ def test_las_plantillas_no_dejan_comentarios_a_la_vista(sesion, household):
     from django.core.management import call_command
     from django.urls import reverse
 
-    call_command("seed_demo", verbosity=0)
+    call_command("seed_demo", name=household.name, verbosity=0)
     rutas = ["core:dashboard", "core:holdings", "core:inbox", "finance:spending"]
     for nombre in rutas:
         contenido = sesion.get(reverse(nombre)).content.decode()
