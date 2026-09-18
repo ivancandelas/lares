@@ -7,6 +7,7 @@ Ver .env.example.
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parents[2]      # .../src
 PROJECT_ROOT = BASE_DIR.parent                      # raiz del repo
@@ -117,6 +118,29 @@ DEFAULT_FROM_EMAIL = env("LARES_FROM_EMAIL", default="lares@localhost")
 CELERY_BROKER_URL = env("LARES_REDIS_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 CELERY_TASK_ALWAYS_EAGER = False
+
+# Calendario de las tareas de fondo. Todas son idempotentes, así que se pueden
+# reintentar, adelantar o repetir sin que al usuario le llegue nada por
+# duplicado. Sin esto, el servicio `beat` arranca y no hace absolutamente nada.
+CELERY_BEAT_SCHEDULE = {
+    "materializar-obligaciones": {
+        "task": "lares.core.tasks.materialize_obligations",
+        "schedule": crontab(hour=3, minute=10),
+    },
+    "enviar-recordatorios": {
+        "task": "lares.core.tasks.send_reminders",
+        # A las 7 y no de madrugada: un aviso se lee cuando empieza el día.
+        "schedule": crontab(hour=7, minute=0),
+    },
+    "detectar-huecos": {
+        "task": "lares.core.tasks.run_checks",
+        "schedule": crontab(hour=3, minute=40),
+    },
+    "traer-de-los-conectores": {
+        "task": "lares.core.tasks.poll_connectors",
+        "schedule": crontab(minute="*/15"),
+    },
+}
 
 # --- Internacionalizacion ---------------------------------------------------
 LANGUAGE_CODE = env("LARES_LANGUAGE_CODE", default="es-mx")

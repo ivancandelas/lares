@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Conectores - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Conectores</h1>
+<p class="mt-1 max-w-[52ch] text-sm text-soft">
+  Sitios de donde llega información sola. Todo acaba en la bandeja, igual que si
+  lo hubieras arrastrado tú.
+</p>
+
+{% if configurados %}
+  <h2 class="mt-10 text-sm font-medium">Configurados</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for c in configurados %}
+      <li class="flex flex-wrap items-baseline justify-between gap-3 py-4">
+        <div class="min-w-0">
+          <a href="{% url 'core:connector-edit' c.pk %}" class="text-[15px] hover:text-calm">
+            {{ c }}{% if not c.is_active %} <span class="text-soft">(pausado)</span>{% endif %}
+          </a>
+          <div class="text-[13px] {% if c.last_error %}text-overdue{% else %}text-soft{% endif %}">
+            {% if c.last_error %}{{ c.last_error }}
+            {% elif c.last_run_at %}Última vez {{ c.last_run_at|date:"j M, H:i"|lower }}, {{ c.last_count }} nuevo(s)
+            {% else %}Nunca se ha ejecutado{% endif %}
+          </div>
+        </div>
+        <form method="post" action="{% url 'core:connector-run' c.pk %}" class="shrink-0">
+          {% csrf_token %}
+          <button class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-calm hover:text-calm">
+            Traer ahora
+          </button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<h2 class="mt-10 text-sm font-medium">Disponibles</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for d in disponibles %}
+    <li class="py-4">
+      <a href="{% url 'core:connector-new' d.key %}" class="text-[15px] hover:text-calm">{{ d.label }}</a>
+      <div class="text-[13px] text-soft">{{ d.description }}</div>
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

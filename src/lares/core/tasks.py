@@ -5,7 +5,8 @@ Todas son idempotentes: se pueden reintentar sin efectos secundarios.
 
 from celery import shared_task
 
-from .models import Household
+from .connectors import run_connector
+from .models import Connector, Household
 from .services import checks, notify, obligations, webhooks
 
 
@@ -41,3 +42,13 @@ def dispatch_webhooks(household_id, verb, payload):
         return {"delivered": 0}
     entregas = webhooks.deliver(household, verb, payload)
     return {"delivered": sum(1 for e in entregas if e.ok), "attempted": len(entregas)}
+
+
+@shared_task
+def poll_connectors():
+    """Trae lo que haya en Paperless, el buzón y las carpetas vigiladas."""
+    total = {}
+    for connector in Connector.all_objects.filter(is_active=True):
+        result = run_connector(connector)
+        total[str(connector.pk)] = {"new": result.new, "error": result.error}
+    return total

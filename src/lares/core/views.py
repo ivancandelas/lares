@@ -70,6 +70,18 @@ def documents(request):
     })
 
 
+def onboarding(request):
+    """Qué falta y por dónde seguir.
+
+    El onboarding más honesto no es un tutorial: es la lista de lo que este
+    hogar todavía no tiene, ordenada por lo que más cambia el resultado.
+    """
+    household = getattr(request, "household", None)
+    return render(request, "core/onboarding.html", {
+        "completeness": assess(household) if household else None,
+    })
+
+
 @login_not_required
 def manifest(request):
     """Manifiesto de la PWA.

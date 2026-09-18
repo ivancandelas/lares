@@ -12,7 +12,17 @@ import datetime as dt
 from django import forms
 from django.db import transaction
 
-from .models import Account, Document, Entry, Link, Location, ObligationRule, Party, Posting
+from .models import (
+    Account,
+    Connector,
+    Document,
+    Entry,
+    Link,
+    Location,
+    ObligationRule,
+    Party,
+    Posting,
+)
 from .models.resource import Resource
 
 INPUT = ("w-full rounded-sm border border-rule bg-white px-3 py-2 "
@@ -276,3 +286,93 @@ class ExpenseForm(forms.Form):
             amount=-importe,
         )
         return entry
+
+
+# ---------------------------------------------------------------------------
+# Conectores
+# ---------------------------------------------------------------------------
+
+
+class ConnectorForm(LaresForm):
+    """Base de los formularios de conector.
+
+    El secreto se pide siempre en blanco: si ya hay uno guardado, dejarlo vacío
+    lo conserva. Así no se enseña nunca en pantalla ni viaja de vuelta al
+    navegador.
+    """
+
+    secret = forms.CharField(
+        required=False, widget=forms.PasswordInput(render_value=False),
+        label="Contraseña o token",
+    )
+
+    class Meta:
+        model = Connector
+        fields = ["label", "is_active"]
+        labels = {"label": "Cómo lo llamas", "is_active": "Activo"}
+
+    CONFIG_FIELDS: tuple = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get("instance") or self.instance
+        if instance and instance.has_secret:
+            self.fields["secret"].help_text = "Ya hay uno guardado. Déjalo vacío para conservarlo."
+        for name in self.CONFIG_FIELDS:
+            if name in self.fields and instance and instance.pk:
+                self.fields[name].initial = instance.config.get(name)
+
+    def save(self, commit=True):
+        connector = super().save(commit=False)
+        connector.key = self.CONNECTOR_KEY
+        connector.config = {
+            **(connector.config or {}),
+            **{name: self.cleaned_data.get(name) for name in self.CONFIG_FIELDS},
+        }
+        if nuevo := self.cleaned_data.get("secret"):
+            connector.secret = nuevo
+        if commit:
+            connector.save()
+        return connector
+
+
+class PaperlessConnectorForm(ConnectorForm):
+    CONNECTOR_KEY = "paperless"
+    CONFIG_FIELDS = ("base_url", "tag", "page_size")
+
+    base_url = forms.URLField(
+        label="Dirección de Paperless", assume_scheme="https",
+        help_text="Por ejemplo https://paperless.casa.local",
+    )
+    tag = forms.CharField(required=False, label="Solo esta etiqueta",
+                          help_text="Vacío: trae todo lo reciente.")
+    page_size = forms.IntegerField(min_value=1, max_value=200, initial=25,
+                                   label="Cuántos revisar cada vez")
+
+
+class ImapConnectorForm(ConnectorForm):
+    CONNECTOR_KEY = "imap"
+    CONFIG_FIELDS = ("host", "port", "username", "folder", "allowed_senders")
+
+    host = forms.CharField(label="Servidor IMAP")
+    port = forms.IntegerField(initial=993, label="Puerto")
+    username = forms.CharField(label="Usuario")
+    folder = forms.CharField(initial="INBOX", label="Carpeta")
+    allowed_senders = forms.CharField(
+        label="Solo de estos remitentes",
+        help_text="Separados por comas. Sin lista no se acepta nada: "
+                  "un buzón abierto es un agujero.",
+    )
+
+
+class WatchFolderConnectorForm(ConnectorForm):
+    CONNECTOR_KEY = "watchfolder"
+    CONFIG_FIELDS = ("path", "delete_after")
+
+    path = forms.CharField(label="Carpeta del servidor",
+                           help_text="Donde el escáner deja lo que digitaliza.")
+    delete_after = forms.BooleanField(required=False, label="Borrar el original tras recogerlo")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.pop("secret", None)       # una carpeta no tiene contraseña

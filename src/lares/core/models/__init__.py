@@ -13,6 +13,7 @@ falta una primitiva, no de que el modulo deba inventarse una tabla suelta.
 """
 
 from .base import HouseholdScopedModel, TimestampedModel
+from .connectors import Connector
 from .documents import Document
 from .events import Event, lares_event
 from .graph import Link
@@ -34,6 +35,6 @@ __all__ = [
     "ObligationRule", "Obligation", "Reminder",
     "Event", "lares_event",
     "ApiKey", "Webhook", "WebhookDelivery",
-    "InboxItem", "Suggestion",
+    "InboxItem", "Suggestion", "Connector",
     "Account", "Entry", "Posting",
 ]

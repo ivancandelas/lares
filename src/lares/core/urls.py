@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import api, views, views_crud, views_inbox
+from . import api, views, views_connectors, views_crud, views_inbox
 
 app_name = "core"
 
@@ -15,6 +15,13 @@ urlpatterns = [
     path("bandeja/<uuid:pk>/", views_inbox.inbox_review, name="inbox-review"),
     path("bandeja/<uuid:pk>/descartar/", views_inbox.inbox_discard, name="inbox-discard"),
     path("bandeja/compartir/", views_inbox.inbox_share, name="inbox-share"),
+
+    path("conectores/", views_connectors.connector_list, name="connectors"),
+    path("conectores/nuevo/<str:key>/", views_connectors.connector_new, name="connector-new"),
+    path("conectores/<uuid:pk>/", views_connectors.connector_edit, name="connector-edit"),
+    path("conectores/<uuid:pk>/traer/", views_connectors.connector_run, name="connector-run"),
+
+    path("empezar/", views.onboarding, name="onboarding"),
 
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("sw.js", views.service_worker, name="service-worker"),
