@@ -20,6 +20,7 @@ urlpatterns = [
 
     path("bandeja/", views_inbox.inbox, name="inbox"),
     path("bandeja/<uuid:pk>/", views_inbox.inbox_review, name="inbox-review"),
+    path("bandeja/<uuid:pk>/archivo/", views_inbox.inbox_file, name="inbox-file"),
     path("bandeja/<uuid:pk>/descartar/", views_inbox.inbox_discard, name="inbox-discard"),
     path("bandeja/compartir/", views_inbox.inbox_share, name="inbox-share"),
     path("bandeja/reprocesar/", views_inbox.inbox_reclassify_all, name="inbox-reclassify-all"),

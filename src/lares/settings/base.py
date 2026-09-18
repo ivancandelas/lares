@@ -81,6 +81,11 @@ MIDDLEWARE = [
     "lares.core.middleware.HouseholdMiddleware",
 ]
 
+# Django trae DENY por defecto, que impide incrustar incluso los archivos
+# propios: el visor de documentos se quedaba en blanco sin ningun error visible.
+# SAMEORIGIN permite verlos aqui y sigue prohibiendo que otro sitio nos enmarque.
+X_FRAME_OPTIONS = "SAMEORIGIN"
+
 ROOT_URLCONF = "lares.urls"
 WSGI_APPLICATION = "lares.wsgi.application"
 ASGI_APPLICATION = "lares.asgi.application"

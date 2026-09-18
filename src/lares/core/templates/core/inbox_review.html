@@ -18,17 +18,17 @@
     <p class="mt-2 text-[13px] text-soft">
       Archivo: {{ item.original_name }}
       {% if item.file %}
-        · <a href="{{ item.file.url }}" class="text-calm hover:underline">abrir</a>
+        · <a href="{% url 'core:inbox-file' item.pk %}" target="_blank" rel="noopener" class="text-calm hover:underline">abrir</a>
       {% endif %}
     </p>
   </div>
 
   {% if vista == "pdf" %}
-    <iframe src="{{ item.file.url }}#view=FitH" title="{{ item.original_name }}"
+    <iframe src="{% url 'core:inbox-file' item.pk %}#view=FitH" title="{{ item.original_name }}"
             loading="lazy"
             class="mt-6 h-96 w-full rounded-sm border border-rule bg-white"></iframe>
   {% elif vista == "image" %}
-    <img src="{{ item.file.url }}" alt="{{ item.original_name }}" loading="lazy"
+    <img src="{% url 'core:inbox-file' item.pk %}" alt="{{ item.original_name }}" loading="lazy"
          class="mt-6 max-h-96 w-full rounded-sm border border-rule bg-white object-contain">
   {% endif %}
 

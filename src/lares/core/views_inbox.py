@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
@@ -92,6 +93,29 @@ def inbox_restore(request, pk):
     item.save(update_fields=["status", "updated_at"])
     messages.success(request, "De vuelta en la bandeja.")
     return redirect("core:inbox")
+
+
+def inbox_file(request, pk):
+    """El archivo crudo de un item, para verlo mientras se revisa.
+
+    Pasa por el manager con ambito de hogar en vez de servirse desde /media/:
+    una URL de medios no comprueba nada, asi que cualquiera con sesion podria
+    leer el archivo de otra casa conociendo la ruta.
+    """
+    import mimetypes
+
+    from django.http import FileResponse
+
+    item = get_object_or_404(InboxItem, pk=pk)
+    if not item.file:
+        raise Http404("Esa entrada no tiene archivo.")
+
+    tipo = item.mime_type or mimetypes.guess_type(item.file.name)[0] \
+        or "application/octet-stream"
+    respuesta = FileResponse(item.file.open("rb"), content_type=tipo)
+    respuesta["Content-Disposition"] = f'inline; filename="{item.original_name}"'
+    respuesta["Content-Security-Policy"] = "sandbox; frame-ancestors 'self'"
+    return respuesta
 
 
 def inbox_discard(request, pk):
