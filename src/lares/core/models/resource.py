@@ -119,6 +119,16 @@ class Resource(HouseholdScopedModel):
             self.kind = getattr(self, "resource_kind", "") or ""
         super().save(*args, **kwargs)
 
+    @property
+    def counts_as_asset(self) -> bool:
+        """Si suma al patrimonio neto.
+
+        Por defecto sí: lo que tienes es tuyo. Un modulo puede decir que no -la
+        casa donde vives de renta genera gasto y obligaciones, pero no es un
+        bien tuyo- y entonces aparece en el sistema sin inflar tu patrimonio.
+        """
+        return self.status == self.Status.ACTIVE
+
     def dispose(self, reason, on_date=None, to=None, amount=None, note=""):
         """Da de baja sin borrar. El historial es parte del valor."""
         import datetime as _dt

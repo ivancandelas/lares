@@ -61,6 +61,7 @@ def _upsert(household, subject, provider, spec):
             "amount": spec.amount,
             "currency": spec.currency or household.currency,
             "severity": spec.severity,
+            "counterparty": spec.counterparty,
             "source": provider.key,
             "remind_offsets": list(spec.remind_offsets or DEFAULT_OFFSETS),
         },

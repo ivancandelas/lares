@@ -1,6 +1,5 @@
 """Contrato del sistema de modulos: el nucleo no debe conocer a los modulos."""
 
-import pytest
 
 from lares.core.registry import registry
 

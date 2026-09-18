@@ -1,0 +1,24 @@
+<li class="flex items-baseline justify-between gap-4 py-4">
+  <div class="min-w-0">
+    <a href="{% url 'core:resource-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+    <div class="text-[13px] text-soft">{{ p.context_line }}</div>
+    <div class="text-[13px] text-soft">{{ p.get_use_display }}</div>
+  </div>
+  <div class="shrink-0 text-right">
+    {% if p.is_mine %}
+      {% if p.current_value %}
+        <div class="tabular-nums text-sm">{{ p.current_value|floatformat:0 }}</div>
+      {% endif %}
+      {% if p.ownership_share %}
+        <div class="text-[13px] text-soft">tu {{ p.ownership_share|floatformat:0 }}%</div>
+      {% endif %}
+    {% else %}
+      {% if p.rent_amount %}
+        <div class="tabular-nums text-sm">{{ p.rent_amount|floatformat:0 }} al mes</div>
+      {% endif %}
+      {% if p.lease_ends_on %}
+        <div class="text-[13px] text-soft">hasta {{ p.lease_ends_on|date:"j M Y"|lower }}</div>
+      {% endif %}
+    {% endif %}
+  </div>
+</li>

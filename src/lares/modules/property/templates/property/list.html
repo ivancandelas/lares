@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Inmuebles - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-light tracking-tight">Inmuebles</h1>
+  <div class="flex gap-2">
+    <a href="{% url 'core:resource-new' 'property' %}"
+       class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir inmueble</a>
+    <a href="{% url 'core:resource-new' 'service' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Añadir servicio</a>
+  </div>
+</div>
+
+{% if mios %}
+  <div class="mt-8 border-y border-rule py-5">
+    <div class="text-[13px] text-soft">Valor de lo que es tuyo</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{{ valor_mio|floatformat:0 }}</div>
+  </div>
+
+  <h2 class="mt-10 text-sm font-medium">Tuyos</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for p in mios %}{% include "property/_row.html" with p=p %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if ajenos %}
+  <h2 class="mt-10 text-sm font-medium">Que no son tuyos</h2>
+  <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+    No suman a tu patrimonio, pero generan renta, servicios, mejoras y un
+    depósito que hay que recuperar.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for p in ajenos %}{% include "property/_row.html" with p=p %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if not mios and not ajenos %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Nada registrado. Da de alta donde vives —sea tuyo o no— y sus recibos
+    empezarán a aparecer solos.
+  </p>
+{% endif %}
+
+{% if servicios %}
+  <h2 class="mt-10 text-sm font-medium">Servicios</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for s in servicios %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <a href="{% url 'core:resource-detail' s.pk %}" class="text-[15px] hover:text-calm">{{ s }}</a>
+          {% with linea=s.context_line %}
+            {% if linea %}<div class="text-[13px] text-soft">{{ linea }}</div>{% endif %}
+          {% endwith %}
+        </div>
+        {% if s.typical_amount %}
+          <span class="shrink-0 tabular-nums text-sm text-soft">{{ s.typical_amount|floatformat:0 }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

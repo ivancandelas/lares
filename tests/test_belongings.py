@@ -7,7 +7,7 @@ import datetime as dt
 
 import pytest
 
-from lares.core.models import Account, Document, Link, Obligation, Party, Resource
+from lares.core.models import Document, Link, Obligation, Party, Resource
 from lares.core.services import checks, obligations
 from lares.modules.belongings.models import Belonging
 

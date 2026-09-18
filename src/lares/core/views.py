@@ -43,10 +43,16 @@ def holdings(request):
     recursos = Resource.objects.filter(status=Resource.Status.ACTIVE)
 
     grupos, valor_total = {}, 0
+    ajenos = []
     for recurso in recursos:
+        concreto = recurso.as_concrete()
         etiqueta = _kind_label(recurso.kind)
         grupos.setdefault(etiqueta, []).append(recurso)
-        valor_total += recurso.current_value or recurso.purchase_amount or 0
+        if concreto.counts_as_asset:
+            valor_total += recurso.current_value or recurso.purchase_amount or 0
+        else:
+            # Lo que administras pero no es tuyo: cuenta como coste, no como bien.
+            ajenos.append(recurso)
 
     deuda = sum(
         c.balance for c in Account.objects.filter(
@@ -56,6 +62,7 @@ def holdings(request):
     idos = Resource.objects.filter(status=Resource.Status.DISPOSED).order_by("-disposed_on")
     return render(request, "core/holdings.html", {
         "grupos": grupos,
+        "ajenos": ajenos,
         "idos": idos[:20],
         "total": len(recursos),
         "valor_total": valor_total,

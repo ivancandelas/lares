@@ -50,6 +50,9 @@ class ObligationSpec:
     severity: str = "normal"      # low | normal | high | critical
     amount: object | None = None
     currency: str | None = None
+    # A quien se le paga o con quien se hace el tramite. "¿A quien?" es parte
+    # del aviso: sin eso, el usuario tiene que ir a buscarlo.
+    counterparty: object | None = None
     remind_offsets: tuple[int, ...] = (-30, -15, -7, -1)
     payload: dict = field(default_factory=dict)
 

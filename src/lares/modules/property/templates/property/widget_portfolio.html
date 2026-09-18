@@ -1,0 +1,12 @@
+<ul class="mt-2 space-y-1.5">
+  {% for p in props %}
+    <li class="flex items-baseline justify-between gap-3 text-[14px]">
+      <span class="min-w-0 truncate">{{ p.name }}</span>
+      <span class="shrink-0 text-[13px] text-soft">
+        {% if p.is_mine %}{{ p.get_use_display|lower }}{% else %}{{ p.get_tenure_display|lower }}{% endif %}
+      </span>
+    </li>
+  {% empty %}
+    <li class="text-[14px] text-soft">Ninguno registrado.</li>
+  {% endfor %}
+</ul>

@@ -179,7 +179,7 @@ def test_confirmar_un_documento_con_vencimiento_crea_el_aviso(sesion, household)
     from lares.core.scoping import use_household
 
     sesion.post("/bandeja/", {
-        "files": _subir("pasaporte.txt", "Pasaporte".encode(), "text/plain"),
+        "files": _subir("pasaporte.txt", b"Pasaporte", "text/plain"),
     })
     with use_household(household):
         item = InboxItem.objects.get()
