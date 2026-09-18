@@ -48,9 +48,9 @@ urlpatterns = [
     path("r/<uuid:pk>/comprobar/", views_crud.resource_verify, name="resource-verify"),
     path("r/<uuid:pk>/recuperar/", views_crud.resource_restore, name="resource-restore"),
 
-    path("personas/", views_crud.party_list, name="parties"),
+    path("personas/", views_contacts.contacts, name="parties"),
     path("personas/nueva/", views_crud.party_new, name="party-new"),
-    path("contactos/", views_contacts.contacts, name="contacts"),
+
     path("contactos/todos.vcf", views_contacts.all_vcards, name="contacts-vcf"),
     path("contactos/etiqueta/<slug:slug>.vcf", views_contacts.tag_vcard,
          name="tag-vcf"),

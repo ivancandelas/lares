@@ -35,8 +35,6 @@ class CoreConfig(AppConfig):
                     section="money"),
             NavItem("Personas", "core:parties", icon="users", order=10,
                     section="more"),
-            NavItem("Contactos", "core:contacts", icon="book", order=12,
-                    section="more"),
             NavItem("Qué tengo compartido", "core:shares", icon="link",
                     order=28, section="more"),
             NavItem("Conectores", "core:connectors", icon="plug", order=20,

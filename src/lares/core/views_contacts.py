@@ -17,13 +17,18 @@ from .services import vcard
 
 
 def contacts(request):
-    """El directorio, agrupado por etiqueta."""
-    personas = Party.objects.filter(kind=Party.Kind.PERSON)
-    etiquetas = Tag.objects.all()
+    """El directorio: personas, organizaciones y sus etiquetas.
+
+    Es la unica pantalla de personas que hay. Tener una lista "de personas" y
+    otra "de contactos" obligaba a recordar en cual estaba cada dato, que es lo
+    contrario de lo que promete el sistema.
+    """
+    personas = list(Party.objects.filter(kind=Party.Kind.PERSON))
+    organizaciones = list(Party.objects.filter(kind=Party.Kind.ORGANIZATION))
 
     grupos = []
     con_etiqueta = set()
-    for tag in etiquetas:
+    for tag in Tag.objects.all():
         gente = [p for p in tagged(tag, Party) if p.kind == Party.Kind.PERSON]
         if gente:
             grupos.append({"tag": tag, "people": gente})
@@ -32,6 +37,7 @@ def contacts(request):
     return render(request, "core/contacts.html", {
         "grupos": grupos,
         "sueltos": [p for p in personas if p.pk not in con_etiqueta],
+        "organizaciones": organizaciones,
         "compartidos": Share.objects.filter(revoked_at__isnull=True),
     })
 

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Contactos - {{ product_name }}{% endblock %}
+{% block title %}Personas - {{ product_name }}{% endblock %}
 
 {% block content %}
 <div class="flex flex-wrap items-baseline justify-between gap-3">
-  <h1 class="text-2xl font-light tracking-tight">Contactos</h1>
+  <h1 class="text-2xl font-light tracking-tight">Personas</h1>
   <div class="flex gap-2">
     <a href="{% url 'core:party-new' %}"
        class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
@@ -12,8 +12,9 @@
   </div>
 </div>
 <p class="mt-1 max-w-[56ch] text-sm text-soft">
-  Agrupados por etiqueta. Puedes exportar una etiqueta entera en vCard, o
-  compartirla por enlace con quien la necesite.
+  Familia, contactos, proveedores y bancos viven juntos: lo que cambia es el
+  papel que juegan. Puedes exportar una etiqueta entera en vCard o compartirla
+  por enlace.
 </p>
 
 {% for g in grupos %}
@@ -39,7 +40,24 @@
   </ul>
 {% endif %}
 
-{% if not grupos and not sueltos %}
+{% if organizaciones %}
+  <h2 class="mt-10 text-sm font-medium">Organizaciones</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for p in organizaciones %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <a href="{% url 'core:party-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+          <div class="text-[13px] text-soft">
+            {% for c in p.contact_points.all %}{{ c.value }}{% if not forloop.last %} · {% endif %}{% endfor %}
+          </div>
+        </div>
+        {% if p.tax_id %}<span class="shrink-0 text-[13px] text-soft">{{ p.tax_id }}</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% if not grupos and not sueltos and not organizaciones %}
   <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
     Nadie registrado todavía. Empieza por la familia: sus teléfonos y sus
     cumpleaños son lo que más falta hace cuando hace falta.

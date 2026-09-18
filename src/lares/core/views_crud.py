@@ -194,13 +194,6 @@ def resource_restore(request, pk):
     return redirect("core:resource-detail", pk=obj.pk)
 
 
-def party_list(request):
-    return render(request, "core/parties.html", {
-        "personas": Party.objects.filter(kind=Party.Kind.PERSON),
-        "organizaciones": Party.objects.filter(kind=Party.Kind.ORGANIZATION),
-    })
-
-
 def party_detail(request, pk):
     """La ficha de una persona u organización, con lo que cuelga de ella."""
     party = get_object_or_404(Party, pk=pk)
