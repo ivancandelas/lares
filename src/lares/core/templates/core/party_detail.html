@@ -9,11 +9,45 @@
       {{ party.get_kind_display }}{% if party.tax_id %}, {{ party.tax_id }}{% endif %}
     </p>
   </div>
-  <a href="{% url 'core:party-edit' party.pk %}"
-     class="shrink-0 rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
-    Editar
-  </a>
+  <div class="flex shrink-0 flex-wrap gap-2">
+    <a href="{% url 'core:contact-points' party.pk %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+      Teléfonos y correos
+    </a>
+    <a href="{% url 'core:party-vcf' party.pk %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+      vCard
+    </a>
+    <a href="{% url 'core:party-edit' party.pk %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+      Editar
+    </a>
+  </div>
 </div>
+
+{% if party.contact_points.all or party.birth_date %}
+  <ul class="mt-4 space-y-1">
+    {% for c in party.contact_points.all %}
+      <li class="text-[15px]">
+        {{ c.value }}
+        <span class="text-[13px] text-soft">{{ c.get_channel_display|lower }}{% if c.label %}, {{ c.label }}{% endif %}</span>
+      </li>
+    {% endfor %}
+    {% if party.birth_date %}
+      <li class="text-[15px]">
+        Cumple el {{ party.birth_date|date:"j \d\e F"|lower }}
+      </li>
+    {% endif %}
+  </ul>
+{% endif %}
+
+{% if etiquetas %}
+  <div class="mt-4 flex flex-wrap gap-2">
+    {% for t in etiquetas %}
+      <span class="rounded-sm border border-rule px-2 py-0.5 text-[13px] text-soft">{{ t.name }}</span>
+    {% endfor %}
+  </div>
+{% endif %}
 
 {% include "core/_related.html" %}
 

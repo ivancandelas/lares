@@ -204,8 +204,11 @@ def party_list(request):
 def party_detail(request, pk):
     """La ficha de una persona u organización, con lo que cuelga de ella."""
     party = get_object_or_404(Party, pk=pk)
+    from .models.tagging import tags_of
+
     return render(request, "core/party_detail.html", {
         "party": party,
+        "etiquetas": tags_of(party),
         "enlaces": registry.links_for(party),
         "prestados": related.lent_to(party),
     })

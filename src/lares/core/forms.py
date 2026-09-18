@@ -109,6 +109,41 @@ class ResourceForm(LaresForm):
 
 
 class PartyForm(LaresForm):
+    """Las etiquetas se escriben separadas por comas.
+
+    Es el gesto que todo el mundo conoce y no obliga a mantener una lista de
+    categorías antes de poder guardar a alguien.
+    """
+
+    GROUPS = (
+        ("Quién es", ["kind", "name", "legal_name", "birth_date"]),
+        ("Cómo lo agrupas", ["tags"]),
+        ("Datos fiscales", ["tax_id"]),
+        ("Notas", ["notes"]),
+    )
+
+    tags = forms.CharField(
+        required=False, label="Etiquetas",
+        help_text="Separadas por comas: familia, trabajo, amigos.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            from .models.tagging import tags_of
+
+            self.fields["tags"].initial = ", ".join(
+                t.name for t in tags_of(self.instance)
+            )
+
+    def save(self, commit=True):
+        party = super().save(commit=commit)
+        if commit:
+            from .models.tagging import set_tags
+
+            set_tags(party, (self.cleaned_data.get("tags") or "").split(","))
+        return party
+
     class Meta:
         model = Party
         fields = ["kind", "name", "legal_name", "tax_id", "birth_date", "notes"]

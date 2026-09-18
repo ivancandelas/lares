@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Qué tengo compartido - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Qué tengo compartido</h1>
+  <a href="{% url 'core:share-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Compartir algo</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Enlaces de solo lectura que puedes revocar. Una copia enviada no se puede
+  retirar; un enlace sí.
+</p>
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for s in shares %}
+    <li class="py-4" x-data="{ copiado: false }">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[15px] {% if not s.is_live %}text-soft line-through{% endif %}">{{ s.label }}</div>
+          <div class="text-[13px] text-soft">
+            {{ s.get_kind_display }}: {{ s.target }}{% if s.note %}, para {{ s.note }}{% endif %}
+          </div>
+          <div class="text-[13px] {% if s.is_live %}text-soft{% else %}text-overdue{% endif %}">
+            {{ s.state }}{% if s.hits %}, abierto {{ s.hits }} vez{{ s.hits|pluralize:"es" }}
+              {% if s.last_seen_at %}(la última el {{ s.last_seen_at|date:"j M, H:i"|lower }}){% endif %}
+            {% else %}, nadie lo ha abierto{% endif %}
+          </div>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          {% if s.is_live %}
+            {% url 'core:shared' s.token as enlace %}
+            <button type="button"
+                    @click="navigator.clipboard.writeText(window.location.origin + '{{ enlace }}'); copiado = true; setTimeout(() => copiado = false, 2000)"
+                    class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-calm hover:text-calm">
+              <span x-text="copiado ? 'Copiado' : 'Copiar enlace'">Copiar enlace</span>
+            </button>
+            <form method="post" action="{% url 'core:share-revoke' s.pk %}">
+              {% csrf_token %}
+              <button class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-overdue hover:text-overdue">
+                Revocar
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">
+      Nada compartido. Es lo correcto hasta que haga falta.
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

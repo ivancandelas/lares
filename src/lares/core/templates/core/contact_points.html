@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ party }} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <h1 class="text-2xl font-light tracking-tight">Cómo localizar a {{ party.name }}</h1>
+
+  <form method="post" class="mt-8 flex flex-wrap items-end gap-3 border-y border-rule py-4">
+    {% csrf_token %}
+    <label>
+      <span class="text-sm text-soft">Qué es</span>
+      <select name="channel"
+              class="mt-1 block rounded-sm border border-rule bg-white px-3 py-2 focus:border-calm focus:outline-none">
+        {% for valor, etiqueta in canales %}<option value="{{ valor }}">{{ etiqueta }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="min-w-[14rem] flex-1">
+      <span class="text-sm text-soft">Cuál</span>
+      <input name="value" required placeholder="33 1234 5678"
+             class="mt-1 w-full rounded-sm border border-rule bg-white px-3 py-2
+                    placeholder:text-soft focus:border-calm focus:outline-none">
+    </label>
+    <label>
+      <span class="text-sm text-soft">Etiqueta</span>
+      <input name="label" placeholder="casa, móvil"
+             class="mt-1 block w-32 rounded-sm border border-rule bg-white px-3 py-2
+                    placeholder:text-soft focus:border-calm focus:outline-none">
+    </label>
+    <button class="rounded-sm bg-calm px-4 py-2 text-sm font-medium text-white hover:bg-ink">
+      Añadir
+    </button>
+  </form>
+
+  <ul class="mt-6 divide-y divide-rule border-y border-rule">
+    {% for c in party.contact_points.all %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <div class="text-[15px]">{{ c.value }}</div>
+          <div class="text-[13px] text-soft">
+            {{ c.get_channel_display }}{% if c.label %}, {{ c.label }}{% endif %}
+          </div>
+        </div>
+        <form method="post" action="{% url 'core:contact-point-delete' c.pk %}">
+          {% csrf_token %}
+          <button class="text-[13px] text-soft hover:text-overdue">quitar</button>
+        </form>
+      </li>
+    {% empty %}
+      <li class="py-3 text-[15px] text-soft">Todavía nada.</li>
+    {% endfor %}
+  </ul>
+
+  <a href="{% url 'core:party-detail' party.pk %}"
+     class="mt-6 inline-block text-sm text-soft hover:text-ink">Volver</a>
+</div>
+{% endblock %}

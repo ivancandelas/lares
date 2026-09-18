@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from lares.core.models import (
+    ContactPoint,
     Document,
     Household,
     Location,
@@ -54,6 +55,7 @@ class Command(BaseCommand):
             )
             Location.objects.get_or_create(household=household, name="Cochera")
             _seed_documents(household, titular)
+            _seed_contacts(household)
             _seed_rules(household)
 
             for seeder in registry.demo_seeders:
@@ -107,3 +109,35 @@ def _seed_rules(household):
             defaults={"label": label, "schedule": schedule, "amount": amount,
                       "currency": household.currency, "remind_offsets": [-7, -3, -1]},
         )
+
+
+def _seed_contacts(household):
+    """Familia y amigos, con lo que hace falta para poder llamarles."""
+    from lares.core.models.tagging import set_tags
+
+    gente = [
+        ("Mariana", dt.date(1988, 6, 14), "familia, casa",
+         [("phone", "33 1234 5678", "móvil"), ("email", "mariana@example.mx", "")]),
+        ("Diego", dt.date(2011, 3, 2), "familia, casa",
+         [("phone", "33 2345 6789", "móvil")]),
+        ("Luis", dt.date(1982, 11, 27), "familia",
+         [("phone", "33 3456 7890", "móvil")]),
+        ("Dra. Robles", None, "salud",
+         [("phone", "33 4567 8901", "consultorio")]),
+        ("Plomería Hernández", None, "servicios",
+         [("phone", "33 5678 9012", "taller")]),
+    ]
+    for nombre, cumple, etiquetas, contactos in gente:
+        party, _ = Party.objects.get_or_create(
+            household=household, name=nombre,
+            defaults={"kind": Party.Kind.PERSON},
+        )
+        if cumple and not party.birth_date:
+            party.birth_date = cumple
+            party.save(update_fields=["birth_date", "updated_at"])
+        set_tags(party, etiquetas.split(","))
+        for canal, valor, etiqueta in contactos:
+            ContactPoint.objects.get_or_create(
+                household=household, party=party, channel=canal, value=valor,
+                defaults={"label": etiqueta},
+            )

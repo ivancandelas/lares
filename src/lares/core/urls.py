@@ -1,7 +1,14 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import api, views, views_connectors, views_crud, views_inbox
+from . import (
+    api,
+    views,
+    views_connectors,
+    views_contacts,
+    views_crud,
+    views_inbox,
+)
 
 app_name = "core"
 
@@ -43,6 +50,22 @@ urlpatterns = [
 
     path("personas/", views_crud.party_list, name="parties"),
     path("personas/nueva/", views_crud.party_new, name="party-new"),
+    path("contactos/", views_contacts.contacts, name="contacts"),
+    path("contactos/todos.vcf", views_contacts.all_vcards, name="contacts-vcf"),
+    path("contactos/etiqueta/<slug:slug>.vcf", views_contacts.tag_vcard,
+         name="tag-vcf"),
+    path("personas/<uuid:pk>/contacto/", views_contacts.contact_points,
+         name="contact-points"),
+    path("personas/<uuid:pk>.vcf", views_contacts.party_vcard, name="party-vcf"),
+    path("contacto/<uuid:pk>/quitar/", views_contacts.contact_point_delete,
+         name="contact-point-delete"),
+
+    path("compartido/", views_contacts.shares, name="shares"),
+    path("compartido/nuevo/", views_contacts.share_new, name="share-new"),
+    path("compartido/<uuid:pk>/revocar/", views_contacts.share_revoke,
+         name="share-revoke"),
+    path("c/<str:token>/", views_contacts.shared_view, name="shared"),
+    path("c/<str:token>.vcf", views_contacts.shared_vcard, name="shared-vcf"),
     path("personas/<uuid:pk>/", views_crud.party_detail, name="party-detail"),
     path("personas/<uuid:pk>/editar/", views_crud.party_edit, name="party-edit"),
     path("r/<uuid:pk>/prestar/", views_crud.resource_lend, name="resource-lend"),

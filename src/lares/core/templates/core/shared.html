@@ -1,0 +1,63 @@
+{% comment %}
+  Lo que ve quien recibe el enlace. Deliberadamente fuera de la plantilla base:
+  no debe ver el menú, ni la búsqueda, ni nada más que lo compartido.
+{% endcomment %}
+<!doctype html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ tag.name|default:"Contactos" }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: {
+      paper: '#FBFBF9', ink: '#17201C', soft: '#5A6560', rule: '#DDE2DD',
+      calm: '#2F6B4F',
+    }}}}
+  </script>
+</head>
+<body class="h-full bg-paper text-ink antialiased">
+  <div class="mx-auto max-w-lg px-5 py-10">
+    <h1 class="text-2xl font-light tracking-tight">{{ tag.name|default:"Contactos" }}</h1>
+    <p class="mt-1 text-sm text-soft">
+      Compartido por {{ hogar.name }}{% if share.expires_on %}, hasta el
+      {{ share.expires_on|date:"j \d\e F \d\e Y"|lower }}{% endif %}.
+    </p>
+
+    <a href="{% url 'core:shared-vcf' share.token %}"
+       class="mt-6 inline-block rounded-sm bg-calm px-4 py-2 text-sm font-medium text-white hover:bg-ink">
+      Guardar en mi teléfono
+    </a>
+    <p class="mt-2 text-[13px] text-soft">
+      Descarga un archivo vCard que entienden Android, iPhone y el ordenador.
+    </p>
+
+    <ul class="mt-8 divide-y divide-rule border-y border-rule">
+      {% for p in people %}
+        <li class="py-3">
+          <div class="text-[15px]">{{ p.name }}</div>
+          {% for c in p.contact_points.all %}
+            <div class="text-[13px] text-soft">
+              {% if c.channel == "phone" %}
+                <a href="tel:{{ c.value }}" class="text-calm hover:underline">{{ c.value }}</a>
+              {% elif c.channel == "email" %}
+                <a href="mailto:{{ c.value }}" class="text-calm hover:underline">{{ c.value }}</a>
+              {% else %}{{ c.value }}{% endif %}
+              {% if c.label %}<span class="text-soft">· {{ c.label }}</span>{% endif %}
+            </div>
+          {% endfor %}
+          {% if p.birth_date %}
+            <div class="text-[13px] text-soft">cumple el {{ p.birth_date|date:"j \d\e F"|lower }}</div>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li class="py-3 text-[15px] text-soft">No hay nadie en esta lista.</li>
+      {% endfor %}
+    </ul>
+
+    <p class="mt-8 text-[13px] text-soft">
+      Solo lectura. Quien lo compartió puede retirar este enlace cuando quiera.
+    </p>
+  </div>
+</body>
+</html>

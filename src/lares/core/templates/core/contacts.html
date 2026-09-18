@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Contactos - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-light tracking-tight">Contactos</h1>
+  <div class="flex gap-2">
+    <a href="{% url 'core:party-new' %}"
+       class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
+    <a href="{% url 'core:contacts-vcf' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Exportar todo</a>
+  </div>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Agrupados por etiqueta. Puedes exportar una etiqueta entera en vCard, o
+  compartirla por enlace con quien la necesite.
+</p>
+
+{% for g in grupos %}
+  <div class="mt-10 flex items-baseline justify-between gap-4">
+    <h2 class="text-sm font-medium">{{ g.tag.name }}</h2>
+    <span class="flex shrink-0 gap-3 text-[13px]">
+      <a href="{% url 'core:tag-vcf' g.tag.slug %}" class="text-calm hover:underline">exportar</a>
+      <a href="{% url 'core:share-new' %}" class="text-calm hover:underline">compartir</a>
+    </span>
+  </div>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for p in g.people %}{% include "core/_contact_row.html" with p=p %}{% endfor %}
+  </ul>
+{% endfor %}
+
+{% if sueltos %}
+  <h2 class="mt-10 text-sm font-medium">Sin etiqueta</h2>
+  <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+    Ponles una y podrás compartirlos en grupo.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for p in sueltos %}{% include "core/_contact_row.html" with p=p %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if not grupos and not sueltos %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Nadie registrado todavía. Empieza por la familia: sus teléfonos y sus
+    cumpleaños son lo que más falta hace cuando hace falta.
+  </p>
+{% endif %}
+{% endblock %}

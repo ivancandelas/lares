@@ -18,7 +18,11 @@ class CoreConfig(AppConfig):
             PaperlessConnectorForm,
             WatchFolderConnectorForm,
         )
-        from .providers import DocumentExpiryProvider, UserRuleProvider
+        from .providers import (
+            BirthdayProvider,
+            DocumentExpiryProvider,
+            UserRuleProvider,
+        )
         from .registry import NavItem, registry
 
         registry.nav(
@@ -29,7 +33,12 @@ class CoreConfig(AppConfig):
                     section="holdings"),
             NavItem("Pagos recurrentes", "core:rules", icon="repeat", order=20,
                     section="money"),
-            NavItem("Personas", "core:parties", icon="users", order=10, section="more"),
+            NavItem("Personas", "core:parties", icon="users", order=10,
+                    section="more"),
+            NavItem("Contactos", "core:contacts", icon="book", order=12,
+                    section="more"),
+            NavItem("Qué tengo compartido", "core:shares", icon="link",
+                    order=28, section="more"),
             NavItem("Conectores", "core:connectors", icon="plug", order=20,
                     section="more"),
             NavItem("Calendario", "core:calendar-settings", icon="calendar",
@@ -39,7 +48,9 @@ class CoreConfig(AppConfig):
         )
         registry.subject_source("document", _expiring_documents)
         registry.subject_source("household", lambda household: [household])
-        registry.obligations(DocumentExpiryProvider, UserRuleProvider)
+        registry.subject_source("party", _people)
+        registry.obligations(DocumentExpiryProvider, UserRuleProvider,
+                             BirthdayProvider)
         # El CFDI va primero: está firmado, no se adivina.
         registry.classifier(CfdiClassifier, KeywordClassifier)
 
@@ -64,3 +75,9 @@ def _expiring_documents(household):
     from .models import Document
 
     return Document.objects.filter(expires_on__isnull=False, archived_at__isnull=True)
+
+
+def _people(household):
+    from .models import Party
+
+    return Party.objects.filter(kind=Party.Kind.PERSON, archived_at__isnull=True)

@@ -1,0 +1,14 @@
+<li class="flex items-baseline justify-between gap-4 py-3">
+  <div class="min-w-0">
+    <a href="{% url 'core:party-detail' p.pk %}" class="text-[15px] hover:text-calm">{{ p.name }}</a>
+    <div class="text-[13px] text-soft">
+      {% for c in p.contact_points.all %}{{ c.value }}{% if not forloop.last %} · {% endif %}{% empty %}sin teléfono ni correo{% endfor %}
+    </div>
+  </div>
+  <div class="shrink-0 text-right">
+    {% if p.birth_date %}
+      <div class="text-[13px] text-soft">{{ p.birth_date|date:"j \d\e F"|lower }}</div>
+    {% endif %}
+    <a href="{% url 'core:party-vcf' p.pk %}" class="text-[13px] text-calm hover:underline">vCard</a>
+  </div>
+</li>

@@ -23,6 +23,8 @@ from .ledger import Account, Entry, Posting
 from .obligations import Obligation, ObligationRule, Reminder
 from .party import ContactPoint, Party
 from .resource import Location, Resource
+from .sharing import Share
+from .tagging import Tag, TaggedItem
 from .tenancy import Household, Membership, User
 
 __all__ = [
@@ -36,5 +38,6 @@ __all__ = [
     "Event", "lares_event",
     "ApiKey", "Webhook", "WebhookDelivery",
     "InboxItem", "Suggestion", "Connector",
+    "Tag", "TaggedItem", "Share",
     "Account", "Entry", "Posting",
 ]

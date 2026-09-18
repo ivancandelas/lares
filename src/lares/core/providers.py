@@ -65,3 +65,38 @@ class UserRuleProvider(ObligationProvider):
                     payload={"rule": str(rule.pk)},
                 ))
         return specs
+
+
+class BirthdayProvider(ObligationProvider):
+    """Los cumpleanos.
+
+    Van por el mismo motor que todo lo demas, asi que aparecen en el tablero y
+    en el feed de calendario sin escribir nada especifico.
+    """
+
+    key = "core.birthday"
+    label = "Cumpleaños"
+    applies_to = "party"
+
+    def generate(self, party, on_date: dt.date):
+        if not party.birth_date:
+            return []
+
+        specs = []
+        for ano in (on_date.year, on_date.year + 1):
+            try:
+                cuando = party.birth_date.replace(year=ano)
+            except ValueError:
+                cuando = dt.date(ano, 2, 28)     # 29 de febrero
+            if cuando < on_date:
+                continue
+            edad = ano - party.birth_date.year
+            specs.append(ObligationSpec(
+                dedupe_key=f"party:{party.pk}:birthday:{ano}",
+                title=f"Cumpleaños de {party.name}",
+                due_on=cuando,
+                severity="low",
+                remind_offsets=(-7, -1),
+                payload={"age": edad},
+            ))
+        return specs
