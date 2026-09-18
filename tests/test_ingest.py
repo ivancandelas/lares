@@ -213,3 +213,74 @@ def test_subir_funciona_aunque_la_cola_este_caida(scoped, monkeypatch):
     item, nuevo = ingest.receive(scoped, _subir("factura.xml", CFDI_XML))
     assert nuevo
     assert InboxItem.objects.count() == 1
+
+
+# --- Reprocesado -------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_reprocesar_aprovecha_un_clasificador_nuevo(scoped):
+    """La razón por la que el crudo se conserva siempre.
+
+    Un archivo que entró sin reconocerse tiene que poder reconocerse después,
+    sin pedirle al usuario que lo suba otra vez.
+    """
+    from lares.core.registry import Classifier, Proposal, registry
+
+    item, _ = ingest.receive(scoped, _subir("IMG_9931.txt", b"zzz", "text/plain"))
+    assert item.suggestion is None
+
+    class ReciboClassifier(Classifier):
+        key = "test.recibo"
+        label = "Recibo"
+
+        def classify(self, entrada):
+            return Proposal(label="Algo nuevo", plan={"document": {"doc_type": "utility"}},
+                            confidence=0.7)
+
+    registry.classifiers.append(ReciboClassifier())
+    try:
+        propuestas = ingest.reclassify(item)
+    finally:
+        registry.classifiers.pop()
+
+    assert propuestas
+    assert item.suggestion.classifier == "test.recibo"
+
+
+@pytest.mark.django_db
+def test_reprocesar_no_duplica_propuestas(scoped):
+    item, _ = ingest.receive(scoped, _subir("factura.xml", CFDI_XML))
+    antes = Suggestion.objects.filter(item=item).count()
+
+    ingest.reclassify(item)
+    ingest.reclassify(item)
+
+    assert Suggestion.objects.filter(item=item).count() == antes
+
+
+@pytest.mark.django_db
+def test_reprocesar_en_bloque_no_toca_lo_ya_registrado(scoped):
+    aplicado, _ = ingest.receive(scoped, _subir("factura.xml", CFDI_XML))
+    documento = Document.objects.create(household=scoped, title="Ya registrado")
+    ingest.apply(aplicado, documento)
+    ingest.receive(scoped, _subir("poliza.txt", "Póliza".encode(), "text/plain"))
+
+    result = ingest.reclassify_all(scoped, only_pending=False)
+
+    assert result["reviewed"] == 1          # solo el pendiente
+    aplicado.refresh_from_db()
+    assert aplicado.status == InboxItem.Status.APPLIED
+    assert aplicado.applied_document_id == documento.pk
+
+
+@pytest.mark.django_db
+def test_lo_descartado_se_puede_recuperar(scoped):
+    item, _ = ingest.receive(scoped, _subir("factura.xml", CFDI_XML))
+    ingest.discard(item)
+
+    item.status = InboxItem.Status.NEW
+    item.save(update_fields=["status"])
+
+    # El archivo nunca se fue: reprocesarlo funciona igual que el primer día.
+    assert ingest.reclassify(item)

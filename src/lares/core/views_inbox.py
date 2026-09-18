@@ -54,6 +54,33 @@ def inbox_review(request, pk):
     })
 
 
+def inbox_reclassify(request, pk):
+    propuestas = ingest.reclassify(get_object_or_404(InboxItem, pk=pk))
+    if propuestas:
+        messages.success(request, f"Ahora parece: {propuestas[0].label}.")
+    else:
+        messages.success(request, "Sigue sin reconocerse. Dime tú qué es.")
+    return redirect("core:inbox")
+
+
+def inbox_reclassify_all(request):
+    result = ingest.reclassify_all(request.household, only_pending=False)
+    messages.success(
+        request,
+        f"{result['reviewed']} revisados, {result['recognised']} reconocidos.",
+    )
+    return redirect("core:inbox")
+
+
+def inbox_restore(request, pk):
+    """Rescatar algo descartado por error, sin volver a subirlo."""
+    item = get_object_or_404(InboxItem, pk=pk)
+    item.status = InboxItem.Status.NEW
+    item.save(update_fields=["status", "updated_at"])
+    messages.success(request, "De vuelta en la bandeja.")
+    return redirect("core:inbox")
+
+
 def inbox_discard(request, pk):
     item = get_object_or_404(InboxItem, pk=pk)
     ingest.discard(item)

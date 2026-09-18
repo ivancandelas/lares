@@ -102,6 +102,42 @@ def classify(item) -> list:
     return propuestas
 
 
+def reclassify(item) -> list:
+    """Vuelve a pasar un item por los clasificadores.
+
+    Es la razon por la que el crudo se conserva siempre. Cuando se anade un
+    clasificador nuevo -o se corrige uno- lo que entro mal tiene que poder
+    volver a entrar bien, sin pedirle al usuario que suba nada otra vez.
+    """
+    item.suggestions.all().delete()
+    if item.file and not item.text:
+        try:
+            with item.file.open("rb") as fh:
+                item.text = extract_text(fh.read(), item.original_name, item.mime_type)
+            item.save(update_fields=["text", "updated_at"])
+        except (FileNotFoundError, ValueError):
+            logger.info("No se pudo releer el archivo de %s", item.pk)
+    return classify(item)
+
+
+def reclassify_all(household, only_pending: bool = True) -> dict:
+    """Reprocesa la bandeja entera. Nunca toca lo ya registrado."""
+    from ..models import InboxItem as _InboxItem
+
+    qs = _InboxItem.objects.all()
+    if only_pending:
+        qs = qs.filter(status=_InboxItem.Status.NEW)
+    else:
+        # Lo aplicado se queda como está: ya lo confirmó una persona.
+        qs = qs.exclude(status=_InboxItem.Status.APPLIED)
+
+    revisados = reconocidos = 0
+    for item in qs:
+        revisados += 1
+        reconocidos += bool(reclassify(item))
+    return {"reviewed": revisados, "recognised": reconocidos}
+
+
 def initial_document_data(item) -> dict:
     """Los valores con los que llega precargado el formulario de la persona."""
     propuesta = item.suggestion

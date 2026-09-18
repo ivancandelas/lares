@@ -2,7 +2,15 @@
 {% block title %}Bandeja - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-light tracking-tight">Bandeja</h1>
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-light tracking-tight">Bandeja</h1>
+  <form method="post" action="{% url 'core:inbox-reclassify-all' %}">
+    {% csrf_token %}
+    <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+      Volver a reconocer todo
+    </button>
+  </form>
+</div>
 <p class="mt-1 max-w-[52ch] text-sm text-soft">
   Suelta aquí facturas, pólizas o recibos. Lares propone qué son; tú confirmas.
 </p>
@@ -56,7 +64,15 @@
     {% for item in cerrados %}
       <li class="flex items-baseline justify-between gap-4 py-2.5 text-[14px] text-soft">
         <span class="min-w-0 truncate">{{ item.original_name }}</span>
-        <span class="shrink-0 text-[13px]">{{ item.get_status_display|lower }}</span>
+        <span class="flex shrink-0 items-center gap-3 text-[13px]">
+          {{ item.get_status_display|lower }}
+          {% if item.status == "discarded" %}
+            <form method="post" action="{% url 'core:inbox-restore' item.pk %}">
+              {% csrf_token %}
+              <button class="text-calm hover:underline">recuperar</button>
+            </form>
+          {% endif %}
+        </span>
       </li>
     {% endfor %}
   </ul>

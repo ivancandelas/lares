@@ -15,6 +15,9 @@ urlpatterns = [
     path("bandeja/<uuid:pk>/", views_inbox.inbox_review, name="inbox-review"),
     path("bandeja/<uuid:pk>/descartar/", views_inbox.inbox_discard, name="inbox-discard"),
     path("bandeja/compartir/", views_inbox.inbox_share, name="inbox-share"),
+    path("bandeja/reprocesar/", views_inbox.inbox_reclassify_all, name="inbox-reclassify-all"),
+    path("bandeja/<uuid:pk>/reprocesar/", views_inbox.inbox_reclassify, name="inbox-reclassify"),
+    path("bandeja/<uuid:pk>/recuperar/", views_inbox.inbox_restore, name="inbox-restore"),
 
     path("conectores/", views_connectors.connector_list, name="connectors"),
     path("conectores/nuevo/<str:key>/", views_connectors.connector_new, name="connector-new"),
