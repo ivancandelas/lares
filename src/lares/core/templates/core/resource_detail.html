@@ -1,5 +1,10 @@
 {% extends "base.html" %}
-{% block title %}{{ obj }} - {{ product_name }}{% endblock %}
+{% block title %}{{ obj }} - {{ product_name }}{% if tabs %}
+  {% for tab in tabs %}
+    {% include tab.template %}
+  {% endfor %}
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="flex items-start justify-between gap-4">
@@ -103,4 +108,9 @@
     </li>
   {% endfor %}
 </ul>
+{% if tabs %}
+  {% for tab in tabs %}
+    {% include tab.template %}
+  {% endfor %}
+{% endif %}
 {% endblock %}

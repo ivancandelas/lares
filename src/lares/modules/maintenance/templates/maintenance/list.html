@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Mantenimiento - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-light tracking-tight">Mantenimiento</h1>
+  <div class="flex gap-2">
+    <a href="{% url 'maintenance:work-new' %}"
+       class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Registrar trabajo</a>
+    <a href="{% url 'maintenance:plan-new' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Añadir plan</a>
+  </div>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  El plan avisa de lo que toca. El historial contesta quién lo hizo la última vez
+  y cuánto costó.
+</p>
+
+<h2 class="mt-10 text-sm font-medium">Lo que toca cada cierto tiempo</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for p in planes %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <a href="{% url 'maintenance:plan-edit' p.pk %}" class="text-[15px] hover:text-calm">{{ p.title }}</a>
+        <div class="text-[13px] text-soft">
+          {{ p.subject }}, {{ p.cadence }}{% if p.preferred_provider %}, {{ p.preferred_provider }}{% endif %}
+        </div>
+      </div>
+      <div class="shrink-0 text-right">
+        {% if p.last_done_on %}
+          <div class="text-[13px] text-soft">última vez {{ p.last_done_on|date:"j M Y"|lower }}</div>
+        {% else %}
+          <div class="text-[13px] text-soon">nunca registrado</div>
+        {% endif %}
+        {% if p.estimated_cost %}
+          <div class="tabular-nums text-[13px] text-soft">~{{ p.estimated_cost|floatformat:0 }}</div>
+        {% endif %}
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">
+      Nada programado. Empieza por el boiler y la afinación del coche: son los que
+      más caro salen si se olvidan.
+    </li>
+  {% endfor %}
+</ul>
+
+<h2 class="mt-10 text-sm font-medium">Lo que ya se hizo</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for w in trabajos %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <div class="text-[15px]">{{ w.title }}</div>
+        <div class="text-[13px] text-soft">
+          {{ w.subject }}, {{ w.done_on|date:"j \d\e F \d\e Y"|lower }}{% if w.provider %}, {{ w.provider }}{% endif %}
+        </div>
+      </div>
+      <div class="shrink-0 text-right">
+        {% if w.cost %}<div class="tabular-nums text-sm">{{ w.cost|floatformat:0 }}</div>{% endif %}
+        {% if w.warranty_until %}
+          <div class="text-[13px] text-soft">garantía a {{ w.warranty_until|date:"j M Y"|lower }}</div>
+        {% endif %}
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">Ningún trabajo registrado todavía.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
