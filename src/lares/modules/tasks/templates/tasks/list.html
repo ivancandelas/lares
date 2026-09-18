@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Tareas - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Tareas</h1>
+<p class="mt-1 max-w-[52ch] text-sm text-soft">
+  Lo que decides tú. Lo que vence solo —pólizas, refrendos, servicios— aparece
+  en Esta semana.
+</p>
+
+<form method="post" class="mt-8 flex flex-wrap items-end gap-3 border-y border-rule py-4">
+  {% csrf_token %}
+  <label class="min-w-[16rem] flex-1">
+    <span class="text-sm text-soft">Qué hay que hacer</span>
+    <input name="title" required placeholder="Cotizar seguro del Mazda"
+           class="mt-1 w-full rounded-sm border border-rule bg-white px-3 py-2
+                  placeholder:text-soft focus:border-calm focus:outline-none">
+  </label>
+  <label>
+    <span class="text-sm text-soft">Para cuándo</span>
+    <input type="date" name="due_on"
+           class="mt-1 block rounded-sm border border-rule bg-white px-3 py-2
+                  focus:border-calm focus:outline-none">
+  </label>
+  <button class="rounded-sm bg-calm px-4 py-2 text-sm font-medium text-white hover:bg-ink">
+    Añadir
+  </button>
+</form>
+
+{% if vencidas %}
+  <h2 class="mt-10 text-sm font-medium text-overdue">Pasadas de fecha</h2>
+  <ul class="mt-1 divide-y divide-rule">
+    {% for t in vencidas %}{% include "tasks/_task_row.html" with t=t late=1 %}{% endfor %}
+  </ul>
+{% endif %}
+
+<h2 class="mt-10 text-sm font-medium">Abiertas</h2>
+{% if pendientes %}
+  <ul class="mt-1 divide-y divide-rule">
+    {% for t in pendientes %}{% include "tasks/_task_row.html" with t=t %}{% endfor %}
+  </ul>
+{% else %}
+  <p class="mt-2 text-[15px] text-soft">No tienes nada apuntado. Añade lo primero arriba.</p>
+{% endif %}
+
+{% if hechas %}
+  <h2 class="mt-10 text-sm font-medium text-soft">Hechas</h2>
+  <ul class="mt-1 divide-y divide-rule">
+    {% for t in hechas %}
+      <li class="py-3 text-[15px] text-soft line-through">{{ t.title }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

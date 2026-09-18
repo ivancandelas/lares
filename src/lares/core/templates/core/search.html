@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{% if query %}{{ query }}{% else %}Buscar{% endif %} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">
+  {% if query %}«{{ query }}»{% else %}Buscar{% endif %}
+</h1>
+
+{% if not query %}
+  <p class="mt-3 max-w-[52ch] leading-relaxed text-soft">
+    Escribe en la barra de arriba para encontrar cualquier cosa: un coche, una
+    persona, un documento o algo que vence.
+  </p>
+{% elif not hits %}
+  <p class="mt-3 max-w-[52ch] leading-relaxed text-soft">
+    Nada coincide con «{{ query }}». Prueba con menos palabras, o regístralo si
+    todavía no está.
+  </p>
+{% else %}
+  <p class="mt-1 text-sm text-soft">{{ hits|length }} resultado{{ hits|length|pluralize:",s" }}</p>
+  <ul class="mt-6 divide-y divide-rule border-y border-rule">
+    {% for hit in hits %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <div class="text-[15px]">{{ hit.title }}</div>
+          {% if hit.subtitle %}<div class="text-[13px] text-soft">{{ hit.subtitle }}</div>{% endif %}
+        </div>
+        <span class="shrink-0 text-[13px] text-soft">{{ hit.label }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

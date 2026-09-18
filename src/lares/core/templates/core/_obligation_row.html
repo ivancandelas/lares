@@ -1,0 +1,31 @@
+{# Fila de la línea temporal. La fecha manda: es lo que se escanea. #}
+<li class="relative flex gap-5">
+  <div class="w-11 shrink-0 pt-4 text-right tabular-nums">
+    <div class="text-[26px] font-extralight leading-none tracking-tighter
+                {% if o.urgency == 'overdue' %}text-overdue
+                {% elif o.urgency == 'soon' %}text-soon{% endif %}">{{ o.due_on|date:"j" }}</div>
+    <div class="mt-0.5 text-[11px] text-soft">{{ o.due_on|date:"M"|lower }}</div>
+  </div>
+
+  <div class="min-w-0 flex-1 border-l border-rule py-4 pl-5">
+    {% if o.urgency != 'calm' %}
+      <span aria-hidden="true"
+            class="absolute left-[43px] top-[22px] h-[7px] w-[7px] rounded-full
+                   {% if o.urgency == 'overdue' %}bg-overdue{% else %}bg-soon{% endif %}"></span>
+    {% endif %}
+
+    <div class="flex items-baseline justify-between gap-4">
+      <span class="text-[15px] leading-snug">{{ o.title }}</span>
+      {% if o.amount %}
+        <span class="shrink-0 tabular-nums text-sm text-soft">{{ o.amount|floatformat:0 }} {{ o.currency }}</span>
+      {% endif %}
+    </div>
+    <div class="mt-1 text-[13px] text-soft">
+      {% if o.days_left < 0 %}Venció hace {{ o.days_left|stringformat:"d"|slice:"1:" }} días
+      {% elif o.days_left == 0 %}Vence hoy
+      {% elif o.days_left == 1 %}Mañana
+      {% else %}En {{ o.days_left }} días{% endif %}
+      {% if o.counterparty %}, {{ o.counterparty }}{% endif %}
+    </div>
+  </div>
+</li>

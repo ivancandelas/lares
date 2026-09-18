@@ -6,7 +6,7 @@ Todas son idempotentes: se pueden reintentar sin efectos secundarios.
 from celery import shared_task
 
 from .models import Household
-from .services import obligations
+from .services import checks, notify, obligations
 
 
 @shared_task
@@ -19,9 +19,15 @@ def materialize_obligations():
 
 
 @shared_task
-def run_checks():
-    from .services import checks
+def send_reminders():
+    return {
+        str(h.pk): notify.send_due_reminders(h)
+        for h in Household.objects.all()
+    }
 
+
+@shared_task
+def run_checks():
     return {
         str(h.pk): len(checks.run_all(h))
         for h in Household.objects.all()

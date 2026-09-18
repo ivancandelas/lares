@@ -13,6 +13,8 @@ sin ello, cada reinicio del scheduler duplica los avisos y el usuario deja de
 confiar en el sistema, que es la unica forma real de que un PRP muera.
 """
 
+import datetime as dt
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -121,6 +123,20 @@ class Obligation(HouseholdScopedModel):
 
     def __str__(self):
         return f"{self.title} ({self.due_on})"
+
+    @property
+    def days_left(self) -> int:
+        return (self.due_on - dt.date.today()).days
+
+    @property
+    def urgency(self) -> str:
+        """Como se pinta. El color aqui es informacion, no decoracion."""
+        days = self.days_left
+        if days < 0:
+            return "overdue"
+        if days <= 7 or self.severity in ("high", "critical"):
+            return "soon"
+        return "calm"
 
 
 class Reminder(HouseholdScopedModel):

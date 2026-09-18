@@ -13,6 +13,22 @@
 - **Sin co-autor.** No añadir líneas `Co-authored-by` ni atribución a herramientas.
 - Commitear solo cuando se pida explícitamente.
 
+## Servidor de demostración
+
+Tras **cada cambio relevante** hay que dejar el demo actualizado y comprobado:
+
+```bash
+uv run src/manage.py migrate
+uv run src/manage.py seed_demo
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8010/
+```
+
+- Corre en **:8010** (el 8000 está ocupado por otra app) con autoreload, así que
+  el código se recarga solo; migraciones y semilla no.
+- Postgres del proyecto en **:5433** (el 5432 está ocupado).
+- Si el cambio añade pantallas o datos, verificar que se ven, no solo que
+  responde 200.
+
 ## Código
 
 - Comentarios y nombres de dominio en español; identificadores técnicos en inglés.

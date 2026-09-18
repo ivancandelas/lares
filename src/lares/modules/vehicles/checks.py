@@ -10,7 +10,7 @@ from .models import Vehicle
 
 class VehicleWithoutPolicy(Check):
     key = "vehicles.no_policy"
-    label = "Vehiculo sin poliza de seguro"
+    label = "Vehículo sin póliza de seguro"
     severity = "critical"
 
     def run(self, household):
@@ -22,8 +22,8 @@ class VehicleWithoutPolicy(Check):
         return [
             Finding(
                 check=self.key,
-                title=f"{vehicle} no tiene poliza asociada",
-                detail="Un vehiculo activo sin seguro registrado es el hueco mas caro posible.",
+                title=f"{vehicle} no tiene póliza asociada",
+                detail="Un vehículo activo sin seguro es el hueco más caro que puedes tener.",
                 severity=self.severity,
                 subject_type="vehicle",
                 subject_id=vehicle.pk,
@@ -35,7 +35,7 @@ class VehicleWithoutPolicy(Check):
 
 class VehicleWithoutInvoice(Check):
     key = "vehicles.no_invoice"
-    label = "Vehiculo sin factura registrada"
+    label = "Vehículo sin factura registrada"
     severity = "normal"
 
     def run(self, household):
@@ -48,7 +48,7 @@ class VehicleWithoutInvoice(Check):
             Finding(
                 check=self.key,
                 title=f"{vehicle} no tiene factura ni documentos",
-                detail="Sin factura no se puede vender, asegurar ni reclamar.",
+                detail="Sin factura no lo puedes vender, asegurar ni reclamar.",
                 severity=self.severity,
                 subject_type="vehicle",
                 subject_id=vehicle.pk,

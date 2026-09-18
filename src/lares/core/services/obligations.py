@@ -13,7 +13,7 @@ import logging
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
-from ..models import Obligation, Reminder, Resource
+from ..models import Obligation, Reminder
 from ..registry import registry
 from ..scoping import use_household
 
@@ -29,17 +29,18 @@ def materialize(household, on_date: dt.date | None = None) -> dict:
     created = updated = 0
 
     with use_household(household):
-        # Se itera por tipo registrado, no sobre Resource: la herencia
-        # multi-tabla devolveria instancias de Resource, sin los campos ni los
-        # metodos de la subclase que el proveedor necesita.
-        for kind, model in registry.resource_kinds.items():
+        # Se itera por fuente de sujetos registrada, no sobre Resource: la
+        # herencia multi-tabla devolveria instancias de Resource sin los campos
+        # de la subclase, y ademas hay obligaciones que no cuelgan de un recurso
+        # (documentos que vencen, reglas del propio usuario).
+        for kind, source in registry.subject_sources.items():
             providers = registry.providers_for(kind)
             if not providers:
                 continue
-            for resource in model.objects.filter(status=Resource.Status.ACTIVE):
+            for subject in source(household):
                 for provider in providers:
-                    for spec in provider.generate(resource, on_date) or []:
-                        obligation, was_created = _upsert(household, resource, provider, spec)
+                    for spec in provider.generate(subject, on_date) or []:
+                        obligation, was_created = _upsert(household, subject, provider, spec)
                         created += was_created
                         updated += not was_created
                         _sync_reminders(obligation)

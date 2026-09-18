@@ -4,29 +4,68 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ product_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,200..700;1,400&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
-  <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+  <script>
+    // El color aquí codifica estado, no decora: vencido / inminente / en orden.
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper:   '#FBFBF9',
+            ink:     '#17201C',
+            soft:    '#5A6560',
+            rule:    '#DDE2DD',
+            overdue: '#A3231C',
+            soon:    '#B26A00',
+            calm:    '#2F6B4F',
+          },
+          fontFamily: { sans: ['"Public Sans"', 'system-ui', 'sans-serif'] },
+        },
+      },
+    }
+  </script>
+  <style>
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+    :focus-visible { outline: 2px solid #2F6B4F; outline-offset: 2px; }
+  </style>
 </head>
-<body class="h-full bg-stone-50 text-stone-900 antialiased">
-  <div class="mx-auto flex min-h-full max-w-6xl flex-col">
-    <header class="flex items-center justify-between px-4 py-4">
-      <a href="/" class="text-lg font-semibold tracking-tight">{{ product_name }}</a>
-      <span class="text-sm text-stone-500">{{ current_household.name|default:"" }}</span>
+<body class="h-full bg-paper font-sans text-ink antialiased">
+  <div class="mx-auto flex min-h-full max-w-3xl flex-col px-5">
+
+    <header class="flex items-baseline justify-between gap-4 border-b border-rule py-4">
+      <a href="/" class="text-[15px] font-semibold tracking-tight">{{ product_name }}</a>
+      {% if user.is_authenticated %}
+        <form action="{% url 'core:search' %}" method="get" class="flex-1 max-w-xs">
+          <input type="search" name="q" value="{{ query|default:'' }}"
+                 placeholder="Buscar en todo"
+                 class="w-full rounded-sm border border-rule bg-white px-2.5 py-1 text-sm
+                        placeholder:text-soft focus:border-calm focus:outline-none">
+        </form>
+        <form action="{% url 'core:logout' %}" method="post">{% csrf_token %}
+          <button class="text-sm text-soft hover:text-ink">Salir</button>
+        </form>
+      {% endif %}
     </header>
 
-    <nav class="flex gap-1 overflow-x-auto border-y border-stone-200 px-2 py-2 text-sm">
-      {% for item in nav_items %}
-        <a href="{% url item.url_name %}"
-           class="whitespace-nowrap rounded-md px-3 py-1.5 hover:bg-stone-200">{{ item.label }}</a>
-      {% empty %}
-        <span class="px-3 py-1.5 text-stone-400">Sin modulos instalados</span>
-      {% endfor %}
-    </nav>
+    {% if user.is_authenticated %}
+      <nav class="flex gap-5 border-b border-rule py-2.5 text-sm">
+        <a href="{% url 'core:dashboard' %}" class="text-soft hover:text-ink">Esta semana</a>
+        {% for item in nav_items %}
+          <a href="{% url item.url_name %}" class="text-soft hover:text-ink">{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+    {% endif %}
 
-    <main class="flex-1 px-4 py-6">{% block content %}{% endblock %}</main>
+    <main class="flex-1 py-8">{% block content %}{% endblock %}</main>
 
-    <footer class="px-4 py-6 text-xs text-stone-400">{{ product_tagline }}</footer>
+    <footer class="border-t border-rule py-4 text-xs text-soft">
+      {{ current_household.name|default:product_tagline }}
+    </footer>
   </div>
 </body>
 </html>

@@ -2,64 +2,81 @@
 {% block title %}Esta semana - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-semibold tracking-tight">Esta semana</h1>
-
 {% if not agenda %}
-  <p class="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">
-    No hay un hogar configurado todavia. Ejecuta
-    <code class="rounded bg-stone-200 px-1">manage.py bootstrap_household</code>.
+  <h1 class="text-2xl font-light tracking-tight">Todavía no hay un hogar</h1>
+  <p class="mt-3 max-w-[52ch] leading-relaxed text-soft">
+    Crea uno para empezar a registrar lo que tienes:
+    <code class="text-ink">manage.py bootstrap_household</code>
   </p>
 {% else %}
 
-  {% if agenda.overdue %}
-    <section class="mt-6">
-      <h2 class="text-sm font-medium uppercase tracking-wide text-red-700">Vencidas</h2>
-      <ul class="mt-2 divide-y divide-stone-200 rounded-lg border border-red-200 bg-white">
-        {% for o in agenda.overdue %}
-          <li class="flex items-center justify-between px-4 py-3">
-            <span>{{ o.title }}</span>
-            <span class="text-sm text-red-700">{{ o.due_on }}</span>
+  <h1 class="text-2xl font-light tracking-tight">Esta semana</h1>
+  <p class="mt-1 text-sm text-soft">{{ agenda.today|date:"l j \d\e F"|lower }}</p>
+
+  {# Lo que el sistema sabe y tú no. Va primero por eso. #}
+  {% if findings %}
+    <section class="mt-8 border-l-2 border-overdue pl-4">
+      <h2 class="text-[15px] font-medium">
+        {{ findings|length }} cosa{{ findings|length|pluralize:",s" }} sin registrar
+      </h2>
+      <ul class="mt-2 space-y-1.5">
+        {% for f in findings %}
+          <li class="text-[14px] leading-snug">
+            <span class="{% if f.severity == 'critical' %}text-overdue{% endif %}">{{ f.title }}</span>
+            {% if f.detail %}<span class="block text-[13px] text-soft">{{ f.detail }}</span>{% endif %}
           </li>
         {% endfor %}
       </ul>
     </section>
   {% endif %}
 
-  <section class="mt-6">
-    <h2 class="text-sm font-medium uppercase tracking-wide text-stone-500">Proximos 7 dias</h2>
-    <ul class="mt-2 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-      {% for o in agenda.this_week %}
-        <li class="flex items-center justify-between px-4 py-3">
-          <span>{{ o.title }}</span>
-          <span class="text-sm text-stone-500">{{ o.due_on }}{% if o.amount %} - {{ o.amount }} {{ o.currency }}{% endif %}</span>
-        </li>
-      {% empty %}
-        <li class="px-4 py-3 text-sm text-stone-500">Nada pendiente esta semana.</li>
-      {% endfor %}
-    </ul>
+  {% if agenda.overdue %}
+    <section class="mt-10">
+      <h2 class="text-sm font-medium text-overdue">Vencidas</h2>
+      <ul class="mt-1">
+        {% for o in agenda.overdue %}{% include "core/_obligation_row.html" %}{% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <section class="mt-10">
+    <h2 class="text-sm font-medium">Próximos siete días</h2>
+    {% if agenda.this_week %}
+      <ul class="mt-1">
+        {% for o in agenda.this_week %}{% include "core/_obligation_row.html" %}{% endfor %}
+      </ul>
+    {% else %}
+      <p class="mt-2 text-[15px] text-soft">
+        Nada vence esta semana.
+        {% with siguiente=agenda.later.0 %}
+          {% if siguiente %}Lo siguiente: {{ siguiente.title }}, el {{ siguiente.due_on|date:"j \d\e F"|lower }}.{% endif %}
+        {% endwith %}
+      </p>
+    {% endif %}
   </section>
 
-  <section class="mt-6">
-    <h2 class="text-sm font-medium uppercase tracking-wide text-stone-500">Mas adelante</h2>
-    <ul class="mt-2 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
-      {% for o in agenda.later %}
-        <li class="flex items-center justify-between px-4 py-3">
-          <span>{{ o.title }}</span>
-          <span class="text-sm text-stone-500">{{ o.due_on }}{% if o.amount %} - {{ o.amount }} {{ o.currency }}{% endif %}</span>
-        </li>
-      {% empty %}
-        <li class="px-4 py-3 text-sm text-stone-500">Sin obligaciones en el horizonte.</li>
+  {% if agenda.later %}
+    <section class="mt-10">
+      <h2 class="text-sm font-medium">Más adelante</h2>
+      {% regroup agenda.later by due_on|date:"F Y" as meses %}
+      {% for mes in meses %}
+        <h3 class="mt-6 text-[13px] text-soft">{{ mes.grouper|lower }}</h3>
+        <ul class="mt-1">
+          {% for o in mes.list %}{% include "core/_obligation_row.html" %}{% endfor %}
+        </ul>
       {% endfor %}
-    </ul>
-  </section>
+    </section>
+  {% endif %}
 
-  <section class="mt-6 grid gap-4 sm:grid-cols-2">
-    {% for widget in widgets %}
-      <div class="rounded-lg border border-stone-200 bg-white p-4">
-        <h3 class="text-sm font-medium text-stone-500">{{ widget.label }}</h3>
-        {{ widget.html }}
-      </div>
-    {% endfor %}
-  </section>
+  {% if widgets %}
+    <section class="mt-12 grid gap-px border-t border-rule pt-8 sm:grid-cols-2">
+      {% for widget in widgets %}
+        <div class="py-2 sm:pr-8">
+          <h2 class="text-sm font-medium">{{ widget.label }}</h2>
+          {{ widget.html }}
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
 {% endif %}
 {% endblock %}

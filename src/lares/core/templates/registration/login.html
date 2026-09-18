@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Entrar - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-sm py-12">
+  <h1 class="text-3xl font-light tracking-tight">{{ product_name }}</h1>
+  <p class="mt-2 max-w-[38ch] text-[15px] leading-relaxed text-soft">
+    Lo que tienes, lo que debes y lo que vence. Todo en un sitio que es tuyo.
+  </p>
+
+  <form method="post" class="mt-10 space-y-5">
+    {% csrf_token %}
+    {% if form.errors %}
+      <p class="border-l-2 border-overdue pl-3 text-sm text-overdue">
+        Ese correo y esa contraseña no coinciden. Revísalos e inténtalo otra vez.
+      </p>
+    {% endif %}
+
+    <label class="block">
+      <span class="text-sm text-soft">Correo</span>
+      <input type="email" name="username" autocomplete="username" required autofocus
+             class="mt-1 w-full rounded-sm border border-rule bg-white px-3 py-2
+                    focus:border-calm focus:outline-none">
+    </label>
+
+    <label class="block">
+      <span class="text-sm text-soft">Contraseña</span>
+      <input type="password" name="password" autocomplete="current-password" required
+             class="mt-1 w-full rounded-sm border border-rule bg-white px-3 py-2
+                    focus:border-calm focus:outline-none">
+    </label>
+
+    <button type="submit"
+            class="w-full rounded-sm bg-calm px-4 py-2.5 text-sm font-medium text-white
+                   hover:bg-ink">Entrar</button>
+  </form>
+</div>
+{% endblock %}

@@ -49,7 +49,10 @@ CORE_APPS = [
 # El registro resuelve dependencias y orden; ver lares/core/registry.py
 LARES_MODULES = env.list(
     "LARES_MODULES",
-    default=["lares.modules.vehicles.apps.VehiclesModule"],
+    default=[
+        "lares.modules.tasks.apps.TasksModule",
+        "lares.modules.vehicles.apps.VehiclesModule",
+    ],
 )
 
 INSTALLED_APPS = DJANGO_APPS + CORE_APPS + LARES_MODULES
@@ -61,6 +64,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Todo exige sesion, tambien en self-hosted: la instalacion puede estar
+    # expuesta y aqui vive el patrimonio entero de una familia.
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Fija el hogar activo para toda la peticion. Debe ir despues de Auth.
@@ -97,6 +103,14 @@ DATABASES = {
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "core.User"
+
+LOGIN_URL = "/entrar/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/entrar/"
+
+# --- Correo (avisos de obligaciones) ---------------------------------------
+vars().update(env.email_url("LARES_EMAIL_URL", default="consolemail://"))
+DEFAULT_FROM_EMAIL = env("LARES_FROM_EMAIL", default="lares@localhost")
 
 # --- Cola de trabajos -------------------------------------------------------
 CELERY_BROKER_URL = env("LARES_REDIS_URL", default="redis://localhost:6379/0")

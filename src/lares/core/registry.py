@@ -141,6 +141,10 @@ class Registry:
         self.widgets: list[DashboardWidget] = []
         self.connectors: dict[str, object] = {}
         self.demo_seeders: list = []
+        # De donde saca el motor los sujetos de cada tipo de obligacion.
+        # "vehicle" -> los vehiculos activos; "document" -> los que vencen;
+        # "household" -> el hogar mismo, para reglas que no cuelgan de nada.
+        self.subject_sources: dict[str, object] = {}
 
     # -- API que usan los modulos -------------------------------------------
 
@@ -149,7 +153,22 @@ class Registry:
         if not kind:
             raise ImproperlyConfigured(f"{model} no declara resource_kind")
         self.resource_kinds[kind] = model
+        # Un tipo de recurso es automaticamente una fuente de sujetos: el motor
+        # recorre las instancias activas del modelo concreto (no de Resource,
+        # que por herencia multi-tabla no traeria los campos de la subclase).
+        self.subject_source(kind, lambda household, _m=model: _m.objects.filter(
+            status="active", archived_at__isnull=True
+        ))
         return model
+
+    def subject_source(self, kind: str, fn):
+        """Registra de donde salen los sujetos de un tipo de obligacion.
+
+        `fn(household) -> iterable`. Permite que un modulo genere obligaciones
+        sobre algo que no es un Resource (documentos, cuentas, personas) sin
+        que el motor tenga que conocerlo.
+        """
+        self.subject_sources[kind] = fn
 
     def document_type(self, key: str, label: str):
         self.document_types[key] = label
@@ -204,11 +223,10 @@ class Registry:
     def widgets_sorted(self):
         return sorted(self.widgets, key=lambda w: (w.order, w.label))
 
-    def providers_for(self, resource_kind: str):
-        return [
-            p for p in self.obligation_providers.values()
-            if p.applies_to in ("", resource_kind)
-        ]
+    def providers_for(self, kind: str):
+        # Coincidencia exacta a proposito: un proveedor sin `applies_to`
+        # correria contra todos los sujetos del sistema.
+        return [p for p in self.obligation_providers.values() if p.applies_to == kind]
 
 
 registry = Registry()

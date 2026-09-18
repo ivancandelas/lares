@@ -1,16 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Vehiculos - {{ product_name }}{% endblock %}
+{% block title %}Vehículos - {{ product_name }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-semibold tracking-tight">Vehiculos</h1>
-<ul class="mt-4 divide-y divide-stone-200 rounded-lg border border-stone-200 bg-white">
+<h1 class="text-2xl font-light tracking-tight">Vehículos</h1>
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
   {% for v in vehicles %}
-    <li class="px-4 py-3">
-      <div class="font-medium">{{ v }}</div>
-      <div class="text-sm text-stone-500">{{ v.plates }}{% if v.odometer_km %} - {{ v.odometer_km }} km{% endif %}</div>
+    <li class="flex items-baseline justify-between gap-4 py-4">
+      <div class="min-w-0">
+        <div class="text-[15px]">{{ v }}</div>
+        <div class="text-[13px] text-soft">
+          {{ v.plates }}{% if v.odometer_km %}, {{ v.odometer_km|floatformat:0 }} km{% endif %}
+          {% if v.owner %}, {{ v.owner }}{% endif %}
+        </div>
+      </div>
+      {% if v.current_value %}
+        <span class="shrink-0 tabular-nums text-sm text-soft">
+          {{ v.current_value|floatformat:0 }} {{ v.currency }}
+        </span>
+      {% endif %}
     </li>
   {% empty %}
-    <li class="px-4 py-3 text-sm text-stone-500">Sin vehiculos registrados.</li>
+    <li class="py-4 text-[15px] text-soft">
+      Ningún vehículo registrado. Añade uno para que empiecen a aparecer sus
+      verificaciones, refrendos y servicios.
+    </li>
   {% endfor %}
 </ul>
 {% endblock %}

@@ -13,7 +13,7 @@ from lares.core.registry import ObligationProvider, ObligationSpec
 
 class VerificacionProvider(ObligationProvider):
     key = "vehicles.verificacion"
-    label = "Verificacion vehicular"
+    label = "Verificación vehicular"
     applies_to = "vehicle"
 
     # Calendario por ultimo digito de placa (esquema tipico en Mexico).
@@ -32,7 +32,7 @@ class VerificacionProvider(ObligationProvider):
                 due = due.replace(year=year + 1)
             specs.append(ObligationSpec(
                 dedupe_key=f"vehicle:{vehicle.pk}:verificacion:{due:%Y-%m}",
-                title=f"Verificacion vehicular - {vehicle}",
+                title=f"Verificación vehicular, {vehicle}",
                 due_on=due,
                 severity="high",
                 remind_offsets=(-45, -20, -7, -1),
@@ -43,7 +43,7 @@ class VerificacionProvider(ObligationProvider):
 
 class RefrendoProvider(ObligationProvider):
     key = "vehicles.refrendo"
-    label = "Refrendo / tenencia"
+    label = "Refrendo o tenencia"
     applies_to = "vehicle"
 
     def generate(self, vehicle, on_date: dt.date):
@@ -51,7 +51,7 @@ class RefrendoProvider(ObligationProvider):
         due = dt.date(year, 3, 31)
         return [ObligationSpec(
             dedupe_key=f"vehicle:{vehicle.pk}:refrendo:{year}",
-            title=f"Refrendo {year} - {vehicle}",
+            title=f"Refrendo {year}, {vehicle}",
             due_on=due,
             severity="high",
             remind_offsets=(-60, -30, -7),
@@ -72,7 +72,7 @@ class ServiceIntervalProvider(ObligationProvider):
         due = on_date + dt.timedelta(days=int(max(remaining, 0) / rate * 30))
         return [ObligationSpec(
             dedupe_key=f"vehicle:{vehicle.pk}:service:{next_km}",
-            title=f"Servicio {next_km:,} km - {vehicle}",
+            title=f"Servicio de {next_km:,} km, {vehicle}",
             due_on=due,
             severity="normal" if remaining > 500 else "high",
             remind_offsets=(-30, -7),

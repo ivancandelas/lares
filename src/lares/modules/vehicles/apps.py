@@ -11,7 +11,7 @@ from lares.core.registry import DashboardWidget, LaresModule, LinkRole, NavItem,
 class VehiclesModule(LaresModule):
     name = "lares.modules.vehicles"
     label = "vehicles"
-    label_verbose = "Vehiculos"
+    label_verbose = "Vehículos"
     version = "0.1.0"
     depends = ("lares.core",)
     icon = "car"
@@ -40,13 +40,13 @@ class VehiclesModule(LaresModule):
             checks.VehicleWithoutInvoice,
         )
 
-        reg.nav(NavItem(label="Vehiculos", url_name="vehicles:list", icon="car", order=30))
+        reg.nav(NavItem(label="Vehículos", url_name="vehicles:list", icon="car", order=30))
 
         reg.demo_seeder(demo.seed)
 
         reg.widget(DashboardWidget(
             key="vehicles.upcoming",
-            label="Vehiculos",
+            label="Vehículos",
             template="vehicles/widget_upcoming.html",
             provider=widgets.upcoming,
             order=30,
