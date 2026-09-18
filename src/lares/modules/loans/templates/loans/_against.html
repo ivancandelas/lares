@@ -1,0 +1,21 @@
+{% load money %}
+{% if loans %}
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for l in loans %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <a href="{% url 'loans:detail' l.pk %}" class="text-[15px] hover:text-calm">{{ l.name }}</a>
+        <span class="shrink-0 tabular-nums text-sm">{% money0 l.outstanding l.currency %}</span>
+      </li>
+    {% endfor %}
+  </ul>
+  {% if valor %}
+    <p class="mt-2 text-[13px] text-soft">
+      Vale {% money0 valor %} y debes {% money0 total %}. Tuyo de verdad:
+      <span class="tabular-nums {% if equity < 0 %}text-overdue{% endif %}">{% money0 equity %}</span>.
+    </p>
+  {% endif %}
+{% else %}
+  <p class="mt-1 border-y border-rule py-3 text-[15px] text-soft">
+    Sin deuda asociada.
+  </p>
+{% endif %}

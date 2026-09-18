@@ -193,6 +193,10 @@ class Registry:
         self.subject_sources: dict[str, object] = {}
         self.classifiers: list = []
         self.related_providers: list = []
+        # Calculos con nombre que un modulo aporta y el nucleo consulta sin
+        # conocerlo. Es lo que evita que el nucleo importe un modulo para
+        # afinar una cifra que el solo no puede calcular.
+        self.calculations: dict = {}
 
     # -- API que usan los modulos -------------------------------------------
 
@@ -253,6 +257,21 @@ class Registry:
 
     def connector(self, key: str, connector):
         self.connectors[key] = connector
+
+    def calculation(self, key: str, fn):
+        """Registra un calculo con nombre, p.ej. "net_worth"."""
+        self.calculations[key] = fn
+
+    def calculate(self, key: str, *args, **kwargs):
+        """Pide un calculo. Devuelve None si nadie lo aporta."""
+        fn = self.calculations.get(key)
+        if fn is None:
+            return None
+        try:
+            return fn(*args, **kwargs)
+        except Exception:
+            logger.exception("El cálculo %s falló", key)
+            return None
 
     def related(self, fn):
         """Enlaces a lo que cuelga de una entidad.

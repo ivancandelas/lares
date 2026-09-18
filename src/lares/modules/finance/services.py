@@ -342,3 +342,132 @@ def _unbudgeted(household, desde, hasta, con_presupuesto: set) -> Decimal:
             entry__date__gte=desde, entry__date__lt=hasta,
         ).exclude(account_id__in=con_presupuesto).aggregate(t=Sum("amount"))["t"]
     return total or Decimal(0)
+
+
+# ---------------------------------------------------------------------------
+# Patrimonio neto y salud financiera
+# ---------------------------------------------------------------------------
+
+
+def net_worth(household) -> dict:
+    """Lo que tienes menos lo que debes, sin contar nada dos veces.
+
+    Los dos sitios donde es facil equivocarse:
+
+      - una tarjeta ya es una cuenta de pasivo; sumar ademas "la tarjeta como
+        cosa" la contaria dos veces
+      - un prestamo que TE dieron no es un recurso tuyo, pero su saldo si es
+        deuda; uno que TU diste es un activo y ya cuenta como recurso
+    """
+    from lares.core.models.resource import Resource
+
+    with use_household(household):
+        recursos = [r.as_concrete() for r in
+                    Resource.objects.filter(status=Resource.Status.ACTIVE)]
+        bienes = sum(
+            (r.current_value or r.purchase_amount or Decimal(0))
+            for r in recursos if r.counts_as_asset
+        )
+        en_cuentas = sum(
+            a.balance for a in Account.objects.filter(
+                type=Account.Type.ASSET, is_active=True)
+        )
+        deuda_cuentas = sum(
+            a.balance for a in Account.objects.filter(
+                type=Account.Type.LIABILITY, is_active=True)
+        )
+        deuda_prestamos = _borrowed_outstanding(recursos)
+
+    activo = bienes + en_cuentas
+    pasivo = deuda_cuentas + deuda_prestamos
+    return {
+        "goods": bienes,
+        "in_accounts": en_cuentas,
+        "assets": activo,
+        "account_debt": deuda_cuentas,
+        "loan_debt": deuda_prestamos,
+        "liabilities": pasivo,
+        "net": activo - pasivo,
+    }
+
+
+def _borrowed_outstanding(recursos) -> Decimal:
+    """Lo que queda por pagar de los préstamos que te dieron."""
+    total = Decimal(0)
+    for recurso in recursos:
+        if recurso.kind != "loan":
+            continue
+        if getattr(recurso, "is_mine_to_collect", True):
+            continue        # los que diste ya cuentan como bien
+        total += recurso.outstanding
+    return total
+
+
+def health(household, months: int = 3) -> dict:
+    """Cuatro indicadores que dicen mas que cualquier grafica.
+
+    Todos se calculan sobre lo registrado; lo que no este en el libro no
+    aparece, y eso se dice en pantalla en vez de disimularlo.
+    """
+    hoy = dt.date.today()
+    desde = hoy - dt.timedelta(days=months * 31)
+    patrimonio = net_worth(household)
+    disponible = available(household)["available"]
+
+    with use_household(household):
+        ingreso = -(Posting.objects.filter(
+            account__type=Account.Type.INCOME, amount__lt=0, entry__date__gte=desde
+        ).aggregate(t=Sum("amount"))["t"] or Decimal(0))
+        gasto = Posting.objects.filter(
+            account__type=Account.Type.EXPENSE, amount__gt=0, entry__date__gte=desde
+        ).aggregate(t=Sum("amount"))["t"] or Decimal(0)
+
+    ingreso_mes = (ingreso / months).quantize(Decimal("0.01"))
+    gasto_mes = (gasto / months).quantize(Decimal("0.01"))
+    fijo = _fixed_monthly(household)
+
+    return {
+        "months": months,
+        "net": patrimonio["net"],
+        "assets": patrimonio["assets"],
+        "liabilities": patrimonio["liabilities"],
+        "monthly_income": ingreso_mes,
+        "monthly_spend": gasto_mes,
+        "fixed_monthly": fijo,
+        # Cuantos meses aguantas si dejara de entrar dinero manana.
+        "runway": (disponible / gasto_mes) if gasto_mes else None,
+        # Cuanto de lo que entra se queda.
+        "savings_rate": (float((ingreso_mes - gasto_mes) / ingreso_mes)
+                         if ingreso_mes else None),
+        # Cuanto pesa la deuda frente a lo que ganas en un ano.
+        "debt_to_income": (float(patrimonio["liabilities"] / (ingreso_mes * 12))
+                           if ingreso_mes else None),
+        # Que parte del ingreso ya esta comprometida antes de empezar el mes.
+        "fixed_share": float(fijo / ingreso_mes) if ingreso_mes else None,
+    }
+
+
+def _fixed_monthly(household) -> Decimal:
+    """Lo que se paga todos los meses pase lo que pase."""
+    total = Decimal(0)
+    with use_household(household):
+        try:
+            from lares.modules.subscriptions.models import Subscription
+
+            total += sum(
+                (s.monthly_cost or Decimal(0))
+                for s in Subscription.objects.filter(
+                    status=Subscription.Status.ACTIVE)
+            )
+        except ImportError:
+            pass
+
+        from lares.core.models.resource import Resource
+
+        for recurso in Resource.objects.filter(status=Resource.Status.ACTIVE,
+                                               kind="loan"):
+            prestamo = recurso.as_concrete()
+            if (not prestamo.is_mine_to_collect and prestamo.payment_amount
+                    and not prestamo.is_settled):
+                total += prestamo.payment_amount
+    return total.quantize(Decimal("0.01"))

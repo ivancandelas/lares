@@ -125,6 +125,11 @@ def budget_edit(request, pk):
     })
 
 
+def health(request):
+    """Cuatro indicadores que dicen más que cualquier gráfica."""
+    return render(request, "finance/health.html", services.health(request.household))
+
+
 def cash_flow(request):
     meses = int(request.GET.get("meses") or 6)
     return render(request, "finance/cash_flow.html",

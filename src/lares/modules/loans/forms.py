@@ -1,20 +1,69 @@
 from django import forms
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 
 from lares.core.forms import LaresForm, ResourceForm
+from lares.core.models import Link
+from lares.core.models.resource import Resource
 
 from .models import Loan, LoanPayment
 
+SECURES = "secures"
+
 
 class LoanForm(ResourceForm):
+    """El préstamo puede colgar de una cosa: la hipoteca, de la casa.
+
+    Sin esa arista, el inmueble aparece en el patrimonio por su valor entero y
+    la deuda que lo grava vive en otra pantalla. Juntos dicen lo que de verdad
+    es tuyo.
+    """
+
+    secured_by = forms.ModelChoiceField(
+        queryset=Resource.objects.none(), required=False, label="Garantizado por",
+        help_text="La casa de una hipoteca, el coche de un crédito automotriz.",
+    )
+
     GROUPS = (
         ("Qué préstamo es", ["name", "direction", "counterpart", "principal",
-                             "is_informal"]),
+                             "is_informal", "secured_by"]),
         ("Intereses", ["interest_kind", "annual_rate"]),
         ("Cuándo y cuánto se paga", ["started_on", "term_months", "payment_amount",
                                      "payment_day"]),
         ("Estado", ["state", "status"]),
         ("Lo acordado", ["description"]),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.household:
+            self.fields["secured_by"].queryset = Resource._base_manager.filter(
+                household=self.household, archived_at__isnull=True,
+            ).exclude(kind__in=("loan", "policy", "service", "subscription"))
+        if self.instance.pk:
+            actual = secured_resource(self.instance)
+            if actual:
+                self.fields["secured_by"].initial = actual.pk
+
+    @transaction.atomic
+    def save(self, commit=True):
+        loan = super().save(commit=commit)
+        if not commit:
+            return loan
+
+        ctype_loan = ContentType.objects.get_for_model(Loan)
+        elegido = self.cleaned_data.get("secured_by")
+        Link.objects.filter(role=SECURES, source_type=ctype_loan,
+                            source_id=loan.pk).delete()
+        if elegido:
+            concreto = elegido.as_concrete()
+            Link.objects.create(
+                household=self.household,
+                source_type=ctype_loan, source_id=loan.pk, role=SECURES,
+                target_type=ContentType.objects.get_for_model(concreto.__class__),
+                target_id=concreto.pk,
+            )
+        return loan
 
     class Meta:
         model = Loan
@@ -86,3 +135,23 @@ class LoanPaymentForm(LaresForm):
                 self.loan.state = Loan.State.PAID
                 self.loan.save(update_fields=["state", "updated_at"])
         return abono
+
+
+def secured_resource(loan):
+    """La cosa que garantiza este préstamo, si hay alguna."""
+    enlace = Link.objects.filter(
+        role=SECURES,
+        source_type=ContentType.objects.get_for_model(Loan), source_id=loan.pk,
+    ).first()
+    return enlace.target if enlace else None
+
+
+def loans_against(resource) -> list:
+    """Los préstamos que gravan esta cosa."""
+    concreto = resource.as_concrete()
+    ids = Link.objects.filter(
+        role=SECURES,
+        target_type=ContentType.objects.get_for_model(concreto.__class__),
+        target_id=concreto.pk,
+    ).values_list("source_id", flat=True)
+    return [x for x in Loan.objects.filter(pk__in=ids) if not x.is_settled]

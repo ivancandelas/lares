@@ -55,11 +55,20 @@ def holdings(request):
             # Lo que administras pero no es tuyo: cuenta como coste, no como bien.
             ajenos.append(recurso)
 
-    deuda = sum(
-        c.balance for c in Account.objects.filter(
-            type=Account.Type.LIABILITY, is_active=True
+    # El cálculo consolidado lo aporta el módulo de dinero, si está instalado:
+    # solo él sabe que el saldo del banco suma, que un préstamo recibido es
+    # deuda y que uno concedido ya cuenta como bien.
+    consolidado = _consolidado(request.household)
+    if consolidado:
+        valor_total = consolidado["assets"]
+        deuda = consolidado["liabilities"]
+    else:
+        deuda = sum(
+            c.balance for c in Account.objects.filter(
+                type=Account.Type.LIABILITY, is_active=True
+            )
         )
-    )
+
     idos = Resource.objects.filter(status=Resource.Status.DISPOSED).order_by("-disposed_on")
     return render(request, "core/holdings.html", {
         "grupos": grupos,
@@ -69,7 +78,18 @@ def holdings(request):
         "valor_total": valor_total,
         "deuda": deuda,
         "neto": valor_total - deuda,
+        "consolidado": consolidado,
     })
+
+
+def _consolidado(household):
+    """El patrimonio consolidado, si algun modulo sabe calcularlo.
+
+    El nucleo no importa el modulo de dinero: se lo pide al registro. Solo ese
+    modulo sabe que el saldo del banco suma, que un prestamo recibido es deuda
+    y que uno concedido ya cuenta como bien.
+    """
+    return registry.calculate("net_worth", household)
 
 
 def documents(request):

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Cómo estás - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Cómo estás</h1>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Cuatro números que dicen más que cualquier gráfica. Salen de lo registrado en
+  los últimos {{ months }} meses: lo que no esté en el libro no aparece aquí.
+</p>
+
+<div class="mt-8 border-y border-rule py-5">
+  <div class="text-[13px] text-soft">Patrimonio neto</div>
+  <div class="mt-0.5 text-3xl font-light tabular-nums {% if net < 0 %}text-overdue{% endif %}">
+    {% money0 net %}
+  </div>
+  <div class="mt-1 text-[13px] text-soft">
+    {% money0 assets %} que tienes, menos {% money0 liabilities %} que debes.
+  </div>
+</div>
+
+<h2 class="mt-10 text-sm font-medium">Cada mes</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  <li class="flex items-baseline justify-between gap-4 py-3">
+    <span class="text-[15px]">Entra</span>
+    <span class="tabular-nums text-sm text-calm">{% money0 monthly_income %}</span>
+  </li>
+  <li class="flex items-baseline justify-between gap-4 py-3">
+    <span class="text-[15px]">Sale</span>
+    <span class="tabular-nums text-sm">{% money0 monthly_spend %}</span>
+  </li>
+  <li class="flex items-baseline justify-between gap-4 py-3">
+    <div class="min-w-0">
+      <div class="text-[15px]">Comprometido antes de empezar</div>
+      <div class="text-[13px] text-soft">Suscripciones y cuotas de préstamo.</div>
+    </div>
+    <span class="tabular-nums text-sm text-soon">{% money0 fixed_monthly %}</span>
+  </li>
+</ul>
+
+<h2 class="mt-10 text-sm font-medium">Cuatro señales</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  <li class="py-4">
+    <div class="flex items-baseline justify-between gap-4">
+      <span class="text-[15px]">Colchón</span>
+      <span class="tabular-nums text-[15px] {% if runway and runway < 3 %}text-overdue{% endif %}">
+        {% if runway %}{{ runway|floatformat:1 }} meses{% else %}—{% endif %}
+      </span>
+    </div>
+    <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+      Lo que aguantarías con lo disponible si dejara de entrar dinero mañana.
+      Por debajo de tres meses, cualquier imprevisto se vuelve deuda.
+    </p>
+  </li>
+  <li class="py-4">
+    <div class="flex items-baseline justify-between gap-4">
+      <span class="text-[15px]">De lo que entra, se queda</span>
+      <span class="tabular-nums text-[15px] {% if savings_rate and savings_rate < 0 %}text-overdue{% endif %}">
+        {% if savings_rate is not None %}{% widthratio savings_rate 1 100 %}%{% else %}—{% endif %}
+      </span>
+    </div>
+    <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+      En negativo significa que cada mes sales con menos de lo que entraste.
+    </p>
+  </li>
+  <li class="py-4">
+    <div class="flex items-baseline justify-between gap-4">
+      <span class="text-[15px]">Deuda frente a lo que ganas en un año</span>
+      <span class="tabular-nums text-[15px]">
+        {% if debt_to_income %}{{ debt_to_income|floatformat:1 }}×{% else %}—{% endif %}
+      </span>
+    </div>
+    <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+      Con hipoteca es normal que sea alta; sin ella, no debería pasar de uno.
+    </p>
+  </li>
+  <li class="py-4">
+    <div class="flex items-baseline justify-between gap-4">
+      <span class="text-[15px]">Del ingreso ya comprometido</span>
+      <span class="tabular-nums text-[15px] {% if fixed_share and fixed_share > 0.6 %}text-overdue{% endif %}">
+        {% if fixed_share is not None %}{% widthratio fixed_share 1 100 %}%{% else %}—{% endif %}
+      </span>
+    </div>
+    <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
+      Lo que se va en cuotas y suscripciones antes de decidir nada. Por encima
+      del 60% queda poco margen para respirar.
+    </p>
+  </li>
+</ul>
+{% endblock %}

@@ -1,4 +1,11 @@
-from lares.core.registry import DashboardWidget, LaresModule, NavItem, Registry
+from lares.core.registry import (
+    DashboardWidget,
+    DetailTab,
+    LaresModule,
+    LinkRole,
+    NavItem,
+    Registry,
+)
 
 
 class LoansModule(LaresModule):
@@ -17,6 +24,18 @@ class LoansModule(LaresModule):
         from .related import for_party
 
         reg.resource(Loan, kind="loan", form=LoanForm)
+        reg.link_role(LinkRole(
+            key="secures", label="Está garantizado por",
+            inverse_key="secured_by", inverse_label="Garantiza",
+            from_kinds=("loan",),
+        ))
+        reg.tabs(DetailTab(
+            key="loans.against",
+            label="Lo que debes por esto",
+            template="loans/_against.html",
+            provider=_deuda_de,
+            order=20,
+        ))
         reg.obligations(obligations.PaymentProvider)
         reg.check(checks.ForgottenLoan, checks.InformalWithoutRecord, checks.Overpaid)
         reg.related(for_party)
@@ -30,3 +49,20 @@ class LoansModule(LaresModule):
             provider=widgets.balance,
             order=19,
         ))
+
+
+def _deuda_de(recurso) -> dict:
+    from decimal import Decimal
+
+    from .forms import loans_against
+
+    prestamos = loans_against(recurso)
+    deuda = sum((x.outstanding for x in prestamos), Decimal(0))
+    valor = recurso.current_value or recurso.purchase_amount or Decimal(0)
+    return {
+        "loans": prestamos,
+        "total": deuda,
+        "valor": valor,
+        # Lo que de verdad es tuyo de esta cosa.
+        "equity": valor - deuda,
+    }
