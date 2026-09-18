@@ -1,4 +1,4 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="es" class="h-full">
 <head>
   <meta charset="utf-8">
@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,200..700;1,400&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+  <script src="{% static 'vendor/alpine.min.js' %}" defer></script>
   <script>
     // El color aquí codifica estado, no decora: vencido / inminente / en orden.
     tailwind.config = {
@@ -61,7 +61,12 @@
         Trece entradas planas obligan a leerlas todas para encontrar una.
         Sueltas lo de cada día; agrupado lo que se consulta de vez en cuando.
       {% endcomment %}
-      <nav class="flex items-center gap-1 overflow-x-auto border-b border-rule py-1.5 text-sm"
+      {% comment %}
+        Ojo con `overflow-x-auto` aquí: crea un contexto de recorte y los
+        desplegables posicionados en absoluto se abren pero quedan cortados.
+        Con `flex-wrap` bajan de línea en pantallas estrechas y se ven.
+      {% endcomment %}
+      <nav class="flex flex-wrap items-center gap-1 border-b border-rule py-1.5 text-sm"
            x-data="{ open: null }" @keydown.escape="open = null">
         <a href="{% url 'core:dashboard' %}"
            class="shrink-0 rounded-sm px-2.5 py-1.5 hover:bg-white

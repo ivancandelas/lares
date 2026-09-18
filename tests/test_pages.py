@@ -108,5 +108,33 @@ def test_la_pagina_carga_alpine(sesion, household):
     from django.urls import reverse
 
     contenido = sesion.get(reverse("core:dashboard")).content.decode()
-    assert "alpinejs" in contenido
+    assert "alpine.min.js" in contenido
     assert 'x-data="{ open: null }"' in contenido
+
+
+@pytest.mark.django_db
+def test_el_menu_no_recorta_sus_desplegables(sesion, household):
+    """`overflow-x-auto` en el nav crea un contexto de recorte.
+
+    Los desplegables van posicionados en absoluto y se abren *fuera* del nav,
+    así que con overflow se abren y no se ven. El síntoma es idéntico a que el
+    JavaScript no funcione, y cuesta mucho de diagnosticar.
+    """
+    import re
+
+    from django.urls import reverse
+
+    contenido = sesion.get(reverse("core:dashboard")).content.decode()
+    nav = re.search(r"<nav[^>]*>", contenido).group(0)
+    assert "overflow-x-auto" not in nav
+    assert "overflow-hidden" not in nav
+
+
+@pytest.mark.django_db
+def test_el_javascript_se_sirve_desde_la_propia_instalacion(sesion, household):
+    """Un self-hosted cuyo menú muere sin internet no es self-hosted."""
+    from django.urls import reverse
+
+    contenido = sesion.get(reverse("core:dashboard")).content.decode()
+    assert "unpkg.com" not in contenido
+    assert "/static/vendor/alpine" in contenido

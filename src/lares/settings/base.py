@@ -158,6 +158,9 @@ DEFAULT_CURRENCY = env("LARES_DEFAULT_CURRENCY", default="MXN")
 # --- Archivos ---------------------------------------------------------------
 STATIC_URL = "static/"
 STATIC_ROOT = PROJECT_ROOT / "staticfiles"
+# JavaScript servido por la propia instalacion: un self-hosted cuyo menu deja de
+# funcionar sin internet no es self-hosted.
+STATICFILES_DIRS = [BASE_DIR / "lares" / "static"]
 MEDIA_URL = "media/"
 # Vacío o sin definir: carpeta del proyecto. En Docker se pasa /data/media.
 MEDIA_ROOT = env("LARES_MEDIA_ROOT", default="") or str(PROJECT_ROOT / "data" / "media")
