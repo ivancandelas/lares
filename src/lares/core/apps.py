@@ -7,7 +7,10 @@ class CoreConfig(AppConfig):
     verbose_name = "Nucleo"
 
     def ready(self):
-        from . import receivers  # noqa: F401
+        from . import (
+            packs,
+            receivers,  # noqa: F401
+        )
         from .classifiers import CfdiClassifier, KeywordClassifier
         from .connectors import ImapRunner, PaperlessRunner, WatchFolderRunner
         from .forms import (
@@ -37,6 +40,10 @@ class CoreConfig(AppConfig):
         registry.obligations(DocumentExpiryProvider, UserRuleProvider)
         # El CFDI va primero: está firmado, no se adivina.
         registry.classifier(CfdiClassifier, KeywordClassifier)
+
+        # Las reglas que cambian por estado y por año viven en packs/*.yaml.
+        # Cambiar una fecha no debería exigir un despliegue.
+        packs.register(registry)
 
         for runner, form in (
             (PaperlessRunner, PaperlessConnectorForm),

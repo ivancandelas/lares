@@ -1,4 +1,9 @@
-"""Lo que genera un inmueble, sea tuyo o no."""
+"""Lo que genera un inmueble, sea tuyo o no.
+
+El predial se fue a packs/mx-jalisco.yaml: cambia de fecha y de importe segun el
+municipio, y no necesita mas que saber si el inmueble es tuyo. Lo que se queda
+aqui depende de datos que solo este modulo entiende.
+"""
 
 import datetime as dt
 
@@ -13,33 +18,6 @@ MESES_POR_CICLO = {
     Service.Cycle.QUARTERLY: 3,
     Service.Cycle.YEARLY: 12,
 }
-
-
-class PredialProvider(ObligationProvider):
-    """El predial lo paga el propietario, no el inquilino."""
-
-    key = "property.predial"
-    label = "Predial"
-    applies_to = "property"
-
-    def generate(self, prop, on_date: dt.date):
-        if not prop.is_mine:
-            return []
-        mes = prop.predial_month or 1
-        specs = []
-        for due in next_occurrences({"yearly": {"month": mes, "day": 31}}, on_date, count=2):
-            specs.append(ObligationSpec(
-                dedupe_key=f"property:{prop.pk}:predial:{due.year}",
-                title=f"Predial {due.year}, {prop.name}",
-                due_on=due,
-                amount=prop.predial_amount,
-                currency=prop.currency or None,
-                severity="high",
-                # Pagarlo en enero suele traer descuento: avisar en noviembre
-                # da margen para juntar el dinero.
-                remind_offsets=(-75, -45, -15, -3),
-            ))
-        return specs
 
 
 class LeaseProvider(ObligationProvider):

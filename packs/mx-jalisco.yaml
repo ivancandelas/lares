@@ -1,0 +1,35 @@
+# México — Jalisco
+#
+# Las reglas que cambian por estado y por año viven aquí, no en el código.
+# Cambiar una fecha o añadir un estado no debería exigir un despliegue.
+#
+# Lo que NO cabe en un pack: las reglas que necesitan leer datos del objeto con
+# lógica propia (la verificación según el último dígito de la placa, el servicio
+# según el odómetro). Esas viven en su módulo, que es el único que sabe leerlos.
+
+meta:
+  id: mx-jalisco
+  label: México — Jalisco
+  country: MX
+  subdivision: MX-JAL
+  updated: 2026-09-18
+
+rules:
+  - id: refrendo_vehicular
+    label: "Refrendo {year}, {subject}"
+    applies_to: vehicle
+    schedule: {yearly: {month: 3, day: 31}}
+    remind: [-60, -30, -7]
+    severity: high
+    note: Suele haber descuento por pago anticipado.
+
+  - id: predial
+    label: "Predial {year}, {subject}"
+    applies_to: property
+    # Lo paga el propietario, no el inquilino.
+    only_if: {is_mine: true}
+    amount_field: predial_amount
+    schedule: {yearly: {month: 1, day: 31}}
+    remind: [-75, -45, -15, -3]
+    severity: high
+    note: Descuento por pago anual anticipado en enero.

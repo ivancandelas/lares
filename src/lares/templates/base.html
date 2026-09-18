@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ product_name }}{% endblock %}</title>
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="manifest" href="{% url 'core:manifest' %}">
   <meta name="theme-color" content="#17201C">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,12 +63,21 @@
         Sueltas lo de cada día; agrupado lo que se consulta de vez en cuando.
       {% endcomment %}
       {% comment %}
-        Ojo con `overflow-x-auto` aquí: crea un contexto de recorte y los
-        desplegables posicionados en absoluto se abren pero quedan cortados.
-        Con `flex-wrap` bajan de línea en pantallas estrechas y se ven.
+        Dos trampas ya pagadas aquí:
+
+        1. `overflow-x-auto` crea un contexto de recorte: los desplegables van
+           posicionados en absoluto, se abren y quedan cortados. Con `flex-wrap`
+           bajan de línea en pantallas estrechas y se ven.
+
+        2. El `@click.outside` va UNA vez, en el <nav>. Con uno por desplegable,
+           pulsar «Patrimonio» es un clic "fuera" de «Dinero» y de «Más», que
+           respondían poniendo open = null en el mismo clic. El menú se abría y
+           se cerraba en el mismo instante, y parecía que el JavaScript no
+           funcionaba.
       {% endcomment %}
       <nav class="flex flex-wrap items-center gap-1 border-b border-rule py-1.5 text-sm"
-           x-data="{ open: null }" @keydown.escape="open = null">
+           x-data="{ open: null }" @keydown.escape="open = null"
+           @click.outside="open = null">
         <a href="{% url 'core:dashboard' %}"
            class="shrink-0 rounded-sm px-2.5 py-1.5 hover:bg-white
                   {% if current_url_name == 'core:dashboard' %}font-medium text-ink{% else %}text-soft{% endif %}">
@@ -86,7 +96,7 @@
               </a>
             {% endfor %}
           {% else %}
-            <div class="relative shrink-0" @click.outside="open = null">
+            <div class="relative shrink-0">
               <button type="button" @click="open = open === '{{ grupo.key }}' ? null : '{{ grupo.key }}'"
                       :aria-expanded="open === '{{ grupo.key }}'"
                       class="rounded-sm px-2.5 py-1.5 text-soft hover:bg-white hover:text-ink">

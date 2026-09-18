@@ -43,3 +43,8 @@ select = ["E", "F", "I", "UP", "B", "DJ"]
 DJANGO_SETTINGS_MODULE = "lares.settings.dev"
 python_files = ["test_*.py"]
 pythonpath = ["src"]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.63.0",
+]

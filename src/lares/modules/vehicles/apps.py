@@ -30,9 +30,9 @@ class VehiclesModule(LaresModule):
             from_kinds=("vehicle",),
         ))
 
+        # El refrendo vive en packs/mx-jalisco.yaml: es una fecha fija al año.
         reg.obligations(
             obligations.VerificacionProvider,
-            obligations.RefrendoProvider,
             obligations.ServiceIntervalProvider,
         )
 

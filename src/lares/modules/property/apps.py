@@ -24,8 +24,8 @@ class PropertyModule(LaresModule):
             from_kinds=("service",), to_kinds=("property",),
         ))
 
-        reg.obligations(obligations.PredialProvider, obligations.LeaseProvider,
-                        obligations.ServiceBillProvider)
+        # El predial vive en packs/mx-jalisco.yaml.
+        reg.obligations(obligations.LeaseProvider, obligations.ServiceBillProvider)
         reg.check(checks.PropertyWithoutDeed, checks.PropertyWithoutInsurance,
                   checks.RentedWithoutDeposit, checks.PropertyWithoutServices)
         reg.demo_seeder(demo.seed)

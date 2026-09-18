@@ -1,9 +1,11 @@
 """Proveedores de obligaciones del modulo de vehiculos.
 
-Nota deliberada: las reglas mexicanas (verificacion, refrendo) estan aqui de
-forma provisional para tener algo funcionando. Su destino correcto es un pack
-de jurisdiccion en YAML, porque cambian por estado y por ano y no deben
-requerir un despliegue. Ver packs/ y docs/03-module-system.md
+El refrendo se fue a packs/mx-jalisco.yaml: es una fecha fija al ano y no
+necesita saber nada del vehiculo.
+
+Lo que se queda aqui es lo que un pack no puede expresar sin volverse codigo
+disfrazado: la verificacion depende del ultimo digito de la placa y el servicio
+del odometro. Solo este modulo sabe leer esos datos.
 """
 
 import datetime as dt
@@ -39,23 +41,6 @@ class VerificacionProvider(ObligationProvider):
                 payload={"half": half},
             ))
         return specs
-
-
-class RefrendoProvider(ObligationProvider):
-    key = "vehicles.refrendo"
-    label = "Refrendo o tenencia"
-    applies_to = "vehicle"
-
-    def generate(self, vehicle, on_date: dt.date):
-        year = on_date.year if on_date.month <= 3 else on_date.year + 1
-        due = dt.date(year, 3, 31)
-        return [ObligationSpec(
-            dedupe_key=f"vehicle:{vehicle.pk}:refrendo:{year}",
-            title=f"Refrendo {year}, {vehicle}",
-            due_on=due,
-            severity="high",
-            remind_offsets=(-60, -30, -7),
-        )]
 
 
 class ServiceIntervalProvider(ObligationProvider):
