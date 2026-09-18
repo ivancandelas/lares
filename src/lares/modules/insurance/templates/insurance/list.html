@@ -21,12 +21,13 @@
 
 <h2 class="mt-10 text-sm font-medium">Vigentes</h2>
 <ul class="mt-1 divide-y divide-rule border-y border-rule">
-  {% for p in vigentes %}{% include "insurance/_row.html" with p=p %}{% endfor %}
+  {% for p in vigentes %}
+    {% include "insurance/_row.html" with p=p %}
   {% empty %}
     <li class="py-3 text-[15px] text-soft">
       Ninguna registrada. Empieza por la del coche o la de la casa: son las que
       más caro sale no tener.
     </li>
-{% endfor %}
+  {% endfor %}
 </ul>
 {% endblock %}
