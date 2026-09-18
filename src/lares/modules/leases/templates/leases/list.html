@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Arrendamiento - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Arrendamiento</h1>
+  <a href="{% url 'core:resource-new' 'lease' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Nuevo contrato</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Los que cobras y los que pagas. Un mes sin cobrar es un mes que ya no se
+  recupera, así que aquí saltan igual que los que debes.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  {% if ingreso_mensual %}
+    <div>
+      <div class="text-[13px] text-soft">Cobras al mes</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 ingreso_mensual %}</div>
+    </div>
+  {% endif %}
+  {% if gasto_mensual %}
+    <div>
+      <div class="text-[13px] text-soft">Pagas al mes</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 gasto_mensual %}</div>
+    </div>
+  {% endif %}
+  {% if atrasados %}
+    <div>
+      <div class="text-[13px] text-soft">Meses sin saldar</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums text-overdue">{{ atrasados|length }}</div>
+    </div>
+  {% endif %}
+</div>
+
+{% if cobro %}
+  <h2 class="mt-10 text-sm font-medium">Los que cobras</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for l in cobro %}{% include "leases/_row.html" with l=l %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if pago %}
+  <h2 class="mt-10 text-sm font-medium">Los que pagas</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for l in pago %}{% include "leases/_row.html" with l=l %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if not cobro and not pago %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Ningún contrato registrado. Si rentas algo —o vives de renta— este es el
+    sitio: de aquí salen el cobro de cada mes, el aviso de fin y el depósito.
+  </p>
+{% endif %}
+{% endblock %}

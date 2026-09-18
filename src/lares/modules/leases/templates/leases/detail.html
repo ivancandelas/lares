@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}{{ lease.name }} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-start justify-between gap-3">
+  <div class="min-w-0">
+    <h1 class="text-2xl font-light tracking-tight">{{ lease.name }}</h1>
+    <p class="mt-1 text-sm text-soft">{{ lease.context_line }}</p>
+  </div>
+  <a href="{% url 'core:resource-edit' lease.pk %}"
+     class="shrink-0 rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Editar</a>
+</div>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Renta</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 lease.rent_amount lease.currency %}</div>
+    {% if proxima_renta != lease.rent_amount %}
+      <div class="text-[13px] text-soon">
+        subiría a {% money0 proxima_renta lease.currency %}
+      </div>
+    {% endif %}
+  </div>
+  {% if lease.deposit_pending %}
+    <div>
+      <div class="text-[13px] text-soft">
+        {% if lease.is_landlord %}Depósito que guardas{% else %}Depósito por recuperar{% endif %}
+      </div>
+      <div class="mt-0.5 text-xl font-light tabular-nums text-soon">{% money0 lease.deposit_pending lease.currency %}</div>
+    </div>
+  {% endif %}
+  {% if lease.days_to_end %}
+    <div>
+      <div class="text-[13px] text-soft">Acaba en</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums {% if lease.days_to_end < 90 %}text-soon{% endif %}">
+        {{ lease.days_to_end }} días
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{% if atrasados %}
+  <p class="mt-4 border-l-2 border-overdue pl-4 text-[15px]">
+    {{ atrasados|length }} mes{{ atrasados|length|pluralize:"es" }} sin
+    {% if lease.is_landlord %}cobrar{% else %}pagar{% endif %}.
+    El más viejo lleva {{ atrasados.0.days_late }} días.
+  </p>
+{% endif %}
+
+{% if lease.guarantor or lease.legal_policy %}
+  <p class="mt-4 text-[15px]">
+    {% if lease.guarantor %}Fiador: {{ lease.guarantor }}.{% endif %}
+    {% if lease.legal_policy %} {{ lease.legal_policy }}.{% endif %}
+  </p>
+{% endif %}
+
+{% if lease.description %}
+  <h2 class="mt-10 text-sm font-medium">Acta de entrega</h2>
+  <p class="mt-1 max-w-[60ch] leading-relaxed">{{ lease.description }}</p>
+{% endif %}
+
+<h2 class="mt-10 text-sm font-medium">Meses</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for p in pagos %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <div class="text-[15px] {% if p.is_late %}text-overdue{% endif %}">{{ p.period }}</div>
+        <div class="text-[13px] text-soft">
+          vencía el {{ p.due_on|date:"j \d\e F"|lower }}
+          {% if p.paid_on %}, pagado el {{ p.paid_on|date:"j \d\e F"|lower }}
+            {% if p.days_late %} ({{ p.days_late }} días tarde){% endif %}
+          {% elif p.is_late %}, lleva {{ p.days_late }} días{% endif %}
+        </div>
+      </div>
+      <div class="flex shrink-0 items-baseline gap-3">
+        <span class="tabular-nums text-sm">{% money0 p.amount_paid|default:p.amount lease.currency %}</span>
+        {% if not p.paid_on %}
+          <a href="{% url 'leases:payment' p.pk %}" class="text-[13px] text-calm hover:underline">
+            {% if lease.is_landlord %}cobrado{% else %}pagado{% endif %}
+          </a>
+        {% endif %}
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+
+{% if lease.deposit_pending and not lease.is_live %}
+  <form method="post" action="{% url 'leases:deposit-returned' lease.pk %}" class="mt-8">
+    {% csrf_token %}
+    <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+      El depósito ya se {% if lease.is_landlord %}devolvió{% else %}recuperó{% endif %}
+    </button>
+  </form>
+{% endif %}
+{% endblock %}

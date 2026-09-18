@@ -57,6 +57,7 @@ LARES_MODULES = env.list(
         "lares.modules.loans.apps.LoansModule",
         "lares.modules.maintenance.apps.MaintenanceModule",
         "lares.modules.property.apps.PropertyModule",
+        "lares.modules.leases.apps.LeasesModule",
         "lares.modules.subscriptions.apps.SubscriptionsModule",
         "lares.modules.tasks.apps.TasksModule",
         "lares.modules.vehicles.apps.VehiclesModule",

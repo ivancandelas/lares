@@ -42,7 +42,7 @@ class Property(Resource):
     class Use(models.TextChoices):
         LIVED_IN = "lived_in", "Lo habito"
         EMPTY = "empty", "Vacío"
-        RENTED_OUT = "rented_out", "Lo tengo rentado"
+        RENTED_OUT = "rented_out", "Se lo rento a un inquilino"
         FOR_SALE = "for_sale", "En venta"
         LENT = "lent", "Prestado a alguien"
         OTHER = "other", "Otro"
@@ -75,17 +75,9 @@ class Property(Resource):
     predial_amount = models.DecimalField("predial estimado", max_digits=12,
                                          decimal_places=2, null=True, blank=True)
 
-    # Datos que solo tienen sentido si vives de renta.
-    rent_amount = models.DecimalField("renta que pagas", max_digits=12, decimal_places=2,
-                                      null=True, blank=True)
-    rent_due_day = models.PositiveSmallIntegerField("día de pago", null=True, blank=True)
-    deposit_amount = models.DecimalField("depósito en garantía", max_digits=12,
-                                         decimal_places=2, null=True, blank=True)
-    lease_ends_on = models.DateField("el contrato acaba el", null=True, blank=True)
-    landlord = models.ForeignKey(
-        "core.Party", verbose_name="arrendador", null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="rented_out_to_us",
-    )
+    # La renta, el deposito y el fin de contrato viven en el modulo de
+    # arrendamiento, no aqui: son del contrato, no del inmueble, y funcionan
+    # igual seas el inquilino o el arrendador.
 
     class Meta:
         verbose_name = "inmueble"

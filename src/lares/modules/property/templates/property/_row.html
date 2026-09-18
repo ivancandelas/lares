@@ -14,12 +14,7 @@
         <div class="text-[13px] text-soft">tu {{ p.ownership_share|floatformat:0 }}%</div>
       {% endif %}
     {% else %}
-      {% if p.rent_amount %}
-        <div class="tabular-nums text-sm">{% money p.rent_amount p.currency %} al mes</div>
-      {% endif %}
-      {% if p.lease_ends_on %}
-        <div class="text-[13px] text-soft">hasta {{ p.lease_ends_on|date:"j M Y"|lower }}</div>
-      {% endif %}
+      <div class="text-[13px] text-soft">{{ p.get_tenure_display|lower }}</div>
     {% endif %}
   </div>
 </li>

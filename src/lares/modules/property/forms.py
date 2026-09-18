@@ -11,8 +11,6 @@ class PropertyForm(ResourceForm):
                              "current_value", "currency", "cadastral_id",
                              "deed_number", "deed_date", "ownership_share",
                              "predial_month", "predial_amount"]),
-        ("Solo si vives de renta", ["landlord", "rent_amount", "rent_due_day",
-                                    "deposit_amount", "lease_ends_on"]),
         ("Notas", ["status", "description"]),
     )
 
@@ -23,8 +21,7 @@ class PropertyForm(ResourceForm):
                   "purchase_amount", "current_value", "currency",
                   "cadastral_id", "deed_number", "deed_date", "ownership_share",
                   "predial_month", "predial_amount",
-                  "landlord", "rent_amount", "rent_due_day", "deposit_amount",
-                  "lease_ends_on", "status", "description"]
+                  "status", "description"]
         labels = {
             "name": "Cómo lo llamas",
             "property_type": "Qué es",
@@ -46,11 +43,6 @@ class PropertyForm(ResourceForm):
             "ownership_share": "Tu parte (%)",
             "predial_month": "Mes del predial",
             "predial_amount": "Predial estimado",
-            "landlord": "Arrendador",
-            "rent_amount": "Renta que pagas",
-            "rent_due_day": "Día de pago",
-            "deposit_amount": "Depósito en garantía",
-            "lease_ends_on": "El contrato acaba el",
             "status": "Estado",
             "description": "Notas",
         }
@@ -58,8 +50,6 @@ class PropertyForm(ResourceForm):
             "tenure": "«Rentado» es cuando tú eres el inquilino. No suma a tu patrimonio.",
             "use": "Independiente de lo anterior: puedes rentar algo que es tuyo.",
             "ownership_share": "Solo si es en copropiedad.",
-            "rent_amount": "Se convierte en un pago mensual que te recuerda solo.",
-            "lease_ends_on": "Avisa con 90 días: renovar o mudarse no se decide en una semana.",
         }
 
 

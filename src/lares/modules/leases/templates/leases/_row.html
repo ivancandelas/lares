@@ -1,0 +1,17 @@
+{% load money %}
+<li class="py-4">
+  <div class="flex items-baseline justify-between gap-4">
+    <a href="{% url 'leases:detail' l.pk %}" class="min-w-0 text-[15px] hover:text-calm">{{ l.name }}</a>
+    <span class="shrink-0 tabular-nums text-sm">{% money0 l.rent_amount l.currency %}<span class="text-soft">/mes</span></span>
+  </div>
+  <div class="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
+    <span>{{ l.context_line }}</span>
+    <span class="shrink-0">
+      {% if l.overdue_payments %}
+        <span class="text-overdue">{% with n=l.overdue_payments|length %}{{ n }} mes{{ n|pluralize:"es" }} sin saldar{% endwith %}</span>
+      {% elif l.days_to_end and l.days_to_end < 90 %}
+        <span class="text-soon">acaba en {{ l.days_to_end }} días</span>
+      {% endif %}
+    </span>
+  </div>
+</li>

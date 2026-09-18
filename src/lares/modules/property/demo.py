@@ -9,8 +9,6 @@ from .models import Property, Service
 
 def seed(household) -> str:
     owner = Party.objects.filter(household=household, is_self=True).first()
-    hoy = dt.date.today()
-
     siapa, _ = Party.objects.get_or_create(
         household=household, name="SIAPA", defaults={"kind": Party.Kind.ORGANIZATION})
     cfe, _ = Party.objects.get_or_create(
@@ -25,8 +23,6 @@ def seed(household) -> str:
             kind="property", property_type=Property.Type.HOUSE,
             tenure=Property.Tenure.RENTED, use=Property.Use.LIVED_IN,
             city="Guadalajara", subdivision="MX-JAL", built_m2=180,
-            landlord=casero, rent_amount=18500, rent_due_day=5,
-            deposit_amount=37000, lease_ends_on=hoy + dt.timedelta(days=100),
             owner=owner, currency="MXN",
         ),
     )

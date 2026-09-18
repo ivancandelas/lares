@@ -9,7 +9,7 @@ import datetime as dt
 
 import pytest
 
-from lares.core.models import Obligation, Party, Resource
+from lares.core.models import Obligation, Resource
 from lares.core.services import checks, obligations
 from lares.modules.property.models import Property, Service
 
@@ -18,13 +18,11 @@ HOY = dt.date(2026, 9, 18)
 
 @pytest.fixture
 def casa_rentada(scoped, me):
-    casero = Party.objects.create(household=scoped, name="Sr. Ramírez")
+    """Donde vives pagando renta. El contrato en sí vive en `leases`."""
     return Property.objects.create(
         household=scoped, name="Casa de Providencia", kind="property",
         property_type=Property.Type.HOUSE, tenure=Property.Tenure.RENTED,
-        use=Property.Use.LIVED_IN, owner=me, landlord=casero,
-        rent_amount=18500, rent_due_day=5, deposit_amount=37000,
-        lease_ends_on=HOY + dt.timedelta(days=100), currency="MXN",
+        use=Property.Use.LIVED_IN, owner=me, currency="MXN",
     )
 
 
@@ -69,28 +67,6 @@ def test_la_copropiedad_es_tuya(scoped, me):
 
 
 # --- Lo que genera cada situación -------------------------------------------
-
-
-@pytest.mark.django_db
-def test_si_vives_de_renta_el_pago_es_una_obligacion(scoped, casa_rentada):
-    obligations.materialize(scoped, HOY)
-
-    pagos = Obligation.objects.filter(source="property.rent",
-                                      title__startswith="Renta")
-    assert pagos.count() == 2                    # el próximo y el siguiente
-    assert pagos.first().amount == 18500
-    assert pagos.first().severity == "critical"
-    assert str(pagos.first().counterparty) == "Sr. Ramírez"
-
-
-@pytest.mark.django_db
-def test_el_fin_del_contrato_avisa_con_tres_meses(scoped, casa_rentada):
-    obligations.materialize(scoped, HOY)
-
-    aviso = Obligation.objects.get(title__startswith="Acaba el contrato")
-    assert aviso.due_on == casa_rentada.lease_ends_on
-    # Renovar o mudarse no se decide en una semana.
-    assert min(aviso.remind_offsets) == -90
 
 
 @pytest.mark.django_db
@@ -143,15 +119,6 @@ def test_avisa_de_un_inmueble_propio_sin_escritura(scoped, depto):
 def test_no_pide_escritura_de_lo_que_no_es_tuyo(scoped, casa_rentada):
     hallazgos = [f for f in checks.run_all(scoped) if f.check == "property.no_deed"]
     assert hallazgos == []
-
-
-@pytest.mark.django_db
-def test_avisa_si_no_registraste_el_deposito(scoped, casa_rentada):
-    casa_rentada.deposit_amount = None
-    casa_rentada.save()
-
-    claves = {f.check for f in checks.run_all(scoped)}
-    assert "property.no_deposit" in claves
 
 
 @pytest.mark.django_db

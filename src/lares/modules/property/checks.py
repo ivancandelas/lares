@@ -63,30 +63,6 @@ class PropertyWithoutInsurance(Check):
         ]
 
 
-class RentedWithoutDeposit(Check):
-    """Vivir de renta sin registrar el depósito es regalar dinero al salir."""
-
-    key = "property.no_deposit"
-    label = "Renta sin depósito registrado"
-    severity = "normal"
-
-    def run(self, household):
-        return [
-            Finding(
-                check=self.key,
-                title=f"No registraste el depósito de {p.name}",
-                detail="Sin el importe y el acta de entrega, recuperarlo depende de la memoria.",
-                severity=self.severity,
-                subject_type="property",
-                subject_id=p.pk,
-            )
-            for p in Property.objects.filter(
-                status=Property.Status.ACTIVE, tenure=Property.Tenure.RENTED
-            )
-            if not p.deposit_amount
-        ]
-
-
 class PropertyWithoutServices(Check):
     key = "property.no_services"
     label = "Inmueble habitado sin servicios registrados"

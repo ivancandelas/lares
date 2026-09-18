@@ -1,0 +1,16 @@
+{% load money %}
+<div class="mt-2 text-[13px] text-soft">
+  {% if cobro %}Cobras {% money0 cobro %}{% endif %}
+  {% if pago %}{% if cobro %} · {% endif %}Pagas {% money0 pago %}{% endif %}
+  {% if atrasos %} · <span class="text-overdue">{{ atrasos }} sin saldar</span>{% endif %}
+</div>
+<ul class="mt-2 space-y-1.5">
+  {% for l in leases %}
+    <li class="flex items-baseline justify-between gap-3 text-[14px]">
+      <span class="min-w-0 truncate">{{ l.property_ref.name }}</span>
+      <span class="shrink-0 tabular-nums text-[13px] text-soft">{% money0 l.rent_amount l.currency %}</span>
+    </li>
+  {% empty %}
+    <li class="text-[14px] text-soft">Ningún contrato.</li>
+  {% endfor %}
+</ul>

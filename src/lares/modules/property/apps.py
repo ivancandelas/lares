@@ -25,9 +25,9 @@ class PropertyModule(LaresModule):
         ))
 
         # El predial vive en packs/mx-jalisco.yaml.
-        reg.obligations(obligations.LeaseProvider, obligations.ServiceBillProvider)
+        reg.obligations(obligations.ServiceBillProvider)
         reg.check(checks.PropertyWithoutDeed, checks.PropertyWithoutInsurance,
-                  checks.RentedWithoutDeposit, checks.PropertyWithoutServices)
+                  checks.PropertyWithoutServices)
         reg.demo_seeder(demo.seed)
         reg.nav(NavItem("Inmuebles", "property:list", icon="home", order=10,
                         section="holdings"))
