@@ -24,6 +24,10 @@ urlpatterns = [
     path("conectores/<uuid:pk>/", views_connectors.connector_edit, name="connector-edit"),
     path("conectores/<uuid:pk>/traer/", views_connectors.connector_run, name="connector-run"),
 
+    path("calendario/", views.calendar_settings, name="calendar-settings"),
+    path("calendario/<str:token>.ics", views.calendar_feed, name="calendar-feed"),
+    path("o/<uuid:pk>.ics", views.obligation_ics, name="obligation-ics"),
+
     path("empezar/", views.onboarding, name="onboarding"),
 
     path("manifest.webmanifest", views.manifest, name="manifest"),

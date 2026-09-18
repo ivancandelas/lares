@@ -1,7 +1,8 @@
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 
@@ -76,6 +77,62 @@ def documents(request):
     return render(request, "core/documents.html", {
         "vencen": docs.filter(expires_on__isnull=False).order_by("expires_on"),
         "sin_vencimiento": docs.filter(expires_on__isnull=True),
+    })
+
+
+@login_not_required
+def calendar_feed(request, token):
+    """El feed suscribible. Sin sesión: lo consume un calendario, no un navegador.
+
+    El token va en la URL porque así lo exige cualquier cliente de calendario.
+    Es un secreto débil a conciencia: se puede rotar y solo expone títulos y
+    fechas, nunca números de póliza, documentos ni saldos.
+    """
+    from .models import Household
+    from .services import calendar as cal
+
+    household = Household.objects.filter(calendar_token=token).first()
+    if not household or not token:
+        raise Http404("Ese calendario no existe o se revocó.")
+
+    prefijo = request.GET.get("de", "")
+    discreto = request.GET.get("discreto") in ("1", "si", "true")
+    contenido = cal.feed(household, source_prefix=prefijo, discreet=discreto)
+    respuesta = HttpResponse(contenido, content_type="text/calendar; charset=utf-8")
+    respuesta["Content-Disposition"] = 'inline; filename="lares.ics"'
+    return respuesta
+
+
+def obligation_ics(request, pk):
+    """«Añadir al calendario» de una obligación suelta."""
+    from .models import Obligation
+    from .services import calendar as cal
+
+    obligation = get_object_or_404(Obligation, pk=pk)
+    respuesta = HttpResponse(cal.single(obligation),
+                             content_type="text/calendar; charset=utf-8")
+    respuesta["Content-Disposition"] = 'attachment; filename="vencimiento.ics"'
+    return respuesta
+
+
+def calendar_settings(request):
+    """Dónde copiar la dirección del feed y cómo revocarla."""
+    household = request.household
+    if request.method == "POST":
+        household.rotate_calendar_token()
+        messages.success(request, "Dirección nueva. La anterior dejó de funcionar.")
+        return redirect("core:calendar-settings")
+
+    if not household.calendar_token:
+        household.rotate_calendar_token()
+
+    url = request.build_absolute_uri(
+        reverse("core:calendar-feed", args=[household.calendar_token])
+    )
+    return render(request, "core/calendar.html", {
+        "url": url,
+        "webcal": url.replace("http://", "webcal://").replace("https://", "webcal://"),
+        "areas": sorted({o for o in registry.obligation_providers}),
     })
 
 

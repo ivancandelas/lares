@@ -37,6 +37,10 @@ class Household(TimestampedModel):
     timezone = models.CharField(max_length=64, default="America/Mexico_City")
     currency = models.CharField(max_length=3, default="MXN")
 
+    # Token del feed de calendario. Va en la URL, así que es un secreto débil
+    # a propósito: se puede revocar y solo expone títulos y fechas.
+    calendar_token = models.CharField(max_length=43, blank=True, db_index=True)
+
     members = models.ManyToManyField(
         User,
         through="Membership",
@@ -49,6 +53,13 @@ class Household(TimestampedModel):
 
     def __str__(self):
         return self.name
+
+    def rotate_calendar_token(self) -> str:
+        import secrets
+
+        self.calendar_token = secrets.token_urlsafe(32)
+        self.save(update_fields=["calendar_token", "updated_at"])
+        return self.calendar_token
 
 
 class Membership(TimestampedModel):

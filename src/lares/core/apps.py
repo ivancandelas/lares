@@ -32,6 +32,8 @@ class CoreConfig(AppConfig):
             NavItem("Personas", "core:parties", icon="users", order=10, section="more"),
             NavItem("Conectores", "core:connectors", icon="plug", order=20,
                     section="more"),
+            NavItem("Calendario", "core:calendar-settings", icon="calendar",
+                    order=25, section="more"),
             NavItem("Por dónde seguir", "core:onboarding", icon="compass", order=30,
                     section="more"),
         )

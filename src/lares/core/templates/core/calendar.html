@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Calendario - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-light tracking-tight">Calendario</h1>
+  <p class="mt-1 max-w-[56ch] text-sm text-soft">
+    Suscribe esta dirección en tu calendario y tus vencimientos aparecerán ahí.
+    Funciona en Google, Apple, Outlook y Thunderbird, sin darle tu contraseña a
+    nadie.
+  </p>
+
+  <div class="mt-8" x-data="{ copiado: false }">
+    <label for="feed" class="block text-sm text-soft">Dirección del calendario</label>
+    <div class="mt-1 flex gap-2">
+      <input id="feed" readonly value="{{ url }}"
+             class="w-full rounded-sm border border-rule bg-white px-3 py-2 text-[13px]"
+             @focus="$el.select()">
+      <button type="button"
+              @click="navigator.clipboard.writeText('{{ url }}'); copiado = true; setTimeout(() => copiado = false, 2000)"
+              class="shrink-0 rounded-sm bg-calm px-3 py-2 text-sm font-medium text-white hover:bg-ink">
+        <span x-text="copiado ? 'Copiada' : 'Copiar'">Copiar</span>
+      </button>
+    </div>
+    <p class="mt-2 text-[13px] text-soft">
+      En Apple y Thunderbird puedes usar
+      <a href="{{ webcal }}" class="text-calm hover:underline">esta otra</a>, que
+      abre el calendario directamente.
+    </p>
+  </div>
+
+  <h2 class="mt-10 text-sm font-medium">Cómo suscribirla</h2>
+  <ul class="mt-2 space-y-2 text-[15px] leading-relaxed">
+    <li><span class="text-soft">Google Calendar:</span> Otros calendarios → Suscribirse mediante URL.</li>
+    <li><span class="text-soft">Apple:</span> Archivo → Nueva suscripción de calendario.</li>
+    <li><span class="text-soft">Outlook:</span> Añadir calendario → Suscribirse desde la web.</li>
+  </ul>
+  <p class="mt-3 max-w-[56ch] text-[13px] text-soft">
+    Google tarda unas horas en refrescar; los demás suelen ser más rápidos. Cada
+    evento lleva sus propios avisos dentro, así que tu calendario te recordará
+    aunque este servidor esté apagado.
+  </p>
+
+  <h2 class="mt-10 text-sm font-medium">Si prefieres calendarios separados</h2>
+  <p class="mt-2 max-w-[56ch] text-[15px] leading-relaxed">
+    Añade <code class="text-[13px]">?de=</code> y el área para suscribir solo una
+    parte y darle su propio color. Por ejemplo
+    <code class="text-[13px]">?de=vehicles</code> o
+    <code class="text-[13px]">?de=insurance</code>.
+  </p>
+
+  <h2 class="mt-10 text-sm font-medium">Si prefieres no publicar los títulos</h2>
+  <p class="mt-2 max-w-[56ch] text-[15px] leading-relaxed">
+    Añade <code class="text-[13px]">?discreto=1</code> y cada evento dirá solo el
+    área —«Seguro», «Vehículo»— con su fecha y sus avisos. Sabes que hay algo,
+    sin que la dirección publique qué.
+  </p>
+
+  <h2 class="mt-10 text-sm font-medium text-overdue">Quién puede verlo</h2>
+  <p class="mt-2 max-w-[56ch] text-[15px] leading-relaxed">
+    Quien tenga la dirección ve los títulos, las fechas y los importes de tus
+    vencimientos, tal como los ves tú. Nunca el contenido de un documento ni el
+    saldo de una cuenta. Ten en cuenta que un título puede llevar datos que no
+    quieras publicar, como los últimos dígitos de una tarjeta.
+  </p>
+  <p class="mt-2 max-w-[56ch] text-[15px] leading-relaxed">
+    Si se te escapó la dirección, genera otra: la anterior deja de funcionar al
+    instante.
+  </p>
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+    <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-overdue hover:text-overdue">
+      Generar una dirección nueva
+    </button>
+  </form>
+</div>
+{% endblock %}
