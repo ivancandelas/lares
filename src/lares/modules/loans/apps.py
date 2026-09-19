@@ -18,7 +18,7 @@ class LoansModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, owed, widgets
+        from . import checks, demo, obligations, owed, recurring, widgets
         from .forms import LoanForm
         from .models import Loan
         from .related import for_party
@@ -40,6 +40,7 @@ class LoansModule(LaresModule):
         reg.check(checks.ForgottenLoan, checks.InformalWithoutRecord, checks.Overpaid)
         reg.related(for_party)
         reg.owed(owed.owed)
+        reg.recurring(recurring.recurring)
         reg.demo_seeder(demo.seed)
         reg.nav(NavItem("Préstamos", "loans:list", icon="handshake", order=19,
                         section="money"))

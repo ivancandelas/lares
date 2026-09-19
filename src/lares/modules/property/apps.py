@@ -11,7 +11,7 @@ class PropertyModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, widgets
+        from . import checks, demo, obligations, recurring, widgets
         from .forms import PropertyForm, ServiceForm
         from .models import Property, Service
 
@@ -28,6 +28,7 @@ class PropertyModule(LaresModule):
         reg.obligations(obligations.ServiceBillProvider)
         reg.check(checks.PropertyWithoutDeed, checks.PropertyWithoutInsurance,
                   checks.PropertyWithoutServices)
+        reg.recurring(recurring.recurring)
         reg.demo_seeder(demo.seed)
         reg.nav(NavItem("Inmuebles", "property:list", icon="home", order=10,
                         section="holdings"))

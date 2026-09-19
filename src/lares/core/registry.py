@@ -161,6 +161,68 @@ class Owed:
         return dias is not None and dias < 0
 
 
+# Cuantas veces al ano cobra cada ciclo. Los modulos ya usaban estas mismas
+# claves por separado; tenerlas en un solo sitio es lo que permite sumar un
+# streaming mensual con un seguro anual sin traducir a mano en cada pantalla.
+VECES_AL_ANO = {
+    "weekly": 52, "monthly": 12, "bimonthly": 6,
+    "quarterly": 4, "semiannual": 2, "yearly": 1,
+}
+
+CICLO_ETIQUETA = {
+    "weekly": "cada semana", "monthly": "al mes", "bimonthly": "cada dos meses",
+    "quarterly": "cada tres meses", "semiannual": "cada seis meses",
+    "yearly": "al año",
+}
+
+
+@dataclass(frozen=True)
+class Recurring:
+    """Algo que te cobra cada tanto, venga de donde venga.
+
+    Netflix es una suscripcion, el agua es un servicio del inmueble y la
+    colegiatura es una regla que programaste tu. Los tres son modelos distintos
+    a proposito -una suscripcion se cancela por una URL, un servicio cuelga de
+    una casa y tiene numero de contrato- pero para la pregunta "cuanto me cobran
+    al mes" son lo mismo, y esa pregunta no la puede contestar ningun modulo
+    solo.
+
+    Como en `Owed`, esto no guarda nada: cada modulo dice lo que ya sabe.
+    """
+
+    title: str
+    amount: object                   # None: recurrente de importe variable
+    cycle: str                       # una clave de VECES_AL_ANO
+    pk: object = None                # el registro del que sale, si hace falta
+    currency: str = ""
+    counterparty: object = None
+    next_on: object = None
+    url: str = ""
+    source: str = ""
+    note: str = ""
+    is_active: bool = True
+
+    @property
+    def times_per_year(self) -> int:
+        return VECES_AL_ANO.get(self.cycle, 12)
+
+    @property
+    def cycle_label(self) -> str:
+        return CICLO_ETIQUETA.get(self.cycle, self.cycle)
+
+    @property
+    def per_year(self):
+        """Lo que cuesta al año. None cuando el importe no se sabe."""
+        if self.amount is None:
+            return None
+        return self.amount * self.times_per_year
+
+    @property
+    def per_month(self):
+        anual = self.per_year
+        return None if anual is None else anual / 12
+
+
 @dataclass(frozen=True)
 class NavItem:
     label: str
@@ -236,6 +298,8 @@ class Registry:
         # Quien te debe y a quien le debes. Cada modulo lo aporta desde sus
         # propios registros; aqui no se guarda ninguna deuda.
         self.owed_providers: list = []
+        # Lo que te cobran cada tanto. Igual que owed: aqui no se guarda nada.
+        self.recurring_providers: list = []
         # Calculos con nombre que un modulo aporta y el nucleo consulta sin
         # conocerlo. Es lo que evita que el nucleo importe un modulo para
         # afinar una cifra que el solo no puede calcular.
@@ -350,6 +414,25 @@ class Registry:
                 salida.extend(fn(household) or [])
             except Exception:
                 logger.exception("Un proveedor de deudas falló")
+        return salida
+
+    def recurring(self, fn):
+        """Lo que se cobra cada tanto.
+
+        `fn(household) -> list[Recurring]`. Permite una sola pantalla de "que me
+        cobran" sin que suscripciones, servicios del inmueble y reglas propias
+        tengan que ser el mismo modelo, que es lo que los volveria inservibles
+        para lo suyo.
+        """
+        self.recurring_providers.append(fn)
+
+    def recurring_all(self, household) -> list:
+        salida = []
+        for fn in self.recurring_providers:
+            try:
+                salida.extend(fn(household) or [])
+            except Exception:
+                logger.exception("Un proveedor de recurrentes falló")
         return salida
 
     def classifier(self, *classifiers):

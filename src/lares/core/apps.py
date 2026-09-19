@@ -46,6 +46,9 @@ class CoreConfig(AppConfig):
             NavItem("Por dónde seguir", "core:onboarding", icon="compass", order=30,
                     section="more"),
         )
+        from .checks import DuplicateRecurring
+        registry.check(DuplicateRecurring)
+
         registry.subject_source("document", _expiring_documents)
         registry.subject_source("household", lambda household: [household])
         registry.subject_source("party", _people)

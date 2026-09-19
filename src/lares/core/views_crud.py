@@ -316,9 +316,97 @@ def document_edit(request, pk):
     })
 
 
+CICLO_DE_SCHEDULE = {"yearly": "yearly", "monthly": "monthly"}
+MESES_A_CICLO = {1: "monthly", 2: "bimonthly", 3: "quarterly",
+                 6: "semiannual", 12: "yearly"}
+
+
+def _ciclo_de(regla) -> str | None:
+    """Cada cuánto cobra una regla propia, si es que se repite.
+
+    Una regla de fecha única o atada a un vencimiento no es un recurrente: sale
+    una vez y no tiene sentido sumarla a lo que te cuesta el mes.
+    """
+    horario = regla.schedule or {}
+    for clave, ciclo in CICLO_DE_SCHEDULE.items():
+        if clave in horario:
+            return ciclo
+    if "every" in horario:
+        return MESES_A_CICLO.get(int(horario["every"].get("months", 1)))
+    return None
+
+
+def _reglas_propias(household) -> list:
+    """Las reglas que programa el usuario, como recurrentes."""
+    from django.urls import reverse
+
+    from .registry import Recurring
+    from .schedule import next_occurrences
+
+    hoy = dt.date.today()
+    salida = []
+    # Las pausadas entran igual: si desaparecieran no habria desde donde
+    # reanudarlas. Quedan fuera de la suma, no de la lista.
+    for regla in ObligationRule.objects.all():
+        ciclo = _ciclo_de(regla)
+        if not ciclo:
+            continue
+        proximas = next_occurrences(regla.schedule, hoy, count=1)
+        salida.append(Recurring(
+            title=regla.label,
+            amount=regla.amount,
+            cycle=ciclo,
+            pk=regla.pk,
+            is_active=regla.is_active,
+            currency=regla.currency,
+            counterparty=regla.counterparty,
+            next_on=proximas[0] if proximas else None,
+            url=reverse("core:rules"),
+            source="core",
+            note="lo programaste tú" if not regla.source_pack
+                 else f"del pack {regla.source_pack}",
+        ))
+    return salida
+
+
+ORIGENES = {
+    "core": "Lo que programaste tú",
+    "subscriptions": "Suscripciones",
+    "property": "Servicios del inmueble",
+    "leases": "Renta",
+    "insurance": "Seguros",
+    "loans": "Préstamos",
+}
+
+
 def rule_list(request):
+    """Todo lo que te cobra cada tanto, venga del módulo que venga.
+
+    Antes esta pantalla solo mostraba las reglas que el usuario programaba a
+    mano, y eso la volvia enganosa: Netflix es una suscripcion y el agua es un
+    servicio del inmueble, pero los dos son pagos recurrentes y no aparecian
+    aqui. Seguir cada uno en su sitio esta bien -una suscripcion se cancela por
+    una URL, un servicio cuelga de una casa- pero la pregunta "cuanto me cobran
+    al mes" solo se contesta juntandolos.
+    """
+    partidas = registry.recurring_all(request.household) + \
+        _reglas_propias(request.household)
+    partidas.sort(key=lambda r: (not r.is_active, -(float(r.per_month or 0))))
+
+    grupos = {}
+    for partida in partidas:
+        grupos.setdefault(ORIGENES.get(partida.source, "Otros"), []).append(partida)
+
+    vivas = [r for r in partidas if r.is_active]
+    al_mes = sum(r.per_month for r in vivas if r.per_month is not None)
+
     return render(request, "core/rules.html", {
-        "reglas": ObligationRule.objects.all(),
+        "grupos": sorted(grupos.items(), key=lambda kv: -sum(
+            float(r.per_month or 0) for r in kv[1] if r.is_active)),
+        "al_mes": al_mes,
+        "al_ano": al_mes * 12,
+        "cuantos": len(vivas),
+        "sin_importe": [r for r in vivas if r.amount is None],
     })
 
 

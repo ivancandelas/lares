@@ -98,10 +98,16 @@ def _seed_rules(household):
     algo inminente, el demo no ensena como se ve lo que de verdad importa.
     """
     proximo = dt.date.today() + dt.timedelta(days=4)
+    # Ninguna repite algo que ya lleve un modulo: el agua y la luz son
+    # servicios del inmueble, no reglas escritas a mano. Duplicarlas sacaria
+    # el gasto del mes al doble, que es justo lo que avisa el hueco
+    # `core.duplicate_recurring`.
     reglas = [
         ("colegiatura", "Colegiatura", {"monthly": {"day": 10}}, 4500),
-        ("recibo_luz", "Recibo de luz", {"monthly": {"day": proximo.day}}, 1180),
-        ("agua", "Recibo de agua", {"every": {"months": 2}, "from": "2026-02-15"}, 640),
+        ("piano", "Clases de piano de Diego",
+         {"monthly": {"day": proximo.day}}, 1180),
+        ("colonos", "Cuota de la asociación de colonos",
+         {"every": {"months": 2}, "from": "2026-02-15"}, 640),
     ]
     for key, label, schedule, amount in reglas:
         ObligationRule.objects.get_or_create(

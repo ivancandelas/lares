@@ -1,37 +1,89 @@
 {% extends "base.html" %}
 {% load money %}
-{% block title %}Recurrentes - {{ product_name }}{% endblock %}
+{% block title %}Pagos recurrentes - {{ product_name }}{% endblock %}
 
 {% block content %}
 <div class="flex items-baseline justify-between gap-4">
-  <h1 class="text-2xl font-light tracking-tight">Recurrentes</h1>
+  <h1 class="text-2xl font-light tracking-tight">Pagos recurrentes</h1>
   <a href="{% url 'core:rule-new' %}"
      class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
 </div>
-<p class="mt-1 max-w-[52ch] text-sm text-soft">
-  Lo que se repite y programas tú: colegiaturas, recibos, cuotas. Lo que sale de
-  un coche o de un documento se genera solo.
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Todo lo que te cobra cada tanto: suscripciones, servicios de la casa, la
+  renta, las primas y lo que programes tú. Cada uno se administra en su sitio;
+  aquí se ven juntos.
 </p>
 
-<ul class="mt-8 divide-y divide-rule border-y border-rule">
-  {% for r in reglas %}
-    <li class="flex items-baseline justify-between gap-4 py-3">
-      <div class="min-w-0">
-        <div class="text-[15px] {% if not r.is_active %}text-soft line-through{% endif %}">{{ r.label }}</div>
-        <div class="text-[13px] text-soft">
-          {% if r.amount %}{% money r.amount r.currency %}{% endif %}
-          {% if r.counterparty %}, {{ r.counterparty }}{% endif %}
+{% if cuantos %}
+  <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+    <div>
+      <div class="text-[13px] text-soft">Al mes</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 al_mes %}</div>
+    </div>
+    <div>
+      <div class="text-[13px] text-soft">Al año</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 al_ano %}</div>
+    </div>
+    <div>
+      <div class="text-[13px] text-soft">Cosas que te cobran</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{{ cuantos }}</div>
+    </div>
+  </div>
+  {% if sin_importe %}
+    <p class="mt-3 max-w-[56ch] text-[13px] text-soft">
+      {{ sin_importe|length }} sin importe conocido, así que no entran en la
+      suma: el total real es más alto.
+    </p>
+  {% endif %}
+{% endif %}
+
+{% for titulo, partidas in grupos %}
+  <h2 class="mt-10 text-sm font-medium">{{ titulo }}</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for r in partidas %}
+      <li class="py-3">
+        <div class="flex items-baseline justify-between gap-4">
+          <a href="{{ r.url }}"
+             class="min-w-0 text-[15px] hover:text-calm {% if not r.is_active %}text-soft line-through{% endif %}">{{ r.title }}</a>
+          <span class="shrink-0 tabular-nums text-sm">
+            {% if r.amount %}{% money0 r.amount r.currency %}<span class="text-soft"> {{ r.cycle_label }}</span>
+            {% else %}<span class="text-soft">variable</span>{% endif %}
+          </span>
         </div>
-      </div>
-      <form method="post" action="{% url 'core:rule-toggle' r.pk %}" class="shrink-0">
-        {% csrf_token %}
-        <button class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-calm hover:text-calm">
-          {% if r.is_active %}Pausar{% else %}Reanudar{% endif %}
-        </button>
-      </form>
-    </li>
-  {% empty %}
-    <li class="py-3 text-[15px] text-soft">Nada programado todavía.</li>
-  {% endfor %}
-</ul>
+        <div class="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
+          <span>
+            {% if r.counterparty %}{{ r.counterparty }}{% endif %}
+            {% if r.note %}{% if r.counterparty %} · {% endif %}{{ r.note }}{% endif %}
+          </span>
+          <span class="flex shrink-0 items-baseline gap-3">
+            {% if r.cycle != "monthly" and r.per_month %}
+              <span>{% money0 r.per_month %}/mes</span>
+            {% endif %}
+            {% if r.next_on and r.is_active %}<span>{{ r.next_on|date:"d/m" }}</span>{% endif %}
+            {% if r.pk %}
+              {% comment %}
+                Las reglas propias son las únicas que se pausan: lo demás se da
+                de baja en su ficha, donde está lo que hace falta para hacerlo
+                bien (cancelar la suscripción, cerrar el contrato del agua).
+              {% endcomment %}
+              <form method="post" action="{% url 'core:rule-toggle' r.pk %}">
+                {% csrf_token %}
+                <button class="rounded-sm border border-rule px-2 py-0.5 text-[12px] hover:border-calm hover:text-calm">
+                  {% if r.is_active %}Pausar{% else %}Reanudar{% endif %}
+                </button>
+              </form>
+            {% endif %}
+          </span>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% empty %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Nada que se repita todavía. Lo que sale de un coche, una póliza o un
+    documento se genera solo; lo demás —colegiaturas, cuotas, recibos— se
+    programa aquí.
+  </p>
+{% endfor %}
+
 {% endblock %}

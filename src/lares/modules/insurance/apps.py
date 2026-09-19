@@ -11,7 +11,7 @@ class InsuranceModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, widgets
+        from . import checks, demo, obligations, recurring, widgets
         from .forms import PolicyForm
         from .models import Policy
 
@@ -29,6 +29,7 @@ class InsuranceModule(LaresModule):
                   checks.Underinsured)
         from .related import for_party as insurance_links
         reg.related(insurance_links)
+        reg.recurring(recurring.recurring)
         reg.demo_seeder(demo.seed)
         reg.nav(NavItem("Seguros", "insurance:list", icon="shield", order=40,
                         section="holdings"))

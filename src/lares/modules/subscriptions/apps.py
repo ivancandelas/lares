@@ -11,7 +11,7 @@ class SubscriptionsModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, widgets
+        from . import checks, demo, obligations, recurring, widgets
         from .forms import SubscriptionForm
         from .models import Subscription
         from .related import for_party
@@ -21,6 +21,7 @@ class SubscriptionsModule(LaresModule):
         reg.check(checks.WithoutPaymentMethod, checks.PriceRose,
                   checks.WorthReviewing)
         reg.related(for_party)
+        reg.recurring(recurring.recurring)
         reg.demo_seeder(demo.seed)
         reg.nav(NavItem("Lo que tienes contratado", "subscriptions:list",
                         icon="repeat", order=18, section="money"))
