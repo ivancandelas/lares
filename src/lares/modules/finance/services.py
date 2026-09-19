@@ -303,6 +303,11 @@ class BudgetLine:
         return not self.over and self.used > self.month_elapsed + 0.15
 
     @property
+    def overspent(self) -> Decimal:
+        """Lo que te pasaste, si te pasaste."""
+        return max(self.spent - self.planned, Decimal(0))
+
+    @property
     def projected(self) -> Decimal:
         """A este ritmo, cómo acaba el mes."""
         if self.month_elapsed <= 0:

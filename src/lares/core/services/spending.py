@@ -160,3 +160,154 @@ def _linked(filas: list[Row]) -> list[Row]:
         url = reverse("finance:merchant", args=[f.key]) if f.key else ""
         salida.append(Row(f.label, f.total, f.count, f.share, f.key, url))
     return salida
+
+
+# ---------------------------------------------------------------------------
+# Estado de resultados
+# ---------------------------------------------------------------------------
+#
+# El informe de arriba mira ventanas moviles ("ultimos 90 dias"), que sirven
+# para ver en que se va el dinero pero no se pueden comparar contra nada: no
+# existe "los 90 dias anteriores a los ultimos 90 dias" en la cabeza de nadie.
+#
+# Un estado de resultados necesita lo contrario: periodos cerrados -un mes, un
+# ano- y el mismo periodo anterior al lado. Sin la comparacion es una lista de
+# numeros; con ella es la unica pregunta que importa, que es si vas mejor o
+# peor que antes.
+#
+# Los traspasos no aparecen, y no hay que filtrarlos: mover dinero entre
+# cuentas propias no toca ninguna cuenta de ingreso ni de gasto. Es la ventaja
+# de llevar partida doble en vez de una tabla de movimientos.
+
+
+@dataclass(frozen=True)
+class StatementLine:
+    label: str
+    amount: object
+    previous: object
+
+    @property
+    def change(self):
+        return self.amount - self.previous
+
+    @property
+    def change_pct(self) -> float | None:
+        if not self.previous:
+            return None
+        return float(self.change / self.previous)
+
+    @property
+    def is_new(self) -> bool:
+        """No estaba antes: conviene mirarlo aunque sea pequeño."""
+        return not self.previous and bool(self.amount)
+
+
+@dataclass(frozen=True)
+class Statement:
+    label: str
+    starts_on: dt.date
+    ends_on: dt.date
+    income: list
+    expenses: list
+    previous_label: str
+
+    @property
+    def total_income(self):
+        return sum((x.amount for x in self.income), 0)
+
+    @property
+    def total_expense(self):
+        return sum((x.amount for x in self.expenses), 0)
+
+    @property
+    def previous_income(self):
+        return sum((x.previous for x in self.income), 0)
+
+    @property
+    def previous_expense(self):
+        return sum((x.previous for x in self.expenses), 0)
+
+    @property
+    def result(self):
+        """Lo que quedó. Positivo es superávit; negativo, déficit."""
+        return self.total_income - self.total_expense
+
+    @property
+    def previous_result(self):
+        return self.previous_income - self.previous_expense
+
+    @property
+    def savings_rate(self) -> float | None:
+        """Qué parte de lo que entró no se fue. Es la cifra que resume el mes."""
+        if not self.total_income:
+            return None
+        return float(self.result / self.total_income)
+
+    @property
+    def is_partial(self) -> bool:
+        """El periodo no ha terminado: comparar de igual a igual engaña."""
+        return self.ends_on >= dt.date.today()
+
+
+def _periodo(year: int, month: int | None) -> tuple:
+    import calendar
+
+    if month:
+        ultimo = calendar.monthrange(year, month)[1]
+        return dt.date(year, month, 1), dt.date(year, month, ultimo)
+    return dt.date(year, 1, 1), dt.date(year, 12, 31)
+
+
+def _anterior(year: int, month: int | None) -> tuple:
+    if not month:
+        return year - 1, None
+    return (year - 1, 12) if month == 1 else (year, month - 1)
+
+
+def _por_categoria(tipo, desde: dt.date, hasta: dt.date) -> dict:
+    signo = -1 if tipo == Account.Type.INCOME else 1
+    filas = (
+        Posting.objects.filter(account__type=tipo, entry__date__gte=desde,
+                               entry__date__lte=hasta)
+        .values("account__name").annotate(t=Sum("amount"))
+    )
+    return {f["account__name"]: signo * (f["t"] or 0) for f in filas
+            if f["t"]}
+
+
+def statement(household, year: int, month: int | None = None) -> Statement:
+    """Lo que entró, lo que salió y lo que quedó, contra el periodo anterior."""
+    import calendar
+
+    from django.utils.formats import date_format
+
+    desde, hasta = _periodo(year, month)
+    ano_prev, mes_prev = _anterior(year, month)
+    desde_prev, hasta_prev = _periodo(ano_prev, mes_prev)
+
+    with use_household(household):
+        ingresos = _por_categoria(Account.Type.INCOME, desde, hasta)
+        gastos = _por_categoria(Account.Type.EXPENSE, desde, hasta)
+        ingresos_prev = _por_categoria(Account.Type.INCOME, desde_prev,
+                                       hasta_prev)
+        gastos_prev = _por_categoria(Account.Type.EXPENSE, desde_prev,
+                                     hasta_prev)
+
+    def _lineas(actual: dict, anterior: dict) -> list:
+        # Las categorías que desaparecieron también salen, con cero: que algo
+        # deje de gastarse es tan informativo como que empiece.
+        etiquetas = sorted(set(actual) | set(anterior),
+                           key=lambda k: -(actual.get(k) or 0))
+        return [StatementLine(label=e, amount=actual.get(e, 0),
+                              previous=anterior.get(e, 0))
+                for e in etiquetas]
+
+    etiqueta = (date_format(desde, "F Y") if month else str(year))
+    etiqueta_prev = (date_format(desde_prev, "F Y") if mes_prev
+                     else str(ano_prev))
+    return Statement(
+        label=etiqueta.capitalize(), starts_on=desde, ends_on=hasta,
+        income=_lineas(ingresos, ingresos_prev),
+        expenses=_lineas(gastos, gastos_prev),
+        previous_label=etiqueta_prev.capitalize(),
+    )

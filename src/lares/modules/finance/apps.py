@@ -45,6 +45,8 @@ class FinanceModule(LaresModule):
                     order=10, section="money"),
             NavItem("Entra y sale", "finance:spending", icon="pie",
                     order=15, section="money"),
+            NavItem("Cómo te fue", "finance:statement", icon="scale",
+                    order=11, section="money"),
             NavItem("Cómo estás", "finance:health", icon="heart",
                     order=13, section="money"),
             NavItem("Presupuesto", "finance:plans", icon="target",

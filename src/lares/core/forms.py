@@ -29,19 +29,48 @@ INPUT = ("w-full rounded-sm border border-rule bg-white px-3 py-2 "
          "placeholder:text-soft focus:border-calm focus:outline-none")
 
 
-class LaresForm(forms.ModelForm):
-    """Base con el aspecto ya resuelto y las fechas como selector nativo.
+# Lo que se puede elegir sin teclearlo. La del hogar va primero; las que ya
+# aparecen en sus datos se anaden solas, para que nada existente deje de poder
+# seleccionarse solo porque no estaba en esta lista.
+MONEDAS = ["MXN", "USD", "EUR", "CAD", "GBP", "JPY", "CHF", "BRL", "COP",
+           "ARS", "CLP", "PEN"]
 
-    `GROUPS` parte el formulario en bloques con titulo. Veinticinco campos
-    seguidos son un muro: agrupados se rellenan sin leerlos todos, y el titulo
-    dice cuando un bloque no aplica ("Solo si vives de renta").
+
+class AccountChoiceField(forms.ModelChoiceField):
+    """Un desplegable de cuentas que dice cuánto hay en cada una.
+
+    Elegir "de que cuenta sale" sin ver el saldo obliga a abrir otra pantalla
+    y volver. Es el dato que se necesita justo en ese momento y el que mas
+    caro sale no tener: de ahi salen los sobregiros.
+    """
+
+    def __init__(self, *args, balances=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.balances = balances or {}
+
+    def label_from_instance(self, obj):
+        if obj.pk not in self.balances:
+            return str(obj)
+        saldo = self.balances[obj.pk]
+        return f"{obj}  ·  {saldo:,.2f} {obj.currency}".rstrip()
+
+
+class GroupedForm:
+    """Lo que `core/form.html` necesita para poder pintar un formulario.
+
+    La plantilla recorre `form.groups`, asi que un formulario que no lo tenga
+    se renderiza **vacio y sin error**: la pagina responde 200 y no hay ni un
+    campo. Paso con los formularios de gasto, traspaso e ingreso, que no
+    heredaban de `LaresForm` por no ser de modelo.
+
+    Va aparte de `LaresForm` justamente por eso: agrupar y dar aspecto no tiene
+    nada que ver con estar atado a un modelo.
     """
 
     GROUPS: tuple = ()
 
-    def __init__(self, *args, household=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.household = household
+    def _estilar(self):
+        self._moneda_como_lista()
         for field in self.fields.values():
             widget = field.widget
             if isinstance(widget, forms.CheckboxInput):
@@ -52,17 +81,53 @@ class LaresForm(forms.ModelForm):
             widget.attrs.setdefault("class", INPUT)
             if isinstance(widget, forms.Textarea):
                 widget.attrs.setdefault("rows", 3)
-        if household:
-            self._scope_choices(household)
 
-    def _scope_choices(self, household):
-        """Los desplegables solo muestran cosas del hogar activo."""
-        for field in self.fields.values():
-            queryset = getattr(field, "queryset", None)
-            if queryset is not None and any(
-                f.name == "household" for f in queryset.model._meta.fields
-            ):
-                field.queryset = queryset.model._base_manager.filter(household=household)
+    def _moneda_como_lista(self):
+        """La moneda se elige, no se teclea.
+
+        Escribirla a mano deja "mxn", "Mxn" y "MX" conviviendo en la base, y
+        entonces cualquier suma por moneda deja de cuadrar.
+        """
+        campo = self.fields.get("currency")
+        if campo is None or isinstance(campo.widget, forms.Select):
+            return
+
+        propia = getattr(getattr(self, "household", None), "currency", "")
+        actual = self.initial.get("currency") or getattr(
+            getattr(self, "instance", None), "currency", "")
+        codigos = []
+        for codigo in [propia, actual, *MONEDAS]:
+            if codigo and codigo not in codigos:
+                codigos.append(codigo)
+
+        opciones = [(c, c) for c in codigos]
+        if not campo.required:
+            opciones.insert(0, ("", "—"))
+        self.fields["currency"] = forms.ChoiceField(
+            choices=opciones, required=campo.required, label=campo.label,
+            help_text=campo.help_text,
+            initial=actual or propia or codigos[0],
+        )
+
+    def _saldos_en(self, nombres, household):
+        """Pone el saldo al lado de cada cuenta en los campos indicados."""
+        from .models import Account
+
+        if not household:
+            return
+        saldos = Account.balances(household)
+        for nombre in nombres:
+            campo = self.fields.get(nombre)
+            if campo is None or not hasattr(campo, "queryset"):
+                continue
+            nuevo = AccountChoiceField(
+                queryset=campo.queryset, required=campo.required,
+                label=campo.label, help_text=campo.help_text,
+                balances=saldos, empty_label=getattr(campo, "empty_label", None),
+            )
+            nuevo.widget.attrs.update(campo.widget.attrs)
+            nuevo.initial = campo.initial
+            self.fields[nombre] = nuevo
 
     def groups(self):
         """[(titulo, [campos])] para la plantilla. Sin GROUPS, un solo bloque."""
@@ -81,6 +146,31 @@ class LaresForm(forms.ModelForm):
         if sobrantes:
             salida.append(("Otros datos", sobrantes))
         return salida
+
+
+class LaresForm(GroupedForm, forms.ModelForm):
+    """Base con el aspecto ya resuelto y las fechas como selector nativo.
+
+    `GROUPS` parte el formulario en bloques con titulo. Veinticinco campos
+    seguidos son un muro: agrupados se rellenan sin leerlos todos, y el titulo
+    dice cuando un bloque no aplica ("Solo si vives de renta").
+    """
+
+    def __init__(self, *args, household=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.household = household
+        self._estilar()
+        if household:
+            self._scope_choices(household)
+
+    def _scope_choices(self, household):
+        """Los desplegables solo muestran cosas del hogar activo."""
+        for field in self.fields.values():
+            queryset = getattr(field, "queryset", None)
+            if queryset is not None and any(
+                f.name == "household" for f in queryset.model._meta.fields
+            ):
+                field.queryset = queryset.model._base_manager.filter(household=household)
 
     def save(self, commit=True):
         obj = super().save(commit=False)
@@ -308,12 +398,18 @@ class AccountForm(LaresForm):
         }
 
 
-class ExpenseForm(forms.Form):
+class ExpenseForm(GroupedForm, forms.Form):
     """Registrar un gasto sin que nadie tenga que saber qué es un asiento.
 
     Por dentro escribe partida doble; por fuera pregunta tres cosas. Si el
     usuario tiene que entender contabilidad, la interfaz falló.
     """
+
+    GROUPS = (
+        ("Qué y cuánto", ["date", "description", "amount"]),
+        ("De dónde sale", ["paid_from", "category"]),
+        ("A quién y sobre qué", ["merchant", "about", "for_whom"]),
+    )
 
     date = forms.DateField(label="Cuándo", initial=dt.date.today)
     description = forms.CharField(max_length=300, label="En qué")
@@ -338,10 +434,7 @@ class ExpenseForm(forms.Form):
     def __init__(self, *args, household=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.household = household
-        for field in self.fields.values():
-            if isinstance(field, forms.DateField):
-                field.widget.input_type = "date"
-            field.widget.attrs.setdefault("class", INPUT)
+        self._estilar()
 
         if household:
             cuentas = Account._base_manager.filter(household=household, is_active=True)
@@ -349,6 +442,7 @@ class ExpenseForm(forms.Form):
                 type__in=[Account.Type.ASSET, Account.Type.LIABILITY]
             )
             self.fields["category"].queryset = cuentas.filter(type=Account.Type.EXPENSE)
+            self._saldos_en(["paid_from"], household)
             self.fields["about"].queryset = Resource._base_manager.filter(
                 household=household, archived_at__isnull=True
             )
@@ -507,7 +601,7 @@ class DisposalForm(LaresForm):
         return recurso
 
 
-class TransferForm(forms.Form):
+class TransferForm(GroupedForm, forms.Form):
     """Mover dinero entre dos cuentas tuyas.
 
     Sacar del cajero, pasar de la nomina al ahorro, pagar la tarjeta: en los
@@ -520,6 +614,12 @@ class TransferForm(forms.Form):
     pasivo, sin tocar ninguna categoria de gasto. Por eso un traspaso no
     aparece en "en que se va el dinero", que es exactamente lo correcto.
     """
+
+    GROUPS = (
+        ("Cuánto y cuándo", ["date", "amount"]),
+        ("Entre qué cuentas", ["origin", "destination"]),
+        ("Concepto", ["description"]),
+    )
 
     date = forms.DateField(label="Cuándo", initial=dt.date.today)
     amount = forms.DecimalField(max_digits=16, decimal_places=2, min_value=0,
@@ -536,16 +636,14 @@ class TransferForm(forms.Form):
     def __init__(self, *args, household=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.household = household
-        for field in self.fields.values():
-            if isinstance(field, forms.DateField):
-                field.widget.input_type = "date"
-            field.widget.attrs.setdefault("class", INPUT)
+        self._estilar()
         if household:
             cuentas = Account._base_manager.filter(
                 household=household, is_active=True,
                 type__in=[Account.Type.ASSET, Account.Type.LIABILITY])
             self.fields["origin"].queryset = cuentas
             self.fields["destination"].queryset = cuentas
+            self._saldos_en(["origin", "destination"], household)
 
     def clean(self):
         datos = super().clean()
@@ -573,12 +671,17 @@ class TransferForm(forms.Form):
         return entry
 
 
-class IncomeEntryForm(forms.Form):
+class IncomeEntryForm(GroupedForm, forms.Form):
     """Registrar dinero que entró.
 
     El gasto tenia formulario y el ingreso no, asi que la unica forma de
     meter un sueldo era el importador de estados de cuenta o la consola.
     """
+
+    GROUPS = (
+        ("Qué y cuánto", ["date", "description", "amount"]),
+        ("Dónde entró", ["into", "category", "payer"]),
+    )
 
     date = forms.DateField(label="Cuándo", initial=dt.date.today)
     description = forms.CharField(max_length=300, label="De qué")
@@ -594,10 +697,7 @@ class IncomeEntryForm(forms.Form):
     def __init__(self, *args, household=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.household = household
-        for field in self.fields.values():
-            if isinstance(field, forms.DateField):
-                field.widget.input_type = "date"
-            field.widget.attrs.setdefault("class", INPUT)
+        self._estilar()
         if household:
             cuentas = Account._base_manager.filter(household=household,
                                                    is_active=True)
@@ -607,6 +707,7 @@ class IncomeEntryForm(forms.Form):
                 type=Account.Type.INCOME)
             self.fields["payer"].queryset = Party._base_manager.filter(
                 household=household, archived_at__isnull=True)
+            self._saldos_en(["into"], household)
 
     @transaction.atomic
     def save(self) -> Entry:

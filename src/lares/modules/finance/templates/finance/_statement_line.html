@@ -1,0 +1,20 @@
+{% load money %}
+<li class="flex items-baseline justify-between gap-4 py-3">
+  <span class="min-w-0 text-[15px]">
+    {{ l.label }}
+    {% if l.is_new %}<span class="ml-1 text-[12px] text-soon">nuevo</span>{% endif %}
+    {% if not l.amount and l.previous %}<span class="ml-1 text-[12px] text-soft">ya no</span>{% endif %}
+  </span>
+  <span class="flex shrink-0 items-baseline gap-4 tabular-nums text-sm">
+    <span>{% money0 l.amount %}</span>
+    {% if l.change %}
+      <span class="w-24 text-right text-[13px]
+        {% if bueno %}{% if l.change > 0 %}text-calm{% else %}text-soft{% endif %}
+        {% else %}{% if l.change > 0 %}text-overdue{% else %}text-calm{% endif %}{% endif %}">
+        {% if l.change > 0 %}+{% endif %}{% money0 l.change %}
+      </span>
+    {% else %}
+      <span class="w-24 text-right text-[13px] text-soft">=</span>
+    {% endif %}
+  </span>
+</li>

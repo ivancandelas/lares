@@ -320,10 +320,16 @@ def test_la_pantalla_dice_cuanto_queda(sesion_admin, household):
 
 
 @pytest.mark.django_db
-def test_las_pantallas_nuevas_abren(sesion_admin, household):
+def test_las_pantallas_nuevas_pintan_sus_campos(sesion_admin, household):
+    """Un 200 no prueba nada: una página sin formulario también responde 200."""
     ingreso = _sueldo(household)
 
     for url in ("/traspasos/nuevo/", "/ingresos/nuevo/",
                 "/dinero/ingresos/nuevo/",
                 f"/dinero/ingresos/{ingreso.pk}/"):
-        assert sesion_admin.get(url).status_code == 200, url
+        respuesta = sesion_admin.get(url)
+        assert respuesta.status_code == 200, url
+        html = respuesta.content.decode()
+        campos = respuesta.context["form"].fields
+        assert campos, url
+        assert all(f'name="{n}"' in html for n in campos), url

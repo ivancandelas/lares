@@ -7,6 +7,7 @@ app_name = "finance"
 urlpatterns = [
     path("dinero/", views.accounts, name="accounts"),
     path("dinero/en-que-se-va/", views.where_it_goes, name="spending"),
+    path("dinero/resultado/", views.statement, name="statement"),
     path("dinero/con/<uuid:pk>/", views.merchant, name="merchant"),
     path("dinero/tarjeta/<uuid:pk>/", views.card_detail, name="card"),
     path("dinero/a-meses/nuevo/", views.installment_new, name="installment-new"),

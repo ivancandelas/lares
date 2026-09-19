@@ -137,3 +137,72 @@ def test_el_javascript_se_sirve_desde_la_propia_instalacion(sesion, household):
     contenido = sesion.get(reverse("core:dashboard")).content.decode()
     assert "unpkg.com" not in contenido
     assert "/static/vendor/alpine" in contenido
+
+
+# --- Que un formulario pinte sus campos -------------------------------------
+
+# Toda pantalla que use `core/form.html` y no pase por `LaresForm`. La
+# plantilla recorre `form.groups`: un formulario sin esa propiedad se renderiza
+# **vacío y sin error**, con un 200 impecable y ni un solo campo. Pasó con el
+# gasto, el traspaso y el ingreso a la vez.
+FORMULARIOS_SUELTOS = [
+    "core:expense-new",
+    "core:income-new",
+    "core:transfer-new",
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("url_name", FORMULARIOS_SUELTOS)
+def test_un_formulario_suelto_pinta_sus_campos(sesion, url_name):
+    respuesta = sesion.get(reverse(url_name))
+    assert respuesta.status_code == 200
+
+    form = respuesta.context["form"]
+    html = respuesta.content.decode()
+    assert form.fields, f"{url_name} no tiene campos"
+    for nombre in form.fields:
+        assert f'name="{nombre}"' in html, (
+            f"{url_name}: el campo «{nombre}» no llegó al HTML. "
+            "Casi siempre es un formulario sin `groups`, que la plantilla "
+            "recorre en silencio."
+        )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("kind", sorted(registry.resource_forms))
+def test_todo_formulario_de_alta_pinta_sus_campos(sesion, kind):
+    """El 200 no basta: una ficha en blanco también responde 200."""
+    respuesta = sesion.get(reverse("core:resource-new", args=[kind]))
+    form = respuesta.context["form"]
+    html = respuesta.content.decode()
+
+    assert form.fields, f"el alta de {kind} no tiene campos"
+    faltan = [n for n in form.fields if f'name="{n}"' not in html]
+    assert not faltan, f"alta de {kind}: campos que no se pintaron: {faltan}"
+
+
+@pytest.mark.django_db
+def test_todo_formulario_sabe_agruparse(sesion):
+    """La garantía a nivel de código, no de pantalla.
+
+    Si alguien escribe un `forms.Form` nuevo y lo sirve con `core/form.html`,
+    esto lo caza aunque olvide añadir la URL a la lista de arriba.
+    """
+    import inspect
+
+    from django import forms as django_forms
+
+    from lares.core import forms as lares_forms
+
+    sospechosos = [
+        cls for _, cls in inspect.getmembers(lares_forms, inspect.isclass)
+        if issubclass(cls, django_forms.BaseForm)
+        and cls.__module__ == lares_forms.__name__
+    ]
+    assert sospechosos
+    sin_groups = [c.__name__ for c in sospechosos if not hasattr(c, "groups")]
+    assert not sin_groups, (
+        f"Estos formularios se renderizarían vacíos: {sin_groups}. "
+        "Heredan de `GroupedForm` o no los pinta `core/form.html`."
+    )

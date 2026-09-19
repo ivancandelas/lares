@@ -50,6 +50,25 @@ class Account(HouseholdScopedModel):
     def __str__(self):
         return self.name
 
+    @classmethod
+    def balances(cls, household) -> dict:
+        """Saldo de todas las cuentas del hogar, en una consulta.
+
+        `balance` hace una por cuenta, que esta bien para una ficha y es un
+        N+1 en un desplegable de veinte cuentas.
+        """
+        from django.db.models import Sum
+
+        totales = (cls._base_manager.filter(household=household)
+                   .values("pk", "type")
+                   .annotate(total=Sum("postings__amount")))
+        negativos = (cls.Type.LIABILITY, cls.Type.INCOME)
+        return {
+            fila["pk"]: (-(fila["total"] or 0) if fila["type"] in negativos
+                         else (fila["total"] or 0))
+            for fila in totales
+        }
+
     @property
     def balance(self):
         """Saldo real, sumado desde los apuntes.

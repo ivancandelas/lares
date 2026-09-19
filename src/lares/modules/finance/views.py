@@ -249,13 +249,25 @@ def import_confirm(request):
 
 
 def plans(request):
-    """Los presupuestos abiertos, con su desviación proyectada."""
+    """El presupuesto: cuánto gastas cada mes en cada categoría.
+
+    Lo del mes va primero porque es lo que se mira: «llevo el 80% del súper con
+    el 40% del mes corrido» es una decision de hoy. El acumulado del año y la
+    proyeccion de cierre van despues, y los proyectos -una obra, un viaje- al
+    final, porque son la excepcion y no lo de todos los dias.
+    """
     from .models_plan import Plan
     from .services_plan import report as plan_report
 
     abiertos = list(Plan.objects.filter(is_active=True))
+    anuales = [p for p in abiertos if not p.is_project]
+    proyectos = [p for p in abiertos if p.is_project]
+
     return render(request, "finance/plans.html", {
-        "informes": [plan_report(request.household, p) for p in abiertos],
+        "mes": services.budgets(request.household),
+        "anuales": [plan_report(request.household, p) for p in anuales],
+        "proyectos": [plan_report(request.household, p) for p in proyectos],
+        "plan_del_ano": anuales[0] if anuales else None,
         "cerrados": Plan.objects.filter(is_active=False)[:10],
     })
 
@@ -383,4 +395,37 @@ def income_edit(request, pk):
     return render(request, "core/form.html", {
         "form": form, "title": ingreso.name, "submit": "Guardar cambios",
         "cancel_url": "core:rules",
+    })
+
+
+# --- Estado de resultados ---------------------------------------------------
+
+
+def statement(request):
+    """Lo que entró, lo que salió y lo que quedó, contra el periodo anterior.
+
+    Periodos cerrados y no ventanas móviles: «los últimos 90 días» no se puede
+    comparar contra nada, y sin comparación esto es una lista de números.
+    """
+    from lares.core.services.spending import statement as build
+
+    hoy = dt.date.today()
+    ano = int(request.GET.get("ano") or hoy.year)
+    crudo = request.GET.get("mes", str(hoy.month))
+    mes = int(crudo) if crudo not in ("", "todo") else None
+
+    anterior = ((ano - 1, 12) if mes == 1 else (ano, mes - 1)) if mes \
+        else (ano - 1, None)
+    siguiente = ((ano + 1, 1) if mes == 12 else (ano, mes + 1)) if mes \
+        else (ano + 1, None)
+
+    return render(request, "finance/statement.html", {
+        "e": build(request.household, ano, mes),
+        "ano": ano,
+        "mes": mes,
+        "anterior": anterior,
+        "siguiente": siguiente if (siguiente[0], siguiente[1] or 12) <=
+        (hoy.year, hoy.month) else None,
+        "url_ano": f"?ano={ano}&mes=todo",
+        "url_mes": f"?ano={ano}&mes={hoy.month if ano == hoy.year else 1}",
     })

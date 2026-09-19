@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Cómo te fue - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-light tracking-tight">{{ e.label }}</h1>
+    <p class="mt-0.5 text-sm text-soft">Contra {{ e.previous_label }}</p>
+  </div>
+  <div class="flex items-baseline gap-2 text-sm">
+    <a href="?ano={{ anterior.0|stringformat:'d' }}&mes={{ anterior.1|default:'todo' }}"
+       class="rounded-sm border border-rule px-2.5 py-1 text-soft hover:border-ink hover:text-ink">Anterior</a>
+    {% if siguiente %}
+      <a href="?ano={{ siguiente.0|stringformat:'d' }}&mes={{ siguiente.1|default:'todo' }}"
+         class="rounded-sm border border-rule px-2.5 py-1 text-soft hover:border-ink hover:text-ink">Siguiente</a>
+    {% endif %}
+    <a href="{% if mes %}{{ url_ano }}{% else %}{{ url_mes }}{% endif %}"
+       class="rounded-sm border border-rule px-2.5 py-1 text-soft hover:border-ink hover:text-ink">
+      Ver {% if mes %}el año{% else %}por mes{% endif %}
+    </a>
+  </div>
+</div>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Entró</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 e.total_income %}</div>
+    <div class="mt-0.5 text-[12px] text-soft">antes {% money0 e.previous_income %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Salió</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 e.total_expense %}</div>
+    <div class="mt-0.5 text-[12px] text-soft">antes {% money0 e.previous_expense %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Quedó</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums {% if e.result < 0 %}text-overdue{% else %}text-calm{% endif %}">
+      {% money0 e.result %}
+    </div>
+    <div class="mt-0.5 text-[12px] text-soft">antes {% money0 e.previous_result %}</div>
+  </div>
+  {% if e.savings_rate is not None %}
+    <div>
+      <div class="text-[13px] text-soft">De lo que entró, guardaste</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% widthratio e.savings_rate 1 100 %}%</div>
+    </div>
+  {% endif %}
+</div>
+
+{% if e.is_partial %}
+  {% comment %}
+    Sin esto, el mes en curso siempre parece un desastre comparado con el
+    anterior completo. Decirlo cuesta una línea y evita una conclusión falsa.
+  {% endcomment %}
+  <p class="mt-3 max-w-[58ch] text-[13px] text-soon">
+    Este periodo no ha terminado, así que la comparación no es de igual a igual:
+    aún faltan días por registrar.
+  </p>
+{% endif %}
+
+<h2 class="mt-10 text-sm font-medium">Entró</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for l in e.income %}{% include "finance/_statement_line.html" with l=l bueno=1 %}{% endfor %}
+  {% if not e.income %}<li class="py-3 text-[14px] text-soft">Nada registrado.</li>{% endif %}
+</ul>
+
+<h2 class="mt-10 text-sm font-medium">Salió</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for l in e.expenses %}{% include "finance/_statement_line.html" with l=l %}{% endfor %}
+  {% if not e.expenses %}<li class="py-3 text-[14px] text-soft">Nada registrado.</li>{% endif %}
+</ul>
+
+<p class="mt-6 max-w-[58ch] text-[13px] text-soft">
+  Los traspasos entre tus cuentas no aparecen aquí, y no hay que filtrarlos:
+  mover dinero de un sitio a otro no toca ninguna categoría de ingreso ni de
+  gasto.
+</p>
+{% endblock %}

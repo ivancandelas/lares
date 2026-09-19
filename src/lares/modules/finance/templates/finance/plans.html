@@ -3,63 +3,139 @@
 {% block title %}Presupuesto - {{ product_name }}{% endblock %}
 
 {% block content %}
-<div class="flex items-baseline justify-between gap-4">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
   <h1 class="text-2xl font-light tracking-tight">Presupuesto</h1>
-  <a href="{% url 'finance:plan-new' %}"
-     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Nuevo</a>
+  <div class="flex gap-2">
+    {% if plan_del_ano %}
+      <a href="{% url 'finance:plan-line-new' plan_del_ano.pk %}"
+         class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir categoría</a>
+    {% endif %}
+    <a href="{% url 'finance:plan-new' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Nuevo presupuesto</a>
+  </div>
 </div>
 <p class="mt-1 max-w-[58ch] text-sm text-soft">
-  Lo que pensabas gastar contra lo que llevas. Un tope mensual dice «no te pases
-  este mes»; esto responde «¿voy como pensaba?», que es otra pregunta.
+  Cuánto piensas gastar cada mes en cada cosa, y cuánto llevas. Saber el 31 que
+  te pasaste no cambia nada; saberlo el 12, sí.
 </p>
 
-{% for i in informes %}
-  <section class="mt-10">
-    <div class="flex items-baseline justify-between gap-4">
-      <h2 class="text-lg font-light">
-        <a href="{% url 'finance:plan' i.plan.pk %}" class="hover:text-calm">{{ i.plan.name }}</a>
-        <span class="ml-2 text-[13px] text-soft">{{ i.plan.context_line }}</span>
-      </h2>
-      <span class="shrink-0 text-[13px] text-soft">{% widthratio i.plan.elapsed 1 100 %}% corrido</span>
+{% comment %}
+  Lo del mes primero: es la única parte que sirve para decidir hoy. El año y
+  los proyectos son para mirar de vez en cuando.
+{% endcomment %}
+<h2 class="mt-10 text-sm font-medium">Este mes</h2>
+<div class="mt-2 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Presupuestado</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 mes.planned %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Llevas</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums {% if mes.spent > mes.planned %}text-overdue{% endif %}">
+      {% money0 mes.spent %}
     </div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Del mes va</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% widthratio mes.elapsed 1 100 %}%</div>
+  </div>
+  {% if mes.unbudgeted %}
+    <div>
+      <div class="text-[13px] text-soft">Sin presupuestar</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 mes.unbudgeted %}</div>
+    </div>
+  {% endif %}
+</div>
 
-    <div class="mt-4 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
-      <div>
-        <div class="text-[13px] text-soft">Previsto</div>
-        <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 i.planned %}</div>
+<ul class="mt-1 divide-y divide-rule border-b border-rule">
+  {% for l in mes.lines %}
+    <li class="py-4">
+      <div class="flex items-baseline justify-between gap-4">
+        <span class="min-w-0 text-[15px]">{{ l.budget.account.name }}</span>
+        <span class="shrink-0 tabular-nums text-sm">
+          {% money0 l.spent %}<span class="text-soft"> de {% money0 l.planned %}</span>
+        </span>
       </div>
-      <div>
-        <div class="text-[13px] text-soft">Real</div>
-        <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 i.actual %}</div>
+      <div class="relative mt-2 h-1 w-full rounded-full bg-rule">
+        <div class="h-1 rounded-full {% if l.over %}bg-overdue{% elif l.ahead %}bg-soon{% else %}bg-ink{% endif %}"
+             style="width: {% widthratio l.used 1 100 %}%"></div>
+        {% comment %} La marca de por dónde va el mes: sin ella, el 60% no dice nada. {% endcomment %}
+        <div class="absolute top-[-2px] h-2 w-px bg-soft"
+             style="left: {% widthratio l.month_elapsed 1 100 %}%"></div>
       </div>
-      {% if i.projection %}
-        <div>
-          <div class="text-[13px] text-soft">Proyección a cierre</div>
-          <div class="mt-0.5 text-xl font-light tabular-nums {% if i.projected_variance > 0 %}text-overdue{% else %}text-calm{% endif %}">
-            {% money0 i.projection %}
-          </div>
-          <div class="mt-0.5 text-[12px] text-soft">
-            {% if i.projected_variance > 0 %}+{% endif %}{% money0 i.projected_variance %}
-          </div>
-        </div>
+      <div class="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
+        <span>
+          {% if l.over %}
+            <span class="text-overdue">te pasaste por {% money0 l.overspent %}</span>
+          {% elif l.ahead %}
+            <span class="text-soon">vas rápido: acabarías en {% money0 l.projected %}</span>
+          {% else %}
+            quedan {% money0 l.remaining %}
+          {% endif %}
+        </span>
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-4 text-[14px] text-soft">
+      Ninguna categoría presupuestada al mes todavía.
+      {% if plan_del_ano %}
+        <a href="{% url 'finance:plan-seed' plan_del_ano.pk %}" class="text-calm hover:underline">Partir de lo que gastaste el año pasado</a>
+        es más rápido que empezar de cero.
       {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+
+{% for i in anuales %}
+  <h2 class="mt-10 text-sm font-medium">
+    <a href="{% url 'finance:plan' i.plan.pk %}" class="hover:text-calm">En el año · {{ i.plan.name }}</a>
+  </h2>
+  <div class="mt-2 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+    <div>
+      <div class="text-[13px] text-soft">Previsto</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 i.planned %}</div>
     </div>
-  </section>
-{% empty %}
-  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
-    Ningún presupuesto todavía. No hace falta empezar de cero: al crearlo puedes
-    partir de lo que de verdad gastaste el año pasado y ajustar lo que vaya a
-    cambiar.
-  </p>
+    <div>
+      <div class="text-[13px] text-soft">Llevas</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 i.actual %}</div>
+    </div>
+    {% if i.projection %}
+      <div>
+        <div class="text-[13px] text-soft">Cerrarías en</div>
+        <div class="mt-0.5 text-xl font-light tabular-nums {% if i.projected_variance > 0 %}text-overdue{% else %}text-calm{% endif %}">
+          {% money0 i.projection %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
 {% endfor %}
+
+{% if proyectos %}
+  <h2 class="mt-10 text-sm font-medium">Proyectos</h2>
+  <p class="mt-1 max-w-[56ch] text-[13px] text-soft">
+    Una obra, un viaje, una boda: tienen su propio presupuesto y solo cuentan
+    lo que se les atribuye.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for i in proyectos %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <a href="{% url 'finance:plan' i.plan.pk %}" class="text-[15px] hover:text-calm">{{ i.plan.name }}</a>
+          <div class="text-[13px] text-soft">{% widthratio i.plan.elapsed 1 100 %}% corrido</div>
+        </div>
+        <span class="shrink-0 tabular-nums text-sm">
+          {% money0 i.actual %}<span class="text-soft"> de {% money0 i.planned %}</span>
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
 
 {% if cerrados %}
   <h2 class="mt-10 text-sm font-medium text-soft">Cerrados</h2>
   <ul class="mt-1 divide-y divide-rule border-y border-rule text-[14px] text-soft">
     {% for p in cerrados %}
-      <li class="py-2.5">
-        <a href="{% url 'finance:plan' p.pk %}" class="hover:text-calm">{{ p.name }}</a>
-      </li>
+      <li class="py-2.5"><a href="{% url 'finance:plan' p.pk %}" class="hover:text-calm">{{ p.name }}</a></li>
     {% endfor %}
   </ul>
 {% endif %}
