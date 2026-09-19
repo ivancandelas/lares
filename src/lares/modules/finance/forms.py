@@ -212,7 +212,7 @@ class PlanLineForm(LaresForm):
         # En un proyecto lo normal es una cifra de golpe; en el del año, algo
         # que se gasta cada mes. Acertar el valor por defecto evita el error
         # más caro de este formulario: una cifra anual tomada por mensual.
-        if plan and not self.instance.pk:
+        if plan and self.is_new:
             self.fields["cadence"].initial = (
                 PlanLineModel.Cadence.TOTAL if plan.is_project
                 else PlanLineModel.Cadence.MONTHLY)
@@ -225,7 +225,7 @@ class PlanLineForm(LaresForm):
         cuenta = self.cleaned_data["account"]
         if self.plan:
             ya = PlanLineModel.objects.filter(plan=self.plan, account=cuenta)
-            if self.instance.pk:
+            if not self.is_new:
                 ya = ya.exclude(pk=self.instance.pk)
             if ya.exists():
                 raise forms.ValidationError("Esa categoría ya está en el "

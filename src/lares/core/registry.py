@@ -466,11 +466,32 @@ class Registry:
             key=lambda i: (i.order, i.label),
         )
 
-    def nav_grouped(self):
+    def nav_for(self, membership):
+        """El menú que le toca a esta persona.
+
+        El 403 es lo que protege; esto solo evita enseñar puertas cerradas y,
+        sobre todo, títulos que ya cuentan de más: «Tarjeta ****9876» en el
+        menú de alguien que no ve el dinero es una fuga aunque no pueda entrar.
+        """
+        from .permissions import scope_of, visible_scopes
+
+        permitidos = visible_scopes(membership)
+        if permitidos is None:
+            return self.nav_items
+        return [
+            item for item in self.nav_items
+            if scope_of(item.url_name, item.url_name.split(":")[0])
+            in permitidos
+        ]
+
+    def nav_grouped(self, membership=None):
         """El menú, listo para pintar: sueltas primero, luego los desplegables."""
+        permitidos = self.nav_for(membership) if membership else None
         salida = []
         for clave, etiqueta in NAV_GROUPS:
             items = self.nav_sorted(clave)
+            if permitidos is not None:
+                items = [i for i in items if i in permitidos]
             if items:
                 salida.append({"key": clave, "label": etiqueta, "items": items})
         return salida

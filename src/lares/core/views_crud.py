@@ -10,8 +10,10 @@ from __future__ import annotations
 import datetime as dt
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_not_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from . import related
 from .forms import (
@@ -339,8 +341,6 @@ def _ciclo_de(regla) -> str | None:
 
 def _reglas_propias(household) -> list:
     """Las reglas que programa el usuario, como recurrentes."""
-    from django.urls import reverse
-
     from .registry import Recurring
     from .schedule import next_occurrences
 
@@ -497,3 +497,168 @@ def _simple_form(request, form_class, title, cancel_url, instance=None):
     return render(request, "core/form.html", {
         "form": form, "title": title, "submit": "Guardar", "cancel_url": cancel_url,
     })
+
+
+# --- El hogar y quién entra -------------------------------------------------
+
+
+def _asegurar_titular(request):
+    """Que quien instaló esto sea titular antes de invitar a nadie.
+
+    En modo de un solo hogar no hace falta membresia para usar el sistema, asi
+    que muchas instalaciones no tienen ninguna. Si desde ahi se invita a
+    alguien y luego se pasa a multiusuario, el dueno se quedaria fuera de su
+    propia casa. Se crea aqui, en el unico momento en que importa.
+    """
+    from django.utils import timezone
+
+    from .models import Membership
+
+    user = request.user
+    membresia = Membership.objects.filter(household=request.household,
+                                          user=user).first()
+    if membresia is None:
+        membresia = Membership.objects.create(
+            household=request.household, user=user,
+            role=Membership.Role.OWNER, accepted_at=timezone.now())
+    return membresia
+
+
+def household_members(request):
+    """Quién entra a este hogar, con qué permiso y hasta cuándo."""
+    from django.conf import settings
+
+    from .models import Membership
+
+    yo = request.membership
+    if yo is None and settings.TENANCY_MODE == "single":
+        # Un solo hogar significa "esto es mío": quien entra lo administra.
+        yo = Membership.objects.filter(household=request.household,
+                                       user=request.user).first()
+
+    miembros = list(
+        Membership.objects.filter(household=request.household)
+        .select_related("user").order_by("role", "user__display_name")
+    )
+    from django.conf import settings
+
+    return render(request, "core/household.html", {
+        "miembros": miembros,
+        "pendientes": [m for m in miembros if not m.is_accepted],
+        "caducados": [m for m in miembros if m.is_expired],
+        "yo": yo,
+        "puedo_administrar": (yo.can_admin if yo
+                              else settings.TENANCY_MODE == "single"),
+    })
+
+
+def member_invite(request):
+    from .forms import MemberForm
+
+    _asegurar_titular(request)
+    form = MemberForm(request.POST or None, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        membresia = form.save()
+        token = membresia.new_invite()
+        enlace = request.build_absolute_uri(
+            reverse("core:invite-accept", args=[token]))
+        messages.success(
+            request,
+            f"Pásale este enlace a {membresia.user}: {enlace}")
+        return redirect("core:household")
+
+    return render(request, "core/form.html", {
+        "form": form, "title": "Invitar a alguien", "submit": "Invitar",
+        "cancel_url": "core:household",
+    })
+
+
+def member_edit(request, pk):
+    from .forms import MemberForm
+    from .models import Membership
+
+    membresia = get_object_or_404(Membership, pk=pk,
+                                  household=request.household)
+    form = MemberForm(request.POST or None, instance=membresia,
+                      household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"{membresia.user}: cambios guardados.")
+        return redirect("core:household")
+
+    return render(request, "core/form.html", {
+        "form": form, "title": str(membresia.user), "submit": "Guardar",
+        "cancel_url": "core:household",
+    })
+
+
+def member_remove(request, pk):
+    """Quitarle el acceso a alguien. No borra nada de lo que registró."""
+    from .models import Membership
+
+    membresia = get_object_or_404(Membership, pk=pk,
+                                  household=request.household)
+    if membresia.role == Membership.Role.OWNER:
+        messages.error(request, "Al titular no se le quita el acceso.")
+        return redirect("core:household")
+    if request.membership and membresia.pk == request.membership.pk:
+        messages.error(request, "No puedes quitarte el acceso a ti mismo.")
+        return redirect("core:household")
+
+    quien = str(membresia.user)
+    membresia.delete()
+    messages.success(request, f"{quien} ya no entra. Lo que registró se queda.")
+    return redirect("core:household")
+
+
+@login_not_required
+def invite_accept(request, token):
+    """Entrar por primera vez con el enlace de invitación.
+
+    El token es de un solo uso y se borra al aceptar: un enlace que sigue
+    valiendo despues de usarlo acaba reenviado en un chat familiar.
+    """
+    from django.contrib.auth import login
+    from django.utils import timezone
+
+    from .forms import AcceptInviteForm
+    from .models import Membership
+
+    membresia = Membership.objects.filter(invite_token=token).first() \
+        if token else None
+    if membresia is None:
+        raise Http404("Esa invitación no existe o ya se usó.")
+    if membresia.is_expired:
+        raise Http404("Esa invitación caducó.")
+
+    form = AcceptInviteForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        usuario = membresia.user
+        usuario.set_password(form.cleaned_data["password1"])
+        usuario.save(update_fields=["password"])
+        membresia.accepted_at = timezone.now()
+        membresia.invite_token = ""
+        membresia.save(update_fields=["accepted_at", "invite_token",
+                                      "updated_at"])
+        login(request, usuario,
+              backend="django.contrib.auth.backends.ModelBackend")
+        request.session["household_id"] = str(membresia.household_id)
+        messages.success(request, f"Bienvenido a {membresia.household}.")
+        return redirect("core:dashboard")
+
+    return render(request, "core/invite.html", {
+        "form": form, "membresia": membresia,
+    })
+
+
+def household_switch(request, pk):
+    """Cambiar de hogar, validando siempre contra las membresías."""
+    from .models import Membership
+
+    membresia = Membership.objects.filter(
+        user=request.user, household_id=pk, accepted_at__isnull=False
+    ).first()
+    if membresia is None or not membresia.is_live:
+        raise Http404("No entras a ese hogar.")
+    request.session["household_id"] = str(pk)
+    return redirect("core:dashboard")

@@ -63,6 +63,19 @@ class Household(TimestampedModel):
 
 
 class Membership(TimestampedModel):
+    """Quién entra a un hogar, con qué permiso y sobre qué.
+
+    Dos ejes que se combinan y que no son lo mismo:
+
+        rol      lo que puede HACER  (mirar, registrar, administrar)
+        ambitos  sobre QUE           (dinero, casa, coches, impuestos)
+
+    Un hijo de dieciseis puede registrar sus tareas y no ver una cuenta; el
+    contador ve impuestos y facturas y nada mas, y ademas con fecha de
+    caducidad. Sin los dos ejes hay que elegir entre darle todo a alguien o no
+    darle nada, y entonces la gente acaba compartiendo la contrasena.
+    """
+
     class Role(models.TextChoices):
         OWNER = "owner", "Titular"
         ADMIN = "admin", "Administrador"
@@ -85,6 +98,14 @@ class Membership(TimestampedModel):
     )
     accepted_at = models.DateTimeField(null=True, blank=True)
 
+    # El acceso profesional es temporal por diseno: un contador no deberia
+    # seguir entrando en octubre porque nadie se acordo de quitarlo en mayo.
+    expires_on = models.DateField("el acceso caduca el", null=True, blank=True)
+
+    # Invitacion pendiente. Un solo uso: al aceptarla se borra.
+    invite_token = models.CharField(max_length=43, blank=True, db_index=True)
+    invited_on = models.DateField(null=True, blank=True)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["household", "user"], name="uniq_membership"),
@@ -92,3 +113,72 @@ class Membership(TimestampedModel):
 
     def __str__(self):
         return f"{self.user} @ {self.household} ({self.role})"
+
+    # -- Vigencia ------------------------------------------------------------
+
+    @property
+    def is_accepted(self) -> bool:
+        return self.accepted_at is not None
+
+    @property
+    def is_expired(self) -> bool:
+        import datetime as dt
+
+        return bool(self.expires_on and self.expires_on < dt.date.today())
+
+    @property
+    def is_live(self) -> bool:
+        return self.is_accepted and not self.is_expired
+
+    @property
+    def days_left(self):
+        import datetime as dt
+
+        return (self.expires_on - dt.date.today()).days if self.expires_on else None
+
+    # -- Qué puede hacer -----------------------------------------------------
+
+    ADMINISTRAN = (Role.OWNER, Role.ADMIN)
+    SOLO_MIRAN = (Role.VIEWER, Role.PROFESSIONAL)
+
+    @property
+    def can_admin(self) -> bool:
+        """Invitar, cambiar roles y tocar la configuración del hogar."""
+        return self.role in self.ADMINISTRAN
+
+    @property
+    def can_write(self) -> bool:
+        """Registrar y editar. Mirar no basta para el contador ni el invitado."""
+        return self.role not in self.SOLO_MIRAN
+
+    # -- Sobre qué -----------------------------------------------------------
+
+    @property
+    def sees_everything(self) -> bool:
+        """Sin ámbitos, ve todo lo que su rol permita.
+
+        El titular ve todo SIEMPRE, aunque alguien le ponga ambitos por error:
+        un hogar donde nadie puede verlo entero no se puede administrar.
+        """
+        return self.role == self.Role.OWNER or not self.scopes
+
+    # El armazón: tablero, bandeja, documentos, búsqueda. No es un dominio y
+    # cerrarlo dejaría a la persona sin sitio al que entrar.
+    SIEMPRE = "core"
+
+    def sees(self, scope: str) -> bool:
+        if scope == self.SIEMPRE:
+            return True
+        return self.sees_everything or scope in (self.scopes or [])
+
+    def new_invite(self) -> str:
+        """Un enlace de un solo uso para entrar por primera vez."""
+        import datetime as dt
+        import secrets
+
+        self.invite_token = secrets.token_urlsafe(32)
+        self.invited_on = dt.date.today()
+        self.accepted_at = None
+        self.save(update_fields=["invite_token", "invited_on", "accepted_at",
+                                 "updated_at"])
+        return self.invite_token

@@ -75,7 +75,7 @@ class DeductionForm(LaresForm):
         documento, perfil = datos.get("document"), datos.get("profile")
         if documento and perfil:
             ya = Deduction.objects.filter(profile=perfil, document=documento)
-            if self.instance.pk:
+            if not self.is_new:
                 ya = ya.exclude(pk=self.instance.pk)
             if ya.exists():
                 self.add_error("document",

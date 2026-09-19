@@ -64,7 +64,7 @@ class PolicyForm(ResourceForm):
             self.fields["covers"].queryset = Resource._base_manager.filter(
                 household=self.household, archived_at__isnull=True,
             ).exclude(kind__in=("policy", "service"))
-        if self.instance.pk:
+        if not self.is_new:
             self.fields["covers"].initial = self.instance.insured_resources()
 
     @transaction.atomic

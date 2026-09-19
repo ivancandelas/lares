@@ -69,6 +69,19 @@ class GroupedForm:
 
     GROUPS: tuple = ()
 
+    @property
+    def is_new(self) -> bool:
+        """Si el objeto todavía no está en la base.
+
+        **No sirve `instance.pk`.** Las claves son UUID con valor por defecto,
+        asi que un objeto sin guardar YA tiene pk y cualquier `if instance.pk`
+        se cumple siempre. De ahi salian dos fallos: el formulario de miembro
+        reventaba al invitar, y la cadencia por defecto de una linea de
+        proyecto no se aplicaba nunca.
+        """
+        instancia = getattr(self, "instance", None)
+        return instancia is None or instancia._state.adding
+
     def _estilar(self):
         self._moneda_como_lista()
         for field in self.fields.values():
@@ -219,7 +232,7 @@ class PartyForm(LaresForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance.pk:
+        if not self.is_new:
             from .models.tagging import tags_of
 
             self.fields["tags"].initial = ", ".join(
@@ -724,3 +737,112 @@ class IncomeEntryForm(GroupedForm, forms.Form):
         Posting.objects.create(household=self.household, entry=entry,
                                account=datos["category"], amount=-importe)
         return entry
+
+
+class MemberForm(LaresForm):
+    """Invitar a alguien o cambiar lo que puede ver.
+
+    El correo va aparte del usuario porque casi siempre la persona todavia no
+    existe: se crea al invitarla y entra por un enlace de un solo uso, sin que
+    haga falta un servidor de correo. Eso importa en self-hosted, que es donde
+    esto vive.
+    """
+
+    email = forms.EmailField(label="Correo", help_text=(
+        "Con él entra. Si ya usa Lares, se le añade este hogar."))
+    display_name = forms.CharField(max_length=120, required=False,
+                                   label="Cómo se llama")
+
+    GROUPS = (
+        ("Quién", ["email", "display_name"]),
+        ("Qué puede hacer", ["role", "expires_on"]),
+        ("Sobre qué", ["scopes"]),
+    )
+
+    class Meta:
+        from .models import Membership
+
+        model = Membership
+        fields = ["role", "expires_on", "scopes"]
+        labels = {"role": "Rol", "expires_on": "El acceso caduca el",
+                  "scopes": "Ámbitos"}
+        help_texts = {
+            "role": "«Solo lectura» y «profesional externo» pueden mirar pero "
+                    "no registrar nada.",
+            "expires_on": "Obligatorio para un profesional externo: un contador "
+                          "no debería seguir entrando en octubre.",
+            "scopes": "Vacío significa todo lo que su rol permita.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        from .permissions import scopes_available
+        from .registry import registry
+
+        super().__init__(*args, **kwargs)
+        self.fields["scopes"] = forms.MultipleChoiceField(
+            choices=scopes_available(registry), required=False,
+            label="Ámbitos", widget=forms.CheckboxSelectMultiple,
+            help_text="Vacío significa todo lo que su rol permita.",
+            initial=list(self.instance.scopes or []) if not self.is_new else [],
+        )
+        if not self.is_new:
+            self.fields["email"].initial = self.instance.user.email
+            self.fields["email"].disabled = True
+            self.fields["display_name"].initial = \
+                self.instance.user.display_name
+
+    def clean(self):
+        from .models import Membership
+
+        datos = super().clean()
+        if (datos.get("role") == Membership.Role.PROFESSIONAL
+                and not datos.get("expires_on")):
+            self.add_error("expires_on",
+                           "Un acceso profesional lleva fecha de caducidad.")
+        return datos
+
+    def save(self, commit=True):
+        from .models import User
+
+        membresia = super().save(commit=False)
+        membresia.scopes = self.cleaned_data.get("scopes") or []
+        membresia.household = self.household
+
+        if self.is_new:
+            correo = self.cleaned_data["email"].lower()
+            usuario = User.objects.filter(email__iexact=correo).first()
+            if usuario is None:
+                usuario = User.objects.create_user(
+                    username=correo, email=correo,
+                    display_name=self.cleaned_data.get("display_name") or "",
+                )
+                # Sin contraseña utilizable: entra por el enlace y la pone.
+                usuario.set_unusable_password()
+                usuario.save(update_fields=["password"])
+            membresia.user = usuario
+        elif nombre := self.cleaned_data.get("display_name"):
+            membresia.user.display_name = nombre
+            membresia.user.save(update_fields=["display_name"])
+
+        if commit:
+            membresia.save()
+        return membresia
+
+
+class AcceptInviteForm(GroupedForm, forms.Form):
+    """Poner una contraseña al entrar por primera vez."""
+
+    password1 = forms.CharField(label="Contraseña", widget=forms.PasswordInput,
+                                min_length=8)
+    password2 = forms.CharField(label="Repítela", widget=forms.PasswordInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", INPUT)
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get("password1") != datos.get("password2"):
+            self.add_error("password2", "No coinciden.")
+        return datos

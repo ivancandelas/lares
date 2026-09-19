@@ -21,7 +21,7 @@ class SubjectMixin:
             self.fields["subject"].queryset = Resource._base_manager.filter(
                 household=self.household, archived_at__isnull=True,
             ).exclude(kind__in=("policy", "service"))
-        if self.instance.pk and self.instance.subject_id:
+        if not self.is_new and self.instance.subject_id:
             self.fields["subject"].initial = self.instance.subject_id
 
     def save(self, commit=True):

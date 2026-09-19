@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Entrar a {{ membresia.household }} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-md">
+  <h1 class="text-2xl font-light tracking-tight">{{ membresia.household }}</h1>
+  <p class="mt-2 max-w-[52ch] leading-relaxed text-soft">
+    Te invitaron como <strong class="font-medium text-ink">{{ membresia.get_role_display|lower }}</strong>.
+    {% if membresia.sees_everything %}
+      Verás todo el hogar.
+    {% else %}
+      Verás {{ membresia.scopes|join:", " }}.
+    {% endif %}
+    {% if membresia.expires_on %}
+      El acceso caduca el {{ membresia.expires_on|date:"d/m/Y" }}.
+    {% endif %}
+  </p>
+  <p class="mt-2 text-[13px] text-soft">Pon una contraseña y entras.</p>
+
+  <form method="post" class="mt-8">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="mb-5">
+        <label for="{{ field.id_for_label }}" class="block text-sm text-soft">{{ field.label }}</label>
+        <div class="mt-1">{{ field }}</div>
+        {% for error in field.errors %}
+          <p class="mt-1 text-[13px] text-overdue">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit"
+            class="rounded-sm bg-calm px-4 py-2.5 text-sm font-medium text-white hover:bg-ink">Entrar</button>
+  </form>
+</div>
+{% endblock %}

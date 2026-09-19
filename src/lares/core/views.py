@@ -29,7 +29,8 @@ def dashboard(request):
         "agenda": week_ahead(household) if household else None,
         # Los huecos ya vienen calculados dentro de la valoración: recalcularlos
         # recorrería todo el inventario una segunda vez por cada carga.
-        "findings": completitud["gaps"] if completitud else [],
+        "findings": _visibles(completitud["gaps"] if completitud else [],
+                              request),
         "completeness": completitud,
         "widgets": _render_widgets(household, request) if household else [],
     }
@@ -82,6 +83,23 @@ def holdings(request):
         "neto": valor_total - deuda,
         "consolidado": consolidado,
     })
+
+
+def _visibles(findings, request):
+    """Los huecos de lo que esta persona ve.
+
+    Un hueco lleva el titulo dentro -"Tarjeta ****9876 sin estado de cuenta"-,
+    asi que filtrarlos no es cosmetica: es la misma fuga que el menu.
+    """
+    from .permissions import visible_scopes
+
+    membership = getattr(request, "membership", None)
+    if membership is None:
+        return findings
+    permitidos = visible_scopes(membership)
+    if permitidos is None:
+        return findings
+    return [f for f in findings if f.check.split(".")[0] in permitidos]
 
 
 def _consolidado(household):
@@ -317,10 +335,19 @@ def search(request):
 def _render_widgets(household, request):
     """Cada modulo aporta su tarjeta: el nucleo solo la coloca.
 
-    Un widget roto no debe tumbar el tablero entero, asi que se aisla.
+    Un widget roto no debe tumbar el tablero entero, asi que se aisla. Y los
+    de un modulo que esta persona no ve no se pintan: el tablero es la primera
+    pantalla y seria la fuga mas facil de todas.
     """
+    from .permissions import visible_scopes
+
+    permitidos = visible_scopes(getattr(request, "membership", None)) \
+        if getattr(request, "membership", None) else None
+
     rendered = []
     for widget in registry.widgets_sorted():
+        if permitidos is not None and widget.key.split(".")[0] not in permitidos:
+            continue
         try:
             data = widget.provider(household) or {}
             html = render_to_string(widget.template, data, request=request)
