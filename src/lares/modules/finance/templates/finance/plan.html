@@ -50,6 +50,10 @@
 {% endif %}
 
 <h2 class="mt-10 text-sm font-medium">Por categoría</h2>
+<p class="mt-1 max-w-[56ch] text-[13px] text-soft">
+  Si una categoría no vale lo mismo todos los meses —diciembre, la
+  inscripción de agosto— entra en ella y captura solo los meses que cambian.
+</p>
 <ul class="mt-1 divide-y divide-rule border-y border-rule">
   {% for l in informe.lines %}{% include "finance/_plan_line.html" with l=l %}{% endfor %}
   {% if not informe.lines %}

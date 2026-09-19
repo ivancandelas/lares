@@ -142,10 +142,18 @@ def _seed_plan(household, cuentas):
         (cuentas["auto"], 24000, PlanLine.Cadence.TOTAL),
     ]
     for cuenta, importe, cadencia in previsto:
-        PlanLine.objects.get_or_create(
+        linea, _ = PlanLine.objects.get_or_create(
             household=household, plan=plan, account=cuenta,
             defaults={"amount": Decimal(importe), "cadence": cadencia},
         )
+        # Diciembre no cuesta lo que marzo: solo se captura lo que cambia.
+        if cuenta is cuentas["super"]:
+            from .models_plan import PlanLineMonth
+
+            for mes, monto in ((12, "13000"), (8, "10500")):
+                PlanLineMonth.objects.get_or_create(
+                    household=household, line=linea, month=mes,
+                    defaults={"amount": Decimal(monto)})
 
 
 def _obra(household):

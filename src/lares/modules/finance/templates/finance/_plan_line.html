@@ -13,7 +13,11 @@
   </div>
   <div class="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
     <span>
-      {% if l.line.is_monthly %}{% money0 l.line.amount %} al mes{% else %}de golpe{% endif %}
+      {% if l.line.is_monthly %}
+        {% money0 l.line.amount %} al mes{% if l.line.overrides %},
+          <a href="{% url 'finance:plan-line-months' l.line.pk %}" class="text-calm hover:underline">{{ l.line.overrides|length }} mes{{ l.line.overrides|length|pluralize:"es" }} distinto{{ l.line.overrides|length|pluralize:"s" }}</a>
+        {% endif %}
+      {% else %}de golpe{% endif %}
       ·
       {% if l.variance > 0 %}{% money0 l.variance %} de más
       {% elif l.variance < 0 %}{% money0 l.variance %} de menos

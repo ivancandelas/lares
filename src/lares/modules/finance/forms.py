@@ -3,7 +3,7 @@ import datetime as dt
 from django import forms
 from django.db import transaction
 
-from lares.core.forms import LaresForm, ResourceForm
+from lares.core.forms import GroupedForm, LaresForm, ResourceForm
 from lares.core.models import Account
 
 from .models import CreditCard
@@ -280,3 +280,57 @@ class RecurringIncomeForm(LaresForm):
             from lares.core.models import Party
             self.fields["payer"].queryset = Party._base_manager.filter(
                 household=self.household, archived_at__isnull=True)
+
+
+MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+         "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+
+class MonthlyAmountsForm(GroupedForm, forms.Form):
+    """Los doce meses de una categoría, precargados con el importe normal.
+
+    Se guardan **solo los que difieren**. Si alguien pone el mismo numero en
+    los doce, esta tabla se queda vacia y la categoria vuelve a ser un solo
+    importe, que es como debe verse cuando no hay nada especial que decir.
+    """
+
+    GROUPS = (
+        ("Primer semestre", [f"mes_{n}" for n in range(1, 7)]),
+        ("Segundo semestre", [f"mes_{n}" for n in range(7, 13)]),
+    )
+
+    def __init__(self, *args, line=None, household=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.line = line
+        self.household = household
+        excepciones = line.overrides if line else {}
+        for numero, nombre in enumerate(MESES, start=1):
+            self.fields[f"mes_{numero}"] = forms.DecimalField(
+                max_digits=16, decimal_places=2, min_value=0, required=False,
+                label=nombre.capitalize(),
+                initial=excepciones.get(numero, line.amount if line else None),
+            )
+        self._estilar()
+
+    @transaction.atomic
+    def save(self):
+        from .models_plan import PlanLineMonth
+
+        normal = self.line.amount
+        for numero in range(1, 13):
+            valor = self.cleaned_data.get(f"mes_{numero}")
+            existente = PlanLineMonth.objects.filter(line=self.line,
+                                                     month=numero).first()
+            # Vacío o igual al normal: no es una excepción y no se guarda.
+            if valor is None or valor == normal:
+                if existente:
+                    existente.delete()
+                continue
+            if existente:
+                existente.amount = valor
+                existente.save(update_fields=["amount", "updated_at"])
+            else:
+                PlanLineMonth.objects.create(
+                    household=self.line.household, line=self.line,
+                    month=numero, amount=valor)
+        return self.line

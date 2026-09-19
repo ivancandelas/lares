@@ -147,6 +147,23 @@ class PlanLine(HouseholdScopedModel):
         return self.cadence == self.Cadence.MONTHLY
 
     @property
+    def overrides(self) -> dict:
+        """Los meses que no son como los demás, por número de mes."""
+        return {m.month: m.amount for m in self.months_set.all()}
+
+    def amount_for(self, month: int) -> Decimal:
+        """Lo presupuestado para ese mes.
+
+        Solo se guardan las excepciones: diciembre cuesta el doble y agosto
+        lleva la inscripcion, pero los otros diez meses son iguales. Obligar a
+        capturar doce cifras por categoria es lo que hace que nadie vuelva a
+        tocar el presupuesto despues de la primera vez.
+        """
+        if not self.is_monthly:
+            return self.amount
+        return self.overrides.get(month, self.amount)
+
+    @property
     def months(self) -> int:
         desde, hasta = self.plan.period
         return max((hasta.year - desde.year) * 12
@@ -155,6 +172,42 @@ class PlanLine(HouseholdScopedModel):
     @property
     def period_amount(self) -> Decimal:
         """Lo previsto para todo el periodo, venga dicho al mes o de golpe."""
-        if self.is_monthly:
-            return self.amount * self.months
-        return self.amount
+        if not self.is_monthly:
+            return self.amount
+        desde, hasta = self.plan.period
+        excepciones = self.overrides
+        total, cursor = Decimal(0), desde.replace(day=1)
+        while cursor <= hasta:
+            total += excepciones.get(cursor.month, self.amount)
+            cursor = (cursor + dt.timedelta(days=32)).replace(day=1)
+        return total
+
+
+class PlanLineMonth(HouseholdScopedModel):
+    """Un mes que no vale lo mismo que los demás.
+
+    Solo existen los meses distintos. Si una categoria vale igual todo el ano,
+    esta tabla no tiene ni una fila para ella, y el presupuesto sigue siendo
+    un numero por categoria como debe ser.
+    """
+
+    line = models.ForeignKey(PlanLine, on_delete=models.CASCADE,
+                            related_name="months_set")
+    month = models.PositiveSmallIntegerField("mes")            # 1..12
+    amount = models.DecimalField("previsto ese mes", max_digits=16,
+                                 decimal_places=2)
+
+    class Meta:
+        ordering = ["month"]
+        verbose_name = "mes distinto"
+        verbose_name_plural = "meses distintos"
+        constraints = [
+            models.UniqueConstraint(fields=["line", "month"],
+                                    name="uniq_linea_mes"),
+            models.CheckConstraint(condition=models.Q(month__gte=1,
+                                                      month__lte=12),
+                                   name="mes_valido"),
+        ]
+
+    def __str__(self):
+        return f"{self.line.account.name} · mes {self.month}"

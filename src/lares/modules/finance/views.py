@@ -348,6 +348,36 @@ def plan_line_edit(request, pk):
     })
 
 
+def plan_line_months(request, pk):
+    """Los doce meses de una categoría, para cuando no todos valen igual."""
+    from .forms import MonthlyAmountsForm
+    from .models_plan import PlanLine
+
+    linea = get_object_or_404(PlanLine, pk=pk)
+    if not linea.is_monthly:
+        messages.info(request, "Esa categoría se presupuesta de golpe, no al mes.")
+        return redirect("finance:plan", pk=linea.plan_id)
+
+    form = MonthlyAmountsForm(request.POST or None, line=linea,
+                              household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        cuantos = linea.months_set.count()
+        messages.success(
+            request,
+            f"{cuantos} mes{'es' if cuantos != 1 else ''} distinto{'s' if cuantos != 1 else ''} "
+            f"de {linea.account.name}." if cuantos
+            else f"{linea.account.name} vale igual todos los meses.")
+        return redirect("finance:plan", pk=linea.plan_id)
+
+    return render(request, "core/form.html", {
+        "form": form,
+        "title": f"{linea.account.name}, mes a mes",
+        "submit": "Guardar",
+        "cancel_url": "finance:plan", "cancel_arg": linea.plan_id,
+    })
+
+
 def plan_seed(request, pk):
     """Partir de lo que de verdad se gastó el año pasado."""
     from .models_plan import Plan

@@ -29,6 +29,8 @@ urlpatterns = [
          name="plan-seed"),
     path("dinero/presupuesto/linea/<uuid:pk>/", views.plan_line_edit,
          name="plan-line-edit"),
+    path("dinero/presupuesto/linea/<uuid:pk>/meses/", views.plan_line_months,
+         name="plan-line-months"),
     path("dinero/topes/", views.budgets, name="budgets"),
     path("dinero/importar/", views.import_statement, name="import"),
     path("dinero/importar/confirmar/", views.import_confirm, name="import-confirm"),

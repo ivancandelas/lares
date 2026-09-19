@@ -51,7 +51,8 @@
   {% for l in mes.lines %}
     <li class="py-4">
       <div class="flex items-baseline justify-between gap-4">
-        <span class="min-w-0 text-[15px]">{{ l.budget.account.name }}</span>
+        <a href="{% url 'finance:plan-line-months' l.budget.pk %}"
+           class="min-w-0 text-[15px] hover:text-calm">{{ l.budget.account.name }}</a>
         <span class="shrink-0 tabular-nums text-sm">
           {% money0 l.spent %}<span class="text-soft"> de {% money0 l.planned %}</span>
         </span>
@@ -65,6 +66,9 @@
       </div>
       <div class="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
         <span>
+          {% if l.budget.overrides %}
+            <span class="text-soft">{{ l.budget.overrides|length }} mes{{ l.budget.overrides|length|pluralize:"es" }} distinto{{ l.budget.overrides|length|pluralize:"s" }} ·</span>
+          {% endif %}
           {% if l.over %}
             <span class="text-overdue">te pasaste por {% money0 l.overspent %}</span>
           {% elif l.ahead %}

@@ -346,7 +346,7 @@ def budgets(household, on_date: dt.date | None = None) -> dict:
         }
 
     lineas = [
-        BudgetLine(budget=b, planned=b.amount,
+        BudgetLine(budget=b, planned=b.amount_for(hoy.month),
                    spent=gastado.get(b.account_id, Decimal(0)),
                    month_elapsed=transcurrido)
         for b in activos
