@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}{{ perfil.taxpayer }} · Impuestos - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <div class="min-w-0">
+    <h1 class="text-2xl font-light tracking-tight">{{ perfil.taxpayer }}</h1>
+    <p class="mt-0.5 text-sm text-soft">
+      {{ perfil.get_regime_display }}{% if perfil.rfc %} · {{ perfil.rfc }}{% endif %}
+    </p>
+  </div>
+  <div class="flex shrink-0 gap-2">
+    <a href="{% url 'taxes:package' perfil.pk %}?ano={{ ano|stringformat:"d" }}"
+       class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Paquete {{ ano|stringformat:"d" }}</a>
+    <a href="{% url 'taxes:profile-edit' perfil.pk %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm hover:border-ink">Editar</a>
+  </div>
+</div>
+
+<div class="mt-6 flex flex-wrap items-baseline gap-2 text-[13px]">
+  <span class="text-soft">Ejercicio:</span>
+  {% for a in anos %}
+    <a href="?ano={{ a|stringformat:"d" }}"
+       class="rounded-sm border px-2 py-0.5 {% if a == ano %}border-ink{% else %}border-rule text-soft hover:border-ink hover:text-ink{% endif %}">{{ a|stringformat:"d" }}</a>
+  {% endfor %}
+</div>
+
+{% include "taxes/_resumen.html" with r=resumen %}
+
+<h2 class="mt-10 text-sm font-medium">Topes de las deducciones personales</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule text-[14px]">
+  {% for c in resumen.caps %}
+    <li class="flex items-baseline justify-between gap-4 py-2.5">
+      <span>{{ c.label }}</span>
+      <span class="shrink-0 tabular-nums {% if not c.applied %}text-soon{% endif %}">
+        {% if c.applied %}{% money0 c.limit %}{% else %}no aplicado{% endif %}
+      </span>
+    </li>
+  {% endfor %}
+</ul>
+{% for c in resumen.caps %}
+  {% if not c.applied %}<p class="mt-2 max-w-[58ch] text-[13px] text-soft">{{ c.note }}</p>{% endif %}
+{% endfor %}
+
+<div class="mt-10 flex items-baseline justify-between gap-4">
+  <h2 class="text-sm font-medium">Deducciones de {{ ano|stringformat:"d" }}</h2>
+  <a href="{% url 'taxes:deduction-new' %}" class="text-sm text-calm hover:underline">Marcar una factura</a>
+</div>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for d in deducciones %}
+    <li class="flex items-baseline justify-between gap-4 py-3">
+      <div class="min-w-0">
+        <a href="{% url 'taxes:deduction-edit' d.pk %}" class="text-[15px] hover:text-calm">{{ d }}</a>
+        <div class="text-[13px] text-soft">
+          {{ d.get_kind_display }} · {{ d.date|date:"d/m/Y" }}
+          {% if d.document %}· con factura{% else %}· <span class="text-soon">sin factura</span>{% endif %}
+        </div>
+      </div>
+      <span class="shrink-0 tabular-nums text-sm">{% money0 d.amount %}</span>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[14px] text-soft">Nada marcado como deducible en {{ ano|stringformat:"d" }}.</li>
+  {% endfor %}
+</ul>
+
+{% if retenciones %}
+  <h2 class="mt-10 text-sm font-medium">Retenciones de {{ ano|stringformat:"d" }}</h2>
+  <p class="mt-1 max-w-[56ch] text-[13px] text-soft">
+    Impuesto que ya se enteró por ti. Si no se declara, se paga dos veces.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for r in retenciones %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <div class="text-[15px]">{{ r.get_kind_display }}{% if r.payer %} · {{ r.payer }}{% endif %}</div>
+          <div class="text-[13px] text-soft">{{ r.date|date:"d/m/Y" }}</div>
+        </div>
+        <span class="shrink-0 tabular-nums text-sm">{% money0 r.amount %}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+{% if declaraciones %}
+  <h2 class="mt-10 text-sm font-medium">Declaraciones</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for d in declaraciones %}
+      <li class="flex items-baseline justify-between gap-4 py-3">
+        <div class="min-w-0">
+          <a href="{% url 'taxes:filing-edit' d.pk %}" class="text-[15px] hover:text-calm">{{ d }}</a>
+          <div class="text-[13px] text-soft">
+            {% if d.is_filed %}presentada el {{ d.filed_on|date:"d/m/Y" }}
+            {% else %}<span class="text-soon">sin presentar</span>{% endif %}
+            {% if d.is_filed and not d.receipt %} · <span class="text-overdue">sin acuse</span>{% endif %}
+          </div>
+        </div>
+        <span class="shrink-0 tabular-nums text-sm">{% if d.amount_paid %}{% money0 d.amount_paid %}{% endif %}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

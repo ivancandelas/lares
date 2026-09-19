@@ -68,13 +68,58 @@ def seed(household) -> str:
 
 
 def _pagar_todo_menos(household, lease, sin_pagar: int):
-    """Marca como pagados todos los meses salvo los ultimos `sin_pagar`."""
+    """Marca como pagados todos los meses salvo los ultimos `sin_pagar`.
+
+    Y los asienta en el libro, que es lo que hace el formulario de verdad. Sin
+    esto la renta cobrada no aparece como ingreso en ninguna parte: ni en el
+    flujo, ni en el rendimiento, ni en la base de impuestos.
+    """
+    from lares.core.models import Account, Entry, Posting
+
     ensure_periods(lease)
+    banco, categoria = _cuentas_de(household, lease)
+
     meses = list(lease.payments.order_by("due_on"))
     corte = len(meses) - sin_pagar if sin_pagar else len(meses)
     for i, pago in enumerate(meses):
-        if i >= corte:
+        if i >= corte or pago.paid_on:
             continue
         pago.paid_on = pago.due_on
         pago.amount_paid = pago.amount
-        pago.save(update_fields=["paid_on", "amount_paid", "updated_at"])
+        if banco and categoria:
+            signo = 1 if lease.is_landlord else -1
+            asiento = Entry.objects.create(
+                household=household, date=pago.due_on, source="demo",
+                description=f"Renta {pago.period} · {lease.property_ref.name}",
+                counterparty=lease.counterpart,
+            )
+            inmueble = lease.property_ref.as_concrete()
+            Posting.objects.create(household=household, entry=asiento,
+                                   account=banco, amount=pago.amount * signo,
+                                   currency=lease.currency or "MXN",
+                                   dimension=inmueble)
+            Posting.objects.create(household=household, entry=asiento,
+                                   account=categoria, amount=-pago.amount * signo,
+                                   currency=lease.currency or "MXN",
+                                   dimension=inmueble)
+            pago.entry = asiento
+        pago.save(update_fields=["paid_on", "amount_paid", "entry", "updated_at"])
+
+
+def _cuentas_de(household, lease):
+    """La cuenta por la que entra o sale, y la categoría que le toca."""
+    from lares.core.models import Account
+
+    banco = Account.objects.filter(household=household,
+                                   type=Account.Type.ASSET).first()
+    if not banco:
+        return None, None
+    if lease.is_landlord:
+        categoria, _ = Account.objects.get_or_create(
+            household=household, name="Ingresos: renta",
+            defaults={"type": Account.Type.INCOME, "currency": "MXN"})
+    else:
+        categoria, _ = Account.objects.get_or_create(
+            household=household, name="Gastos: vivienda",
+            defaults={"type": Account.Type.EXPENSE, "currency": "MXN"})
+    return banco, categoria

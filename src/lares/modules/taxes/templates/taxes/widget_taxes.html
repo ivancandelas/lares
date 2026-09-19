@@ -1,0 +1,19 @@
+{% load money %}
+<ul class="mt-2 space-y-2">
+  {% for r in resumenes %}
+    <li class="text-[14px]">
+      <div class="flex items-baseline justify-between gap-3">
+        <a href="{% url 'taxes:profile' r.profile.pk %}" class="min-w-0 truncate hover:text-calm">{{ r.profile.taxpayer }}</a>
+        <span class="shrink-0 tabular-nums text-[13px] text-soft">base {% money0 r.base %}</span>
+      </div>
+      <div class="text-[12px] text-soft">
+        {{ r.profile.get_regime_display }} · {% money0 r.personal_allowed %} deducidos en {{ ano|stringformat:"d" }}
+      </div>
+    </li>
+  {% empty %}
+    <li class="text-[14px] text-soft">Nadie declara todavía.</li>
+  {% endfor %}
+</ul>
+{% if sin_declarar %}
+  <div class="mt-2 text-[13px] text-soon">{{ sin_declarar }} sin presentar</div>
+{% endif %}

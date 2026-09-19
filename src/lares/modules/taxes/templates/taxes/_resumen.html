@@ -1,0 +1,33 @@
+{% load money %}
+{% comment %}
+  El aviso no es decorativo: estimar un impuesto es fácil de hacer mal y caro de
+  equivocar. Lo que se muestra es la base, no una cifra a pagar.
+{% endcomment %}
+<div class="mt-8 border-y border-rule py-5">
+  <div class="flex flex-wrap gap-x-12 gap-y-4">
+    <div>
+      <div class="text-[13px] text-soft">Ingresos {{ r.year|stringformat:"d" }}</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 r.income %}</div>
+    </div>
+    {% if r.blind_deduction %}
+      <div>
+        <div class="text-[13px] text-soft">Deducción ciega (35%)</div>
+        <div class="mt-0.5 text-xl font-light tabular-nums text-calm">−{% money0 r.blind_deduction %}</div>
+      </div>
+    {% endif %}
+    <div>
+      <div class="text-[13px] text-soft">Deducciones que cuentan</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums text-calm">−{% money0 r.other_deductions %}</div>
+    </div>
+    <div>
+      <div class="text-[13px] text-soft">Base estimada</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 r.base %}</div>
+    </div>
+    {% if r.withheld_isr %}
+      <div>
+        <div class="text-[13px] text-soft">ISR ya retenido</div>
+        <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 r.withheld_isr %}</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
