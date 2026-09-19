@@ -15,7 +15,10 @@
   <li><a href="{% url 'core:party-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Persona u organización</a></li>
   <li><a href="{% url 'core:account-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Cuenta bancaria</a></li>
   <li><a href="{% url 'core:expense-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Gasto</a></li>
+  <li><a href="{% url 'core:income-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Ingreso</a></li>
+  <li><a href="{% url 'core:transfer-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Traspaso entre cuentas</a></li>
   <li><a href="{% url 'core:rule-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Pago o trámite recurrente</a></li>
+  <li><a href="{% url 'finance:income-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Ingreso recurrente (sueldo)</a></li>
   <li><a href="{% url 'core:location-new' %}" class="block py-3.5 text-[15px] hover:text-calm">Ubicación</a></li>
 </ul>
 {% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Presupuesto - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Presupuesto</h1>
+  <a href="{% url 'finance:plan-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Nuevo</a>
+</div>
+<p class="mt-1 max-w-[58ch] text-sm text-soft">
+  Lo que pensabas gastar contra lo que llevas. Un tope mensual dice «no te pases
+  este mes»; esto responde «¿voy como pensaba?», que es otra pregunta.
+</p>
+
+{% for i in informes %}
+  <section class="mt-10">
+    <div class="flex items-baseline justify-between gap-4">
+      <h2 class="text-lg font-light">
+        <a href="{% url 'finance:plan' i.plan.pk %}" class="hover:text-calm">{{ i.plan.name }}</a>
+        <span class="ml-2 text-[13px] text-soft">{{ i.plan.context_line }}</span>
+      </h2>
+      <span class="shrink-0 text-[13px] text-soft">{% widthratio i.plan.elapsed 1 100 %}% corrido</span>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+      <div>
+        <div class="text-[13px] text-soft">Previsto</div>
+        <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 i.planned %}</div>
+      </div>
+      <div>
+        <div class="text-[13px] text-soft">Real</div>
+        <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 i.actual %}</div>
+      </div>
+      {% if i.projection %}
+        <div>
+          <div class="text-[13px] text-soft">Proyección a cierre</div>
+          <div class="mt-0.5 text-xl font-light tabular-nums {% if i.projected_variance > 0 %}text-overdue{% else %}text-calm{% endif %}">
+            {% money0 i.projection %}
+          </div>
+          <div class="mt-0.5 text-[12px] text-soft">
+            {% if i.projected_variance > 0 %}+{% endif %}{% money0 i.projected_variance %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+{% empty %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Ningún presupuesto todavía. No hace falta empezar de cero: al crearlo puedes
+    partir de lo que de verdad gastaste el año pasado y ajustar lo que vaya a
+    cambiar.
+  </p>
+{% endfor %}
+
+{% if cerrados %}
+  <h2 class="mt-10 text-sm font-medium text-soft">Cerrados</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule text-[14px] text-soft">
+    {% for p in cerrados %}
+      <li class="py-2.5">
+        <a href="{% url 'finance:plan' p.pk %}" class="hover:text-calm">{{ p.name }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

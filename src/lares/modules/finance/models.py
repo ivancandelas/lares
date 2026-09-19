@@ -2,8 +2,9 @@ from django.db import models
 
 from lares.core.models import Resource
 
-from .models_budget import Budget  # noqa: F401  (lo descubre Django aquí)
+from .models_income import RecurringIncome  # noqa: F401
 from .models_installment import InstallmentPlan  # noqa: F401
+from .models_plan import Plan, PlanLine  # noqa: F401
 from .models_provision import Provision  # noqa: F401
 
 

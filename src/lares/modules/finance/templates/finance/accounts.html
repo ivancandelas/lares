@@ -8,6 +8,10 @@
   <div class="flex gap-2">
     <a href="{% url 'core:expense-new' %}"
        class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Registrar gasto</a>
+    <a href="{% url 'core:income-new' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Ingreso</a>
+    <a href="{% url 'core:transfer-new' %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Traspaso</a>
     <a href="{% url 'core:resource-new' 'credit_card' %}"
        class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Añadir tarjeta</a>
     <a href="{% url 'core:account-new' %}"

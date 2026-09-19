@@ -5,6 +5,7 @@ Las dos preguntas por las que existe el módulo: «¿quién arregló el boiler?�
 """
 
 import datetime as dt
+from decimal import Decimal
 
 import pytest
 from django.contrib.contenttypes.models import ContentType
@@ -40,10 +41,11 @@ def _plan(household, cosa, titulo="Afinación", meses=12, ultima=None, proveedor
     )
 
 
-def _trabajo(household, cosa, titulo, cuando, proveedor=None, coste=None, plan=None):
+def _trabajo(household, cosa, titulo, cuando, proveedor=None, coste=None,
+             plan=None, garantia=None):
     return WorkOrder.objects.create(
         household=household, title=titulo, done_on=cuando, provider=proveedor,
-        cost=coste, plan=plan,
+        cost=coste, plan=plan, warranty_until=garantia,
         subject_type=ContentType.objects.get_for_model(cosa.__class__),
         subject_id=cosa.pk,
     )
@@ -170,3 +172,79 @@ def test_avisa_de_trabajos_sin_saber_quien_los_hizo(scoped, mazda):
 
     claves = {f.check for f in checks.run_all(scoped)}
     assert "maintenance.no_provider" in claves
+
+
+# --- El historial en la ficha de la cosa ------------------------------------
+
+
+@pytest.mark.django_db
+def test_el_historial_sale_en_la_ficha_de_cualquier_cosa(scoped):
+    """Vivía en su pantalla y no donde se busca: en la ficha del coche."""
+    from lares.core.registry import registry
+
+    for kind in ("vehicle", "property", "belonging"):
+        etiquetas = [t.label for t in registry.tabs_for(kind)]
+        assert "Historial de mantenimiento" in etiquetas, kind
+
+
+@pytest.mark.django_db
+def test_la_pestana_trae_los_trabajos_de_esa_cosa_y_no_de_otra(scoped, me):
+    from lares.modules.maintenance.services import history_tab
+    from lares.modules.vehicles.models import Vehicle
+
+    mazda = Vehicle.objects.create(household=scoped, name="Mazda",
+                                   kind="vehicle", plates="AAA111", owner=me)
+    otro = Vehicle.objects.create(household=scoped, name="Nissan",
+                                  kind="vehicle", plates="BBB222", owner=me)
+    _trabajo(scoped, mazda, "Afinación", HOY, coste=Decimal("4750"))
+    _trabajo(scoped, otro, "Frenos", HOY, coste=Decimal("2000"))
+
+    datos = history_tab(mazda)
+    assert [t.title for t in datos["trabajos"]] == ["Afinación"]
+    assert datos["gastado"] == 4750
+
+
+@pytest.mark.django_db
+def test_la_pestana_dice_si_el_trabajo_sigue_en_garantia(scoped, me):
+    """Si el boiler vuelve a fallar en tres meses, lo arregla el mismo."""
+    from lares.modules.maintenance.services import history_tab
+    from lares.modules.vehicles.models import Vehicle
+
+    coche = Vehicle.objects.create(household=scoped, name="Mazda",
+                                   kind="vehicle", plates="AAA111", owner=me)
+    vivo = _trabajo(scoped, coche, "Frenos", HOY, coste=Decimal("3000"),
+                    garantia=HOY + dt.timedelta(days=60))
+    viejo = _trabajo(scoped, coche, "Clutch", HOY - dt.timedelta(days=200),
+                     coste=Decimal("9000"),
+                     garantia=HOY - dt.timedelta(days=60))
+
+    assert vivo.warranty_valid
+    assert not viejo.warranty_valid
+    assert len(history_tab(coche)["trabajos"]) == 2
+
+
+@pytest.mark.django_db
+def test_registrar_un_trabajo_desde_la_ficha_ya_sabe_de_qué_es(sesion_admin,
+                                                                household):
+    from lares.modules.vehicles.models import Vehicle
+
+    coche = Vehicle.objects.create(household=household, name="Mazda",
+                                   kind="vehicle", plates="AAA111")
+    respuesta = sesion_admin.get(f"/mantenimiento/trabajo/nuevo/?de={coche.pk}")
+
+    assert respuesta.status_code == 200
+    assert respuesta.context["form"]["subject"].value() == str(coche.pk)
+
+
+@pytest.mark.django_db
+def test_la_ficha_de_un_coche_muestra_su_historial(sesion_admin, household):
+    from lares.modules.vehicles.models import Vehicle
+
+    coche = Vehicle.objects.create(household=household, name="Mazda",
+                                   kind="vehicle", plates="AAA111")
+    _trabajo(household, coche, "Afinación de 40.000", HOY,
+             coste=Decimal("4750"))
+
+    contenido = sesion_admin.get(f"/r/{coche.pk}/").content.decode()
+    assert "Historial de mantenimiento" in contenido
+    assert "Afinación de 40.000" in contenido

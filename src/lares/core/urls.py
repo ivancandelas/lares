@@ -84,6 +84,8 @@ urlpatterns = [
     path("cuentas/nueva/", views_crud.account_new, name="account-new"),
     path("ubicaciones/nueva/", views_crud.location_new, name="location-new"),
     path("gastos/nuevo/", views_crud.expense_new, name="expense-new"),
+    path("ingresos/nuevo/", views_crud.income_new, name="income-new"),
+    path("traspasos/nuevo/", views_crud.transfer_new, name="transfer-new"),
     path("api/v1/agenda", api.agenda, name="api-agenda"),
     path("api/v1/obligations", api.obligations, name="api-obligations"),
     path("api/v1/obligations/<uuid:pk>/complete", api.complete_obligation,

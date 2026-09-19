@@ -1,0 +1,30 @@
+{% load money %}
+<li class="py-3">
+  <div class="flex items-baseline justify-between gap-4">
+    <a href="{% url 'finance:plan-line-edit' l.line.pk %}"
+       class="min-w-0 text-[15px] hover:text-calm">{{ l.account.name }}</a>
+    <span class="shrink-0 tabular-nums text-sm">
+      {% money0 l.actual %}<span class="text-soft"> de {% money0 l.planned %}</span>
+    </span>
+  </div>
+  <div class="mt-2 h-1 w-full rounded-full bg-rule">
+    <div class="h-1 rounded-full {% if l.is_drifting %}bg-overdue{% else %}bg-ink{% endif %}"
+         style="width: {% widthratio l.progress 1 100 %}%"></div>
+  </div>
+  <div class="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
+    <span>
+      {% if l.line.is_monthly %}{% money0 l.line.amount %} al mes{% else %}de golpe{% endif %}
+      ·
+      {% if l.variance > 0 %}{% money0 l.variance %} de más
+      {% elif l.variance < 0 %}{% money0 l.variance %} de menos
+      {% else %}al día{% endif %}
+    </span>
+    <span class="shrink-0">
+      {% if l.projection %}
+        cierra en {% money0 l.projection %}{% if l.is_drifting %}
+          <span class="text-overdue">(+{% money0 l.projected_variance %})</span>
+        {% endif %}
+      {% endif %}
+    </span>
+  </div>
+</li>

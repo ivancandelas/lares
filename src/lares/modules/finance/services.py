@@ -213,16 +213,31 @@ def cash_flow(household, months: int = 6) -> dict:
     menos las obligaciones con fecha. El ingreso es una estimacion y se dice:
     el promedio de los ultimos tres meses.
     """
+    from .models_income import RecurringIncome
+
     hoy = dt.date.today()
     datos = available(household)
     saldo = datos["available"]
 
     with use_household(household):
-        desde = hoy - dt.timedelta(days=92)
-        ingreso = -(Posting.objects.filter(
-            account__type=Account.Type.INCOME, amount__lt=0, entry__date__gte=desde
-        ).aggregate(t=Sum("amount"))["t"] or 0)
-        mensual_estimado = (ingreso / 3).quantize(Decimal("0.01")) if ingreso else Decimal(0)
+        # Un sueldo declarado no es una estimacion: se sabe cuanto es y cuando
+        # cae. Solo cuando no hay ninguno se recurre al promedio, que depende
+        # de si el mes pasado hubo un ingreso raro.
+        declarados = [i for i in RecurringIncome.objects.filter(is_active=True)
+                      if i.is_live]
+        if declarados:
+            mensual_estimado = sum((i.per_month for i in declarados),
+                                   Decimal(0))
+            origen_ingreso = "declarado"
+        else:
+            desde = hoy - dt.timedelta(days=92)
+            ingreso = -(Posting.objects.filter(
+                account__type=Account.Type.INCOME, amount__lt=0,
+                entry__date__gte=desde
+            ).aggregate(t=Sum("amount"))["t"] or 0)
+            mensual_estimado = ((ingreso / 3).quantize(Decimal("0.01"))
+                                if ingreso else Decimal(0))
+            origen_ingreso = "promedio"
 
         pendientes = list(
             Obligation.objects.filter(
@@ -248,6 +263,7 @@ def cash_flow(household, months: int = 6) -> dict:
     return {
         "start": datos["available"],
         "monthly_income": mensual_estimado,
+        "income_source": origen_ingreso,
         "months": salida,
         "worst": min(salida, key=lambda m: m.balance) if salida else None,
         "goes_negative": [m for m in salida if m.balance < 0],
@@ -295,7 +311,13 @@ class BudgetLine:
 
 
 def budgets(household, on_date: dt.date | None = None) -> dict:
-    from .models_budget import Budget
+    """El ritmo del mes, sobre las categorías presupuestadas al mes.
+
+    Sale del mismo presupuesto y no de una tabla aparte: llevar un tope mensual
+    por un lado y un previsto anual por otro seria decir dos veces lo mismo, y
+    en cuanto uno se ajusta y el otro no, los dos dejan de ser fiables.
+    """
+    from .models_plan import Plan, PlanLine
 
     hoy = on_date or dt.date.today()
     primero = hoy.replace(day=1)
@@ -304,7 +326,12 @@ def budgets(household, on_date: dt.date | None = None) -> dict:
     transcurrido = hoy.day / dias_mes
 
     with use_household(household):
-        activos = list(Budget.objects.filter(is_active=True).select_related("account"))
+        activos = list(
+            PlanLine.objects.filter(
+                plan__is_active=True, plan__kind=Plan.Kind.ANNUAL,
+                plan__year=hoy.year, cadence=PlanLine.Cadence.MONTHLY,
+            ).select_related("account", "plan")
+        )
         gastado = {
             d["account_id"]: d["total"]
             for d in Posting.objects.filter(

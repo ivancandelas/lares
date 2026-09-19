@@ -1,4 +1,9 @@
-"""La renta: el recurrente más grande de casi cualquier casa."""
+"""La renta: el recurrente más grande de casi cualquier casa.
+
+Va en los dos sentidos. La que pagas se va cada mes; la que cobras entra cada
+mes, y dejarla fuera haria que "lo que queda al mes" saliera mucho mas bajo de
+lo que es para quien vive de rentar.
+"""
 
 import datetime as dt
 
@@ -13,8 +18,8 @@ def recurring(household) -> list:
     hoy = dt.date.today()
     salida = []
     for contrato in Lease.objects.filter(status=Lease.Status.ACTIVE):
-        if not (contrato.is_live and not contrato.is_landlord):
-            continue        # lo que cobras no es un gasto recurrente tuyo
+        if not contrato.is_live:
+            continue
         import calendar
 
         dia = min(contrato.rent_day, calendar.monthrange(hoy.year, hoy.month)[1])
@@ -29,11 +34,13 @@ def recurring(household) -> list:
             title=f"Renta de {contrato.property_ref.name}",
             amount=contrato.rent_amount,
             cycle="monthly",
+            direction="in" if contrato.is_landlord else "out",
             currency=contrato.currency,
             counterparty=contrato.counterpart,
             next_on=proximo,
             url=reverse("leases:detail", args=[contrato.pk]),
             source="leases",
-            note="renta",
+            note="renta que cobras" if contrato.is_landlord
+                 else "renta que pagas",
         ))
     return salida

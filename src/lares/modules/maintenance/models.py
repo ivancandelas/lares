@@ -103,3 +103,11 @@ class WorkOrder(HouseholdScopedModel):
 
     def __str__(self):
         return f"{self.title} ({self.done_on})"
+
+    @property
+    def warranty_valid(self) -> bool:
+        """Si el trabajo sigue en garantía. Es la mitad de para qué se guarda."""
+        import datetime as _dt
+
+        return bool(self.warranty_until
+                    and self.warranty_until >= _dt.date.today())

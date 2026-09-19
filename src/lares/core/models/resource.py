@@ -191,6 +191,10 @@ class Resource(HouseholdScopedModel):
                 valor = getattr(self, f"get_{field.name}_display")()
             elif isinstance(valor, decimal.Decimal):
                 valor = f"{valor:,.2f}".rstrip("0").rstrip(".")
+            elif _es_un_ano(field, valor):
+                # Un año es un identificador, no una cantidad: con separador
+                # de miles se lee "2,022", que no es un año.
+                valor = str(valor)
             par = (str(field.verbose_name).capitalize(), valor)
             # Lo que define a un coche es la placa, no el estado del registro.
             (propios if field.model is not Resource else heredados).append(par)
@@ -217,3 +221,11 @@ class Resource(HouseholdScopedModel):
             pk=self.pk, household_id=self.household_id
         ).first()
         return concreto or self
+
+
+def _es_un_ano(field, valor) -> bool:
+    """Campos que llevan un año y no deben mostrarse como cantidad."""
+    return (isinstance(valor, int) and not isinstance(valor, bool)
+            and ("year" in field.name or "ano" in field.name
+                 or "año" in str(field.verbose_name).lower())
+            and 1000 <= valor <= 9999)

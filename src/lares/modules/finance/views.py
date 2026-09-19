@@ -1,3 +1,5 @@
+import datetime as dt
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -5,9 +7,8 @@ from lares.core.models import Account, Entry, Party
 from lares.core.services import spending
 
 from . import services
-from .forms import BudgetForm, InstallmentPlanForm, ProvisionForm
+from .forms import InstallmentPlanForm, ProvisionForm
 from .models import CreditCard
-from .models_budget import Budget
 from .models_provision import Provision
 
 # La partida doble es una decision interna: nadie quiere leer "Pasivo" en la
@@ -122,35 +123,13 @@ def installment_new(request):
 
 
 def budgets(request):
-    """Cuánto has puesto de tope y a qué ritmo vas."""
-    return render(request, "finance/budgets.html",
-                  services.budgets(request.household))
+    """El ritmo del mes. Vive dentro del presupuesto, no aparte.
 
+    Se conserva la direccion porque era una pantalla propia: llegar a un 404
+    tras haberla usado meses es peor que un salto.
+    """
+    return redirect("finance:plans")
 
-def budget_new(request):
-    form = BudgetForm(request.POST or None, household=request.household)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Presupuesto guardado.")
-        return redirect("finance:budgets")
-    return render(request, "core/form.html", {
-        "form": form, "title": "Poner un tope a una categoría",
-        "submit": "Guardar", "cancel_url": "finance:budgets",
-    })
-
-
-def budget_edit(request, pk):
-    presupuesto = get_object_or_404(Budget, pk=pk)
-    form = BudgetForm(request.POST or None, instance=presupuesto,
-                      household=request.household)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Cambios guardados.")
-        return redirect("finance:budgets")
-    return render(request, "core/form.html", {
-        "form": form, "title": str(presupuesto.account), "submit": "Guardar cambios",
-        "cancel_url": "finance:budgets",
-    })
 
 
 def health(request):
@@ -264,3 +243,144 @@ def import_confirm(request):
         f"{resultado['known']} que ya estaban.",
     )
     return redirect("finance:accounts")
+
+
+# --- Presupuesto: previsto contra real --------------------------------------
+
+
+def plans(request):
+    """Los presupuestos abiertos, con su desviación proyectada."""
+    from .models_plan import Plan
+    from .services_plan import report as plan_report
+
+    abiertos = list(Plan.objects.filter(is_active=True))
+    return render(request, "finance/plans.html", {
+        "informes": [plan_report(request.household, p) for p in abiertos],
+        "cerrados": Plan.objects.filter(is_active=False)[:10],
+    })
+
+
+def plan_detail(request, pk):
+    from .models_plan import Plan
+    from .services_plan import report as plan_report
+
+    plan = get_object_or_404(Plan, pk=pk)
+    return render(request, "finance/plan.html", {
+        "plan": plan,
+        "informe": plan_report(request.household, plan),
+    })
+
+
+def plan_new(request):
+    from .forms import PlanForm
+
+    form = PlanForm(request.POST or None, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        plan = form.save()
+        messages.success(request, f"«{plan.name}» creado. Ahora las categorías.")
+        return redirect("finance:plan", pk=plan.pk)
+    return render(request, "core/form.html", {
+        "form": form, "title": "Nuevo presupuesto", "submit": "Crear",
+        "cancel_url": "finance:plans",
+    })
+
+
+def plan_edit(request, pk):
+    from .forms import PlanForm
+    from .models_plan import Plan
+
+    plan = get_object_or_404(Plan, pk=pk)
+    form = PlanForm(request.POST or None, instance=plan,
+                    household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Cambios guardados.")
+        return redirect("finance:plan", pk=plan.pk)
+    return render(request, "core/form.html", {
+        "form": form, "title": plan.name, "submit": "Guardar cambios",
+        "cancel_url": "finance:plan", "cancel_arg": plan.pk,
+    })
+
+
+def plan_line_new(request, pk):
+    from .forms import PlanLineForm
+    from .models_plan import Plan
+
+    plan = get_object_or_404(Plan, pk=pk)
+    form = PlanLineForm(request.POST or None, plan=plan,
+                        household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Categoría añadida.")
+        return redirect("finance:plan", pk=plan.pk)
+    return render(request, "core/form.html", {
+        "form": form, "title": f"Categoría de {plan.name}", "submit": "Añadir",
+        "cancel_url": "finance:plan", "cancel_arg": plan.pk,
+    })
+
+
+def plan_line_edit(request, pk):
+    from .forms import PlanLineForm
+    from .models_plan import PlanLine
+
+    linea = get_object_or_404(PlanLine, pk=pk)
+    form = PlanLineForm(request.POST or None, instance=linea, plan=linea.plan,
+                        household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Cambios guardados.")
+        return redirect("finance:plan", pk=linea.plan_id)
+    return render(request, "core/form.html", {
+        "form": form, "title": str(linea.account), "submit": "Guardar cambios",
+        "cancel_url": "finance:plan", "cancel_arg": linea.plan_id,
+    })
+
+
+def plan_seed(request, pk):
+    """Partir de lo que de verdad se gastó el año pasado."""
+    from .models_plan import Plan
+    from .services_plan import seed_from
+
+    plan = get_object_or_404(Plan, pk=pk)
+    ano = int(request.GET.get("de") or ((plan.year or dt.date.today().year) - 1))
+    creadas = seed_from(request.household, plan, ano)
+    if creadas:
+        messages.success(request, f"{creadas} categorías traídas de {ano}. "
+                                  f"Ajusta lo que vaya a cambiar.")
+    else:
+        messages.info(request, f"No hay gasto registrado en {ano} que traer.")
+    return redirect("finance:plan", pk=plan.pk)
+
+
+# --- Ingresos recurrentes ---------------------------------------------------
+
+
+def income_new(request):
+    from .forms import RecurringIncomeForm
+
+    form = RecurringIncomeForm(request.POST or None, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        ingreso = form.save()
+        messages.success(request, f"«{ingreso.name}» registrado.")
+        return redirect("core:rules")
+    return render(request, "core/form.html", {
+        "form": form, "title": "Nuevo ingreso recurrente", "submit": "Guardar",
+        "cancel_url": "core:rules",
+    })
+
+
+def income_edit(request, pk):
+    from .forms import RecurringIncomeForm
+    from .models_income import RecurringIncome
+
+    ingreso = get_object_or_404(RecurringIncome, pk=pk)
+    form = RecurringIncomeForm(request.POST or None, instance=ingreso,
+                               household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Cambios guardados.")
+        return redirect("core:rules")
+    return render(request, "core/form.html", {
+        "form": form, "title": ingreso.name, "submit": "Guardar cambios",
+        "cancel_url": "core:rules",
+    })

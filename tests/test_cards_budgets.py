@@ -1,4 +1,4 @@
-"""Tarjetas y topes de gasto.
+"""Tarjetas y presupuesto del mes.
 
 Dos cosas que casi ninguna app distingue:
 
@@ -15,7 +15,7 @@ from lares.core.models import Account, Entry, Obligation, Posting
 from lares.core.services import checks, obligations
 from lares.modules.finance import services
 from lares.modules.finance.models import CreditCard
-from lares.modules.finance.models_budget import Budget
+from lares.modules.finance.models_plan import Plan, PlanLine
 
 HOY = dt.date.today()
 
@@ -122,10 +122,18 @@ def test_no_avisa_si_si_alcanza(scoped, tarjeta):
 
 @pytest.fixture
 def tope(scoped):
+    """Una categoría presupuestada al mes.
+
+    El tope ya no es una tabla aparte: es una línea del presupuesto del año con
+    cadencia mensual. Llevar las dos cosas era decir dos veces lo mismo.
+    """
     cuenta = Account.objects.create(household=scoped, name="Supermercado",
                                     type=Account.Type.EXPENSE)
-    return Budget.objects.create(household=scoped, account=cuenta,
-                                 amount=Decimal("8000"))
+    plan = Plan.objects.create(household=scoped, name=f"Presupuesto {HOY.year}",
+                               kind=Plan.Kind.ANNUAL, year=HOY.year)
+    return PlanLine.objects.create(household=scoped, plan=plan, account=cuenta,
+                                   amount=Decimal("8000"),
+                                   cadence=PlanLine.Cadence.MONTHLY)
 
 
 def _gastar(household, cuenta, importe, dia):

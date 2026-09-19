@@ -165,12 +165,13 @@ class Owed:
 # claves por separado; tenerlas en un solo sitio es lo que permite sumar un
 # streaming mensual con un seguro anual sin traducir a mano en cada pantalla.
 VECES_AL_ANO = {
-    "weekly": 52, "monthly": 12, "bimonthly": 6,
+    "weekly": 52, "biweekly": 24, "monthly": 12, "bimonthly": 6,
     "quarterly": 4, "semiannual": 2, "yearly": 1,
 }
 
 CICLO_ETIQUETA = {
-    "weekly": "cada semana", "monthly": "al mes", "bimonthly": "cada dos meses",
+    "weekly": "cada semana", "biweekly": "cada quincena",
+    "monthly": "al mes", "bimonthly": "cada dos meses",
     "quarterly": "cada tres meses", "semiannual": "cada seis meses",
     "yearly": "al año",
 }
@@ -193,6 +194,7 @@ class Recurring:
     title: str
     amount: object                   # None: recurrente de importe variable
     cycle: str                       # una clave de VECES_AL_ANO
+    direction: str = "out"           # "out" te cobran | "in" te pagan
     pk: object = None                # el registro del que sale, si hace falta
     currency: str = ""
     counterparty: object = None
@@ -201,6 +203,10 @@ class Recurring:
     source: str = ""
     note: str = ""
     is_active: bool = True
+
+    @property
+    def is_income(self) -> bool:
+        return self.direction == "in"
 
     @property
     def times_per_year(self) -> int:

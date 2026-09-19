@@ -7,8 +7,10 @@ from lares.core.forms import LaresForm, ResourceForm
 from lares.core.models import Account
 
 from .models import CreditCard
-from .models_budget import Budget
+from .models_income import RecurringIncome as RecurringIncomeModel
 from .models_installment import InstallmentPlan
+from .models_plan import Plan as PlanModel
+from .models_plan import PlanLine as PlanLineModel
 from .models_provision import Provision
 
 
@@ -70,28 +72,6 @@ class ProvisionForm(LaresForm):
             "saved_amount": "No mueve dinero: solo deja de contarlo como disponible.",
         }
 
-
-class BudgetForm(LaresForm):
-    class Meta:
-        model = Budget
-        fields = ["account", "amount", "is_active", "note"]
-        labels = {
-            "account": "En qué",
-            "amount": "Cuánto al mes",
-            "is_active": "Activo",
-            "note": "Nota",
-        }
-        help_texts = {
-            "account": "Una categoría de gasto: supermercado, gasolina, mascotas.",
-            "amount": "Te aviso cuando gastes más rápido que el mes, no el día 31.",
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.household:
-            self.fields["account"].queryset = Account._base_manager.filter(
-                household=self.household, type=Account.Type.EXPENSE, is_active=True
-            )
 
 
 class InstallmentPlanForm(LaresForm):
@@ -176,3 +156,127 @@ class InstallmentPlanForm(LaresForm):
         plan.entry = asiento
         plan.save()
         return plan
+
+
+class PlanForm(LaresForm):
+    GROUPS = (
+        ("Qué presupuesto", ["name", "kind", "currency"]),
+        ("Periodo", ["year", "starts_on", "ends_on"]),
+        ("Notas", ["note", "is_active"]),
+    )
+
+    class Meta:
+        model = PlanModel
+        fields = ["name", "kind", "currency", "year", "starts_on", "ends_on",
+                  "note", "is_active"]
+        labels = {
+            "name": "Cómo lo llamas", "kind": "De qué tipo",
+            "currency": "Moneda", "year": "Ejercicio",
+            "starts_on": "Desde", "ends_on": "Hasta", "note": "Nota",
+            "is_active": "Activo",
+        }
+        help_texts = {
+            "kind": "El del año responde «¿voy como pensaba?». El de un "
+                    "proyecto —una obra, un viaje— es donde más se desvía.",
+            "year": "Solo para el del año.",
+            "starts_on": "Solo para un proyecto. De aquí sale la proyección.",
+        }
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get("kind") == PlanModel.Kind.PROJECT:
+            if not datos.get("starts_on"):
+                self.add_error("starts_on", "Un proyecto necesita fecha de "
+                                            "inicio: sin ella no hay proyección.")
+        elif not datos.get("year"):
+            self.add_error("year", "Di de qué año es.")
+        return datos
+
+
+class PlanLineForm(LaresForm):
+    class Meta:
+        model = PlanLineModel
+        fields = ["account", "amount", "cadence", "note"]
+        labels = {"account": "En qué", "amount": "Previsto",
+                  "cadence": "Cada cuánto", "note": "Nota"}
+        help_texts = {
+            "cadence": "«Al mes» para lo que se gasta parejo —el súper, la "
+                       "gasolina— y además avisa dentro del mes. «En todo el "
+                       "periodo» para lo que cae de golpe: vacaciones, el "
+                       "mantenimiento del coche.",
+        }
+
+    def __init__(self, *args, plan=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.plan = plan
+        # En un proyecto lo normal es una cifra de golpe; en el del año, algo
+        # que se gasta cada mes. Acertar el valor por defecto evita el error
+        # más caro de este formulario: una cifra anual tomada por mensual.
+        if plan and not self.instance.pk:
+            self.fields["cadence"].initial = (
+                PlanLineModel.Cadence.TOTAL if plan.is_project
+                else PlanLineModel.Cadence.MONTHLY)
+        if self.household:
+            self.fields["account"].queryset = Account._base_manager.filter(
+                household=self.household, is_active=True,
+                type__in=[Account.Type.EXPENSE, Account.Type.INCOME])
+
+    def clean_account(self):
+        cuenta = self.cleaned_data["account"]
+        if self.plan:
+            ya = PlanLineModel.objects.filter(plan=self.plan, account=cuenta)
+            if self.instance.pk:
+                ya = ya.exclude(pk=self.instance.pk)
+            if ya.exists():
+                raise forms.ValidationError("Esa categoría ya está en el "
+                                            "presupuesto.")
+        return cuenta
+
+    def save(self, commit=True):
+        linea = super().save(commit=False)
+        linea.plan = self.plan
+        linea.household = self.plan.household
+        if commit:
+            linea.save()
+        return linea
+
+
+class RecurringIncomeForm(LaresForm):
+    GROUPS = (
+        ("Qué ingreso", ["name", "payer", "amount", "currency"]),
+        ("Cada cuánto", ["cycle", "pay_day", "started_on", "ends_on"]),
+        ("Dónde entra", ["account", "category"]),
+        ("Notas", ["note", "is_active"]),
+    )
+
+    class Meta:
+        model = RecurringIncomeModel
+        fields = ["name", "payer", "amount", "currency", "cycle", "pay_day",
+                  "started_on", "ends_on", "account", "category", "note",
+                  "is_active"]
+        labels = {
+            "name": "Qué es", "payer": "Quién te paga",
+            "amount": "Cuánto te llega", "currency": "Moneda",
+            "cycle": "Cada cuánto", "pay_day": "Día de pago",
+            "started_on": "Desde cuándo", "ends_on": "Hasta cuándo",
+            "account": "Dónde entra", "category": "Cómo se clasifica",
+            "note": "Nota", "is_active": "Activo",
+        }
+        help_texts = {
+            "amount": "Lo que de verdad te llega, no el bruto.",
+            "cycle": "De aquí sale la proyección de «¿me alcanza?».",
+            "pay_day": "Si lo sabes, se muestra cuándo cae el próximo.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.household:
+            cuentas = Account._base_manager.filter(household=self.household,
+                                                   is_active=True)
+            self.fields["account"].queryset = cuentas.filter(
+                type=Account.Type.ASSET)
+            self.fields["category"].queryset = cuentas.filter(
+                type=Account.Type.INCOME)
+            from lares.core.models import Party
+            self.fields["payer"].queryset = Party._base_manager.filter(
+                household=self.household, archived_at__isnull=True)

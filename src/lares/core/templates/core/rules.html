@@ -8,26 +8,35 @@
   <a href="{% url 'core:rule-new' %}"
      class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir</a>
 </div>
-<p class="mt-1 max-w-[56ch] text-sm text-soft">
-  Todo lo que te cobra cada tanto: suscripciones, servicios de la casa, la
-  renta, las primas y lo que programes tú. Cada uno se administra en su sitio;
-  aquí se ven juntos.
+<p class="mt-1 max-w-[58ch] text-sm text-soft">
+  Lo que entra y lo que se va solo cada mes: el sueldo, las suscripciones, los
+  servicios de la casa, la renta, las primas y lo que programes tú. Cada uno se
+  administra en su sitio; aquí se ven juntos.
+</p>
+<p class="mt-2 text-[13px]">
+  <a href="{% url 'finance:income-new' %}" class="text-calm hover:underline">Añadir un ingreso recurrente</a>
 </p>
 
 {% if cuantos %}
   <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+    {% if entra %}
+      <div>
+        <div class="text-[13px] text-soft">Entra al mes</div>
+        <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 entra %}</div>
+      </div>
+    {% endif %}
     <div>
-      <div class="text-[13px] text-soft">Al mes</div>
+      <div class="text-[13px] text-soft">Sale al mes</div>
       <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 al_mes %}</div>
+      <div class="mt-0.5 text-[12px] text-soft">{% money0 al_ano %} al año</div>
     </div>
-    <div>
-      <div class="text-[13px] text-soft">Al año</div>
-      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 al_ano %}</div>
-    </div>
-    <div>
-      <div class="text-[13px] text-soft">Cosas que te cobran</div>
-      <div class="mt-0.5 text-xl font-light tabular-nums">{{ cuantos }}</div>
-    </div>
+    {% if entra %}
+      <div>
+        <div class="text-[13px] text-soft">Queda</div>
+        <div class="mt-0.5 text-xl font-light tabular-nums {% if queda < 0 %}text-overdue{% endif %}">{% money0 queda %}</div>
+        <div class="mt-0.5 text-[12px] text-soft">antes de lo que no se repite</div>
+      </div>
+    {% endif %}
   </div>
   {% if sin_importe %}
     <p class="mt-3 max-w-[56ch] text-[13px] text-soft">

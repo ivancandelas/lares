@@ -85,6 +85,18 @@ class Goal(HouseholdScopedModel):
         verbose_name_plural = "metas"
         indexes = [models.Index(fields=["household", "is_active"])]
 
+    # Lo derivado se cachea por instancia porque una sola pantalla lo pide una
+    # decena de veces. A cambio, recargar tiene que tirar la caché: leer un
+    # valor viejo despues de un refresh_from_db seria peor que la consulta.
+    DERIVADO = ("contributed", "current", "missing", "is_reached", "progress",
+                "pace", "eta", "months_late", "monthly_needed", "gap",
+                "last_movement")
+
+    def refresh_from_db(self, *args, **kwargs):
+        super().refresh_from_db(*args, **kwargs)
+        for nombre in self.DERIVADO:
+            self.__dict__.pop(nombre, None)
+
     def __str__(self):
         return self.name
 

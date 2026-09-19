@@ -30,12 +30,21 @@ def plan_edit(request, pk):
 
 
 def work_new(request):
-    return _form(request, WorkOrderForm, "Registrar un trabajo hecho")
+    # `?de=` llega desde la ficha de la cosa: si ya sabemos sobre qué es, no
+    # tiene sentido volver a preguntarlo.
+    inicial = {}
+    if sujeto := request.GET.get("de"):
+        from lares.core.models import Resource
+
+        if Resource.objects.filter(pk=sujeto).exists():
+            inicial = {"subject": sujeto}
+    return _form(request, WorkOrderForm, "Registrar un trabajo hecho",
+                 initial=inicial)
 
 
-def _form(request, form_class, title, instance=None):
+def _form(request, form_class, title, instance=None, initial=None):
     form = form_class(request.POST or None, instance=instance,
-                      household=request.household)
+                      initial=initial or {}, household=request.household)
     if request.method == "POST" and form.is_valid():
         obj = form.save()
         obligation_service.materialize(request.household)

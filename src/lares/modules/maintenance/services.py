@@ -35,3 +35,14 @@ def providers(household) -> list:
         .order_by("-ultimo")
     )
     return list(datos)
+
+
+def history_tab(resource) -> dict:
+    """El contexto de la pestaña de historial en la ficha de una cosa."""
+    trabajos = history_for(resource)
+    return {
+        "resource": resource,
+        "trabajos": trabajos,
+        "gastado": sum(t.cost or 0 for t in trabajos),
+        "ultimo": trabajos[0] if trabajos else None,
+    }

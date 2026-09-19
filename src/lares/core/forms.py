@@ -300,7 +300,12 @@ class AccountForm(LaresForm):
             "last_four": "Últimos 4 dígitos",
             "currency": "Moneda",
         }
-        help_texts = {"last_four": "Nunca guardes el número completo."}
+        help_texts = {
+            "last_four": "Nunca guardes el número completo.",
+            "type": "El efectivo es una cuenta como cualquier otra: márcalo "
+                    "como activo. Así sacar del cajero es un traspaso entre "
+                    "dos cuentas tuyas, no un gasto.",
+        }
 
 
 class ExpenseForm(forms.Form):
@@ -500,3 +505,121 @@ class DisposalForm(LaresForm):
         if commit:
             recurso.save()
         return recurso
+
+
+class TransferForm(forms.Form):
+    """Mover dinero entre dos cuentas tuyas.
+
+    Sacar del cajero, pasar de la nomina al ahorro, pagar la tarjeta: en los
+    tres casos el dinero no se gasta, cambia de sitio. Registrarlo como gasto
+    es el error mas comun de cualquier sistema de finanzas personales, y el
+    mas caro: el dinero se cuenta dos veces -una al moverlo y otra al
+    gastarlo de verdad- y todo lo demas queda mal.
+
+    Por dentro son dos apuntes que suman cero contra dos cuentas de activo o
+    pasivo, sin tocar ninguna categoria de gasto. Por eso un traspaso no
+    aparece en "en que se va el dinero", que es exactamente lo correcto.
+    """
+
+    date = forms.DateField(label="Cuándo", initial=dt.date.today)
+    amount = forms.DecimalField(max_digits=16, decimal_places=2, min_value=0,
+                                label="Cuánto")
+    origin = forms.ModelChoiceField(queryset=Account.objects.none(),
+                                    label="De qué cuenta sale")
+    destination = forms.ModelChoiceField(queryset=Account.objects.none(),
+                                         label="A qué cuenta entra")
+    description = forms.CharField(max_length=300, required=False,
+                                  label="Concepto",
+                                  help_text="Opcional: «retiro del cajero», "
+                                            "«pago de la tarjeta».")
+
+    def __init__(self, *args, household=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.household = household
+        for field in self.fields.values():
+            if isinstance(field, forms.DateField):
+                field.widget.input_type = "date"
+            field.widget.attrs.setdefault("class", INPUT)
+        if household:
+            cuentas = Account._base_manager.filter(
+                household=household, is_active=True,
+                type__in=[Account.Type.ASSET, Account.Type.LIABILITY])
+            self.fields["origin"].queryset = cuentas
+            self.fields["destination"].queryset = cuentas
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get("origin") and datos.get("origin") == datos.get("destination"):
+            self.add_error("destination", "Tiene que ser otra cuenta.")
+        return datos
+
+    @transaction.atomic
+    def save(self) -> Entry:
+        datos = self.cleaned_data
+        origen, destino = datos["origin"], datos["destination"]
+        entry = Entry.objects.create(
+            household=self.household, date=datos["date"], source="transfer",
+            description=datos.get("description")
+            or f"Traspaso de {origen.name} a {destino.name}",
+        )
+        importe = datos["amount"]
+        # Un pasivo vive en negativo: abonar a la tarjeta SUBE su saldo
+        # contable hacia cero, y por eso el signo es el mismo en los dos
+        # casos. La cuenta de origen baja, la de destino sube.
+        Posting.objects.create(household=self.household, entry=entry,
+                               account=origen, amount=-importe)
+        Posting.objects.create(household=self.household, entry=entry,
+                               account=destino, amount=importe)
+        return entry
+
+
+class IncomeEntryForm(forms.Form):
+    """Registrar dinero que entró.
+
+    El gasto tenia formulario y el ingreso no, asi que la unica forma de
+    meter un sueldo era el importador de estados de cuenta o la consola.
+    """
+
+    date = forms.DateField(label="Cuándo", initial=dt.date.today)
+    description = forms.CharField(max_length=300, label="De qué")
+    amount = forms.DecimalField(max_digits=16, decimal_places=2, min_value=0,
+                                label="Cuánto")
+    into = forms.ModelChoiceField(queryset=Account.objects.none(),
+                                  label="A qué cuenta entró")
+    category = forms.ModelChoiceField(queryset=Account.objects.none(),
+                                      label="Categoría")
+    payer = forms.ModelChoiceField(queryset=Party.objects.none(), required=False,
+                                   label="Quién te pagó")
+
+    def __init__(self, *args, household=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.household = household
+        for field in self.fields.values():
+            if isinstance(field, forms.DateField):
+                field.widget.input_type = "date"
+            field.widget.attrs.setdefault("class", INPUT)
+        if household:
+            cuentas = Account._base_manager.filter(household=household,
+                                                   is_active=True)
+            self.fields["into"].queryset = cuentas.filter(
+                type=Account.Type.ASSET)
+            self.fields["category"].queryset = cuentas.filter(
+                type=Account.Type.INCOME)
+            self.fields["payer"].queryset = Party._base_manager.filter(
+                household=household, archived_at__isnull=True)
+
+    @transaction.atomic
+    def save(self) -> Entry:
+        datos = self.cleaned_data
+        entry = Entry.objects.create(
+            household=self.household, date=datos["date"], source="manual",
+            description=datos["description"], counterparty=datos.get("payer"),
+        )
+        importe = datos["amount"]
+        # Los ingresos viven en negativo en partida doble: la cuenta sube y
+        # la categoria de ingreso baja la misma cantidad.
+        Posting.objects.create(household=self.household, entry=entry,
+                               account=datos["into"], amount=importe)
+        Posting.objects.create(household=self.household, entry=entry,
+                               account=datos["category"], amount=-importe)
+        return entry

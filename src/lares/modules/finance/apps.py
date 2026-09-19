@@ -18,7 +18,7 @@ class FinanceModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, owed, services, widgets
+        from . import checks, demo, obligations, owed, recurring, services, widgets
         from .forms import CreditCardForm
         from .models import CreditCard
 
@@ -34,8 +34,11 @@ class FinanceModule(LaresModule):
         reg.obligations(obligations.CardPaymentProvider)
         reg.check(checks.CardWithoutStatement, checks.CardOverLimit,
                   checks.CannotPayInFull, checks.BudgetPace,
-                  checks.InstallmentsCommitted, checks.InstallmentInterest)
+                  checks.InstallmentsCommitted, checks.InstallmentInterest,
+                  checks.PlanDrifting, checks.PlanUnplanned,
+                  checks.NegativeCash)
         reg.owed(owed.owed)
+        reg.recurring(recurring.recurring)
         reg.demo_seeder(demo.seed)
         reg.nav(
             NavItem("Cuentas y tarjetas", "finance:accounts", icon="wallet",
@@ -44,8 +47,8 @@ class FinanceModule(LaresModule):
                     order=15, section="money"),
             NavItem("Cómo estás", "finance:health", icon="heart",
                     order=13, section="money"),
-            NavItem("Topes de gasto", "finance:budgets", icon="gauge",
-                    order=14, section="money"),
+            NavItem("Presupuesto", "finance:plans", icon="target",
+                    order=12, section="money"),
             NavItem("Dinero apartado", "finance:provisions", icon="lock",
                     order=16, section="money"),
             NavItem("¿Me alcanza?", "finance:cash-flow", icon="trend",

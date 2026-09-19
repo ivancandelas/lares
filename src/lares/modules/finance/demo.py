@@ -5,6 +5,7 @@ demostraria nada: el punto es que el saldo se calcula desde los apuntes.
 """
 
 import datetime as dt
+from decimal import Decimal
 
 from lares.core.models import Account, Entry, Party, Posting
 
@@ -40,6 +41,13 @@ def seed(household) -> str:
             kind="credit_card", issuer=banco, account=tdc_account, last_four="1234",
             credit_limit=60000, cut_day=17, due_day=5, apr=42.5, currency="MXN",
         ),
+    )
+
+    # El efectivo es una cuenta de activo como cualquier otra. Tenerlo aparte
+    # es lo que permite que sacar del cajero sea un traspaso y no un gasto.
+    efectivo, _ = Account.objects.get_or_create(
+        household=household, name="Efectivo", type=Account.Type.ASSET,
+        defaults={"currency": "MXN"},
     )
 
     mascotas, _ = Account.objects.get_or_create(
@@ -97,20 +105,129 @@ def seed(household) -> str:
         Posting.objects.create(household=household, entry=entry, account=origen,
                                amount=-importe, currency="MXN")
 
-    _seed_budgets(household, {"super": gasto_super, "auto": gasto_auto,
-                              "mascotas": mascotas, "familia": familia})
+    _seed_cash(household, nomina, efectivo, gasto_super)
+    _seed_income(household, nomina, sueldo, banco)
+    _seed_plan(household, {"super": gasto_super, "auto": gasto_auto,
+                           "mascotas": mascotas, "familia": familia})
+    _obra(household)
 
     return f"cuentas: {Account.objects.count()}, tarjetas: {CreditCard.objects.count()}, " \
            f"saldo tarjeta: {tdc_account.balance:,.0f} MXN (nómina: {nomina.name})"
 
 
-def _seed_budgets(household, cuentas):
-    """Topes de ejemplo, uno de ellos ya pasado de ritmo."""
-    from .models_budget import Budget
 
-    topes = [(cuentas["super"], 8000), (cuentas["auto"], 5000),
-             (cuentas["mascotas"], 1500), (cuentas["familia"], 9000)]
-    for cuenta, importe in topes:
-        Budget.objects.get_or_create(
-            household=household, account=cuenta, defaults={"amount": importe}
+def _seed_plan(household, cuentas):
+    """Un presupuesto del año con una categoría que se va a pasar.
+
+    El vehiculo va deliberadamente corto: sin una linea desviada no se ve lo
+    unico que distingue un presupuesto de una tabla, que es la proyeccion.
+    """
+    from .models_plan import Plan, PlanLine
+
+    hoy = dt.date.today()
+    plan, creado = Plan.objects.get_or_create(
+        household=household, name=f"Presupuesto {hoy.year}",
+        defaults=dict(kind=Plan.Kind.ANNUAL, year=hoy.year, currency="MXN",
+                      note="Partido de lo del año pasado y ajustado."),
+    )
+    if not creado:
+        return
+
+    # Unas al mes y otras de golpe: es lo que distingue el super del
+    # mantenimiento del coche, y forzar una sola cadencia estropea la mitad.
+    previsto = [
+        (cuentas["super"], 8000, PlanLine.Cadence.MONTHLY),
+        (cuentas["familia"], 9000, PlanLine.Cadence.MONTHLY),
+        (cuentas["mascotas"], 1500, PlanLine.Cadence.MONTHLY),
+        (cuentas["auto"], 24000, PlanLine.Cadence.TOTAL),
+    ]
+    for cuenta, importe, cadencia in previsto:
+        PlanLine.objects.get_or_create(
+            household=household, plan=plan, account=cuenta,
+            defaults={"amount": Decimal(importe), "cadence": cadencia},
         )
+
+
+def _obra(household):
+    """El presupuesto de un proyecto, que es donde más se desvía."""
+    from lares.core.models import Entry, Posting
+    from .models_plan import Plan, PlanLine
+
+    hoy = dt.date.today()
+    obra, creado = Plan.objects.get_or_create(
+        household=household, name="Remodelación de la cocina",
+        defaults=dict(kind=Plan.Kind.PROJECT, currency="MXN",
+                      starts_on=hoy - dt.timedelta(days=60),
+                      ends_on=hoy + dt.timedelta(days=60),
+                      note="Presupuesto cerrado con el contratista."),
+    )
+    if not creado:
+        return
+
+    materiales, _ = Account.objects.get_or_create(
+        household=household, name="Gastos: obra y materiales",
+        defaults={"type": Account.Type.EXPENSE})
+    banco = Account.objects.filter(household=household,
+                                   type=Account.Type.ASSET).first()
+    PlanLine.objects.create(household=household, plan=obra,
+                            account=materiales, amount=Decimal("120000"),
+                            cadence=PlanLine.Cadence.TOTAL)
+
+    # Gasto atribuido al proyecto con la dimension del libro: sin eso, la obra
+    # se comeria todo el gasto de casa del ano.
+    for hace, importe, concepto in ((50, 42000, "Anticipo al contratista"),
+                                    (20, 38000, "Muebles y cubierta")):
+        asiento = Entry.objects.create(
+            household=household, date=hoy - dt.timedelta(days=hace),
+            description=concepto, source="demo")
+        Posting.objects.create(household=household, entry=asiento,
+                               account=materiales, amount=Decimal(importe),
+                               currency="MXN", dimension=obra)
+        if banco:
+            Posting.objects.create(household=household, entry=asiento,
+                                   account=banco, amount=-Decimal(importe),
+                                   currency="MXN")
+
+
+def _seed_cash(household, nomina, efectivo, categoria):
+    """Un retiro del cajero y un gasto pagado en efectivo.
+
+    El retiro es un traspaso, no un gasto: si se anotara como gasto, el dinero
+    se contaria dos veces -una al sacarlo y otra al gastarlo-.
+    """
+    hoy = dt.date.today()
+    if Entry.objects.filter(household=household,
+                            description="Retiro del cajero").exists():
+        return
+
+    retiro = Entry.objects.create(household=household, source="transfer",
+                                  date=hoy - dt.timedelta(days=8),
+                                  description="Retiro del cajero")
+    Posting.objects.create(household=household, entry=retiro, account=nomina,
+                           amount=Decimal("-4000"), currency="MXN")
+    Posting.objects.create(household=household, entry=retiro, account=efectivo,
+                           amount=Decimal("4000"), currency="MXN")
+
+    gasto = Entry.objects.create(household=household, source="demo",
+                                 date=hoy - dt.timedelta(days=6),
+                                 description="Mercado del domingo")
+    Posting.objects.create(household=household, entry=gasto, account=categoria,
+                           amount=Decimal("850"), currency="MXN")
+    Posting.objects.create(household=household, entry=gasto, account=efectivo,
+                           amount=Decimal("-850"), currency="MXN")
+
+
+def _seed_income(household, nomina, sueldo, banco):
+    """El sueldo, declarado. Deja de ser una estimación del flujo."""
+    from .models_income import RecurringIncome
+
+    empresa, _ = Party.objects.get_or_create(
+        household=household, name="Softtek",
+        defaults={"kind": Party.Kind.ORGANIZATION})
+    RecurringIncome.objects.get_or_create(
+        household=household, name="Nómina",
+        defaults=dict(payer=empresa, amount=Decimal("42000"),
+                      cycle=RecurringIncome.Cycle.MONTHLY, pay_day=30,
+                      account=nomina, category=sueldo, currency="MXN",
+                      note="Neto, después de retenciones."),
+    )

@@ -191,3 +191,113 @@ class InstallmentInterest(Check):
                 subject_type="credit_card", subject_id=plan.card_id,
             ))
         return hallazgos
+
+
+class PlanDrifting(Check):
+    """Una categoría que, al ritmo que va, cierra el año pasada.
+
+    Lo que se mira es la proyeccion de cierre y no el gasto del mes: un mes
+    malo no dice nada y avisar por cada uno acaba con que nadie mire la
+    pantalla. Tres meses seguidos por encima si cambian el cierre, y eso es
+    justo lo que la proyeccion recoge.
+    """
+
+    key = "finance.plan_drift"
+    label = "Presupuesto que se va a pasar"
+    severity = "normal"
+
+    # Antes de esto no hay periodo suficiente para proyectar nada serio.
+    MINIMO = 0.15
+
+    def run(self, household):
+        from .models_plan import Plan
+        from .services_plan import report as plan_report
+
+        hallazgos = []
+        for plan in Plan.objects.filter(is_active=True):
+            if plan.elapsed < self.MINIMO:
+                continue
+            informe = plan_report(household, plan)
+            for linea in informe.lines:
+                if not linea.is_drifting:
+                    continue
+                hallazgos.append(Finding(
+                    check=self.key,
+                    title=f"{linea.account.name} va a cerrar "
+                          f"{linea.projected_variance:,.0f} por encima",
+                    detail=(f"Llevas {linea.actual:,.0f} de "
+                            f"{linea.planned:,.0f} con el "
+                            f"{plan.elapsed:.0%} del periodo corrido "
+                            f"({plan.name})."),
+                    severity=self.severity,
+                    subject_type="plan", subject_id=plan.pk,
+                ))
+        return hallazgos
+
+
+class PlanUnplanned(Check):
+    """Gasto real en categorías que nadie presupuestó.
+
+    Es donde se escapa el dinero de quien presupuesta solo lo que ya sabe que
+    va a gastar: el presupuesto cuadra y la cuenta no.
+    """
+
+    key = "finance.plan_unplanned"
+    label = "Gasto fuera del presupuesto"
+    severity = "low"
+
+    def run(self, household):
+        from .models_plan import Plan
+        from .services_plan import report as plan_report
+
+        hallazgos = []
+        for plan in Plan.objects.filter(is_active=True,
+                                        kind=Plan.Kind.ANNUAL):
+            informe = plan_report(household, plan)
+            if not informe.unplanned or not informe.lines:
+                continue
+            total = sum(x.actual for x in informe.unplanned)
+            hallazgos.append(Finding(
+                check=self.key,
+                title=f"{total:,.0f} gastados fuera del presupuesto "
+                      f"de {plan.name}",
+                detail=(f"En {len(informe.unplanned)} categorías que nadie "
+                        f"previó. La mayor es "
+                        f"{informe.unplanned[0].account.name}."),
+                severity=self.severity,
+                subject_type="plan", subject_id=plan.pk,
+            ))
+        return hallazgos
+
+
+class NegativeCash(Check):
+    """Una cuenta de activo en negativo.
+
+    El caso clasico es el efectivo. No se puede gastar dinero que nunca
+    entro, asi que un saldo negativo significa siempre lo mismo: falta
+    registrar de donde salio. Casi siempre es un retiro del cajero anotado
+    como gasto en vez de como traspaso, y entonces el dinero se cuenta dos
+    veces -una al sacarlo y otra al gastarlo-.
+    """
+
+    key = "finance.negative_asset"
+    label = "Cuenta en negativo"
+    severity = "normal"
+
+    def run(self, household):
+        from lares.core.models import Account
+
+        return [
+            Finding(
+                check=self.key,
+                title=f"{cuenta.name} tiene saldo negativo",
+                detail=("No se puede gastar de una cuenta lo que nunca entró. "
+                        "Suele ser un retiro anotado como gasto: si sacas del "
+                        "banco para tener efectivo, es un traspaso entre dos "
+                        "cuentas tuyas."),
+                severity=self.severity,
+            )
+            for cuenta in Account.objects.filter(type=Account.Type.ASSET,
+                                                 is_active=True)
+            if cuenta.balance < 0
+        ]

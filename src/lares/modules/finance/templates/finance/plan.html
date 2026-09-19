@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}{{ plan.name }} - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <div class="min-w-0">
+    <h1 class="text-2xl font-light tracking-tight">{{ plan.name }}</h1>
+    <p class="mt-0.5 text-sm text-soft">
+      {{ plan.context_line }} · {% widthratio plan.elapsed 1 100 %}% corrido
+    </p>
+  </div>
+  <div class="flex shrink-0 gap-2">
+    <a href="{% url 'finance:plan-line-new' plan.pk %}"
+       class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir categoría</a>
+    <a href="{% url 'finance:plan-edit' plan.pk %}"
+       class="rounded-sm border border-rule px-3 py-1.5 text-sm hover:border-ink">Editar</a>
+  </div>
+</div>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Previsto</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 informe.planned %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Real</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 informe.actual %}</div>
+  </div>
+  {% if informe.projection %}
+    <div>
+      <div class="text-[13px] text-soft">Proyección a cierre</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums {% if informe.projected_variance > 0 %}text-overdue{% else %}text-calm{% endif %}">
+        {% money0 informe.projection %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{% comment %}
+  La proyección es una regla de tres sobre el tiempo corrido: cruda, pero es la
+  única que no exige inventar un patrón de gasto que nadie conoce. Se dice.
+{% endcomment %}
+{% if informe.projection %}
+  <p class="mt-3 max-w-[58ch] text-[13px] text-soft">
+    La proyección reparte lo gastado sobre el periodo corrido. Sirve para ver si
+    vas encaminado, no para cerrar una cifra: un gasto que solo pasa en
+    diciembre la infla todo el año.
+  </p>
+{% endif %}
+
+<h2 class="mt-10 text-sm font-medium">Por categoría</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for l in informe.lines %}{% include "finance/_plan_line.html" with l=l %}{% endfor %}
+  {% if not informe.lines %}
+    <li class="py-4 text-[14px] text-soft">
+      Sin categorías todavía.
+      <a href="{% url 'finance:plan-seed' plan.pk %}" class="text-calm hover:underline">Partir de lo que gastaste el año pasado</a>
+      y ajustar es más rápido que empezar de cero.
+    </li>
+  {% endif %}
+</ul>
+
+{% if informe.lines %}
+  <p class="mt-3 text-[13px]">
+    <a href="{% url 'finance:plan-seed' plan.pk %}" class="text-calm hover:underline">Traer las categorías que falten del año pasado</a>
+  </p>
+{% endif %}
+
+{% if informe.unplanned %}
+  <h2 class="mt-10 text-sm font-medium">Fuera del presupuesto</h2>
+  <p class="mt-1 max-w-[56ch] text-[13px] text-soft">
+    Gasto real en categorías que nadie previó. Es donde se escapa el dinero de
+    quien presupuesta solo lo que ya sabe que va a gastar.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for l in informe.unplanned %}
+      <li class="flex items-baseline justify-between gap-4 py-2.5 text-[14px]">
+        <span class="min-w-0">{{ l.account.name }}</span>
+        <span class="shrink-0 tabular-nums">{% money0 l.actual %}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}

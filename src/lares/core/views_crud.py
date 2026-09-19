@@ -19,6 +19,7 @@ from .forms import (
     DisposalForm,
     DocumentForm,
     ExpenseForm,
+    IncomeEntryForm,
     LocationForm,
     ObligationRuleForm,
     PartyForm,
@@ -370,6 +371,7 @@ def _reglas_propias(household) -> list:
 
 
 ORIGENES = {
+    "finance_income": "Lo que entra",
     "core": "Lo que programaste tú",
     "subscriptions": "Suscripciones",
     "property": "Servicios del inmueble",
@@ -398,13 +400,20 @@ def rule_list(request):
         grupos.setdefault(ORIGENES.get(partida.source, "Otros"), []).append(partida)
 
     vivas = [r for r in partidas if r.is_active]
-    al_mes = sum(r.per_month for r in vivas if r.per_month is not None)
+    entra = sum(r.per_month for r in vivas
+                if r.is_income and r.per_month is not None)
+    sale = sum(r.per_month for r in vivas
+               if not r.is_income and r.per_month is not None)
 
     return render(request, "core/rules.html", {
-        "grupos": sorted(grupos.items(), key=lambda kv: -sum(
-            float(r.per_month or 0) for r in kv[1] if r.is_active)),
-        "al_mes": al_mes,
-        "al_ano": al_mes * 12,
+        # Lo que entra primero: es lo que da sentido a todo lo demás.
+        "grupos": sorted(grupos.items(), key=lambda kv: (
+            not kv[1][0].is_income,
+            -sum(float(r.per_month or 0) for r in kv[1] if r.is_active))),
+        "entra": entra,
+        "al_mes": sale,
+        "al_ano": sale * 12,
+        "queda": entra - sale,
         "cuantos": len(vivas),
         "sin_importe": [r for r in vivas if r.amount is None],
     })
@@ -447,6 +456,33 @@ def expense_new(request):
         return redirect("finance:accounts")
     return render(request, "core/form.html", {
         "form": form, "title": "Registrar un gasto", "submit": "Registrar",
+        "cancel_url": "finance:accounts",
+    })
+
+
+def transfer_new(request):
+    """Mover dinero entre cuentas tuyas, que no es gastarlo."""
+    from .forms import TransferForm
+
+    form = TransferForm(request.POST or None, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        entry = form.save()
+        messages.success(request, f"«{entry.description}» registrado.")
+        return redirect("finance:accounts")
+    return render(request, "core/form.html", {
+        "form": form, "title": "Registrar un traspaso", "submit": "Registrar",
+        "cancel_url": "finance:accounts",
+    })
+
+
+def income_new(request):
+    form = IncomeEntryForm(request.POST or None, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        entry = form.save()
+        messages.success(request, f"«{entry.description}» registrado.")
+        return redirect("finance:accounts")
+    return render(request, "core/form.html", {
+        "form": form, "title": "Registrar un ingreso", "submit": "Registrar",
         "cancel_url": "finance:accounts",
     })
 
