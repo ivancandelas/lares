@@ -1,0 +1,19 @@
+{% load money %}
+<ul class="mt-2 space-y-2.5">
+  {% for m in metas %}
+    <li>
+      <div class="flex items-baseline justify-between gap-3 text-[14px]">
+        <a href="{% url 'goals:detail' m.pk %}" class="min-w-0 truncate hover:text-calm">{{ m.name }}</a>
+        <span class="shrink-0 tabular-nums text-[13px] {% if m.months_late > 0 %}text-overdue{% else %}text-soft{% endif %}">
+          {% if m.months_late > 0 %}{{ m.months_late }} mes{{ m.months_late|pluralize:"es" }} tarde
+          {% elif m.eta %}{{ m.eta|date:"m/Y" }}{% else %}—{% endif %}
+        </span>
+      </div>
+      <div class="mt-1 h-1 w-full rounded-full bg-rule">
+        <div class="h-1 rounded-full bg-ink" style="width: {% widthratio m.progress 1 100 %}%"></div>
+      </div>
+    </li>
+  {% empty %}
+    <li class="text-[14px] text-soft">Ninguna meta abierta.</li>
+  {% endfor %}
+</ul>

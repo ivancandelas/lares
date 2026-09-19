@@ -1,3 +1,5 @@
+import datetime as dt
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
@@ -90,6 +92,36 @@ def _consolidado(household):
     y que uno concedido ya cuenta como bien.
     """
     return registry.calculate("net_worth", household)
+
+
+def owed(request):
+    """Quién te debe y a quién le debes, en una sola pantalla.
+
+    No hay tabla de cuentas por cobrar ni por pagar. Lo que se debe ya esta
+    registrado donde ocurre -el prestamo sabe cuanto falta, el contrato sabe
+    que meses no llegaron, la tarjeta sabe su saldo- y copiarlo a una tabla
+    aparte crearia dos verdades que se separan al primer abono.
+
+    Lo unico que faltaba era mirarlo junto, porque las dos preguntas que
+    importan -cuanto me deben, cuanto debo- son las unicas que ningun modulo
+    puede responder solo.
+    """
+    partidas = registry.owed_all(request.household)
+    # Lo vencido primero; despues lo que tiene fecha; al final lo que no la
+    # tiene, que no es menos importante pero no compite por el mismo dia.
+    partidas.sort(key=lambda o: (o.due_on is None, o.due_on or dt.date.max,
+                                 -float(o.amount or 0)))
+    cobrar = [o for o in partidas if o.is_incoming]
+    pagar = [o for o in partidas if not o.is_incoming]
+
+    return render(request, "core/owed.html", {
+        "cobrar": cobrar,
+        "pagar": pagar,
+        "total_cobrar": (cobran := sum(o.amount or 0 for o in cobrar)),
+        "total_pagar": (pagan := sum(o.amount or 0 for o in pagar)),
+        "neto": cobran - pagan,
+        "vencidas": [o for o in partidas if o.is_overdue],
+    })
 
 
 def documents(request):

@@ -11,7 +11,7 @@ class LeasesModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, widgets
+        from . import checks, demo, obligations, owed, widgets
         from .forms import LeaseForm
         from .models import Lease
         from .related import for_party
@@ -23,6 +23,7 @@ class LeasesModule(LaresModule):
                   checks.LeaseWithoutDocument, checks.DepositPending,
                   checks.NoDeposit, checks.NoInventory)
         reg.related(for_party)
+        reg.owed(owed.owed)
         reg.demo_seeder(demo.seed)
         reg.tabs(DetailTab(
             key="leases.of_property",

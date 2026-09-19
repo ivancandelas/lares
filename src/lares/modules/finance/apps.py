@@ -18,7 +18,7 @@ class FinanceModule(LaresModule):
     tier = "standard"
 
     def register(self, reg: Registry) -> None:
-        from . import checks, demo, obligations, services, widgets
+        from . import checks, demo, obligations, owed, services, widgets
         from .forms import CreditCardForm
         from .models import CreditCard
 
@@ -35,6 +35,7 @@ class FinanceModule(LaresModule):
         reg.check(checks.CardWithoutStatement, checks.CardOverLimit,
                   checks.CannotPayInFull, checks.BudgetPace,
                   checks.InstallmentsCommitted, checks.InstallmentInterest)
+        reg.owed(owed.owed)
         reg.demo_seeder(demo.seed)
         reg.nav(
             NavItem("Cuentas y tarjetas", "finance:accounts", icon="wallet",

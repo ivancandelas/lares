@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Quién debe a quién - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Quién debe a quién</h1>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Lo que te deben y lo que debes, junto. Sale de donde ya estaba registrado
+  —préstamos, rentas, tarjetas, compras a meses—, así que no hay que llevarlo
+  aquí por separado.
+</p>
+
+<div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+  <div>
+    <div class="text-[13px] text-soft">Te deben</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums text-calm">{% money0 total_cobrar %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Debes</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 total_pagar %}</div>
+  </div>
+  <div>
+    <div class="text-[13px] text-soft">Diferencia</div>
+    <div class="mt-0.5 text-xl font-light tabular-nums {% if neto < 0 %}text-overdue{% endif %}">{% money0 neto %}</div>
+  </div>
+  {% if vencidas %}
+    <div>
+      <div class="text-[13px] text-soft">Vencidas</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums text-overdue">{{ vencidas|length }}</div>
+    </div>
+  {% endif %}
+</div>
+
+<h2 class="mt-10 text-sm font-medium">Te deben</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for o in cobrar %}{% include "core/_owed_row.html" with o=o %}{% endfor %}
+  {% if not cobrar %}<li class="py-3 text-[14px] text-soft">Nadie te debe nada registrado.</li>{% endif %}
+</ul>
+
+<h2 class="mt-10 text-sm font-medium">Debes</h2>
+<ul class="mt-1 divide-y divide-rule border-y border-rule">
+  {% for o in pagar %}{% include "core/_owed_row.html" with o=o %}{% endfor %}
+  {% if not pagar %}<li class="py-3 text-[14px] text-soft">No debes nada registrado.</li>{% endif %}
+</ul>
+{% endblock %}

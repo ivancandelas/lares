@@ -15,6 +15,7 @@ app_name = "core"
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("patrimonio/", views.holdings, name="holdings"),
+    path("se-debe/", views.owed, name="owed"),
     path("documentos/", views.documents, name="documents"),
     path("buscar/", views.search, name="search"),
 

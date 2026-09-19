@@ -53,6 +53,7 @@ LARES_MODULES = env.list(
     default=[
         "lares.modules.belongings.apps.BelongingsModule",
         "lares.modules.finance.apps.FinanceModule",
+        "lares.modules.goals.apps.GoalsModule",
         "lares.modules.insurance.apps.InsuranceModule",
         "lares.modules.loans.apps.LoansModule",
         "lares.modules.maintenance.apps.MaintenanceModule",

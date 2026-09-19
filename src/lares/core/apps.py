@@ -29,6 +29,8 @@ class CoreConfig(AppConfig):
             NavItem("Bandeja", "core:inbox", icon="inbox", order=10, section="main"),
             NavItem("Todo lo que tienes", "core:holdings", icon="box", order=5,
                     section="holdings"),
+            NavItem("Quién debe a quién", "core:owed", icon="scale",
+                    order=19, section="money"),
             NavItem("Documentos", "core:documents", icon="file", order=90,
                     section="holdings"),
             NavItem("Pagos recurrentes", "core:rules", icon="repeat", order=20,

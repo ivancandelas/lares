@@ -1,0 +1,31 @@
+{% load money %}
+<li class="py-4">
+  <div class="flex items-baseline justify-between gap-4">
+    <a href="{% url 'goals:detail' m.pk %}" class="min-w-0 text-[15px] hover:text-calm">{{ m.name }}</a>
+    <span class="shrink-0 tabular-nums text-sm">
+      {% if m.is_payoff %}
+        {% money0 m.current m.currency %}<span class="text-soft"> de {% money0 m.baseline_amount m.currency %}</span>
+      {% else %}
+        {% money0 m.current m.currency %}<span class="text-soft"> de {% money0 m.target_amount m.currency %}</span>
+      {% endif %}
+    </span>
+  </div>
+  <div class="mt-2 h-1 w-full rounded-full bg-rule">
+    <div class="h-1 rounded-full {% if m.is_reached %}bg-calm{% else %}bg-ink{% endif %}"
+         style="width: {% widthratio m.progress 1 100 %}%"></div>
+  </div>
+  <div class="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
+    <span>{{ m.context_line }}</span>
+    <span class="shrink-0">
+      {% if m.is_reached %}
+        <span class="text-calm">llegaste</span>
+      {% elif m.months_late > 0 %}
+        <span class="text-overdue">{{ m.months_late }} mes{{ m.months_late|pluralize:"es" }} tarde</span>
+      {% elif m.eta %}
+        llegarías en {{ m.eta|date:"m/Y" }}
+      {% elif m.monthly_needed %}
+        harían falta {% money0 m.monthly_needed m.currency %} al mes
+      {% endif %}
+    </span>
+  </div>
+</li>

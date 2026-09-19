@@ -1,0 +1,20 @@
+{% load money %}
+<li class="py-3">
+  <div class="flex items-baseline justify-between gap-4">
+    <a href="{{ o.url }}" class="min-w-0 text-[15px] hover:text-calm">{{ o.title }}</a>
+    <span class="shrink-0 tabular-nums text-sm">{% money0 o.amount o.currency %}</span>
+  </div>
+  <div class="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-4 text-[13px] text-soft">
+    <span>
+      {% if o.counterparty %}{{ o.counterparty }}{% endif %}
+      {% if o.note %}{% if o.counterparty %} · {% endif %}{{ o.note }}{% endif %}
+    </span>
+    <span class="shrink-0">
+      {% if o.is_overdue %}
+        <span class="text-overdue">venció el {{ o.due_on|date:"d/m/Y" }}</span>
+      {% elif o.due_on %}
+        vence el {{ o.due_on|date:"d/m/Y" }}
+      {% endif %}
+    </span>
+  </div>
+</li>

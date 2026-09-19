@@ -122,6 +122,46 @@ class RelatedLink:
 
 
 @dataclass(frozen=True)
+class Owed:
+    """Una deuda viva, vista desde tu lado de la mesa.
+
+    No hay tabla de "cuentas por cobrar" ni de "cuentas por pagar" a proposito.
+    Lo que se debe ya esta registrado donde ocurre: un prestamo sabe cuanto
+    falta, un contrato sabe que meses no se cobraron, una tarjeta sabe su saldo.
+    Copiar eso a una tabla aparte crearia dos verdades que se desincronizan al
+    primer abono.
+
+    Asi que esto no guarda nada: cada modulo dice lo que ya sabe y el nucleo lo
+    junta en una sola pantalla.
+    """
+
+    direction: str                   # "in" te deben | "out" debes
+    title: str
+    amount: object
+    currency: str = ""
+    counterparty: object = None
+    due_on: object = None
+    url: str = ""
+    source: str = ""
+    note: str = ""
+
+    @property
+    def is_incoming(self) -> bool:
+        return self.direction == "in"
+
+    @property
+    def days_left(self):
+        import datetime as _dt
+
+        return (self.due_on - _dt.date.today()).days if self.due_on else None
+
+    @property
+    def is_overdue(self) -> bool:
+        dias = self.days_left
+        return dias is not None and dias < 0
+
+
+@dataclass(frozen=True)
 class NavItem:
     label: str
     url_name: str
@@ -193,6 +233,9 @@ class Registry:
         self.subject_sources: dict[str, object] = {}
         self.classifiers: list = []
         self.related_providers: list = []
+        # Quien te debe y a quien le debes. Cada modulo lo aporta desde sus
+        # propios registros; aqui no se guarda ninguna deuda.
+        self.owed_providers: list = []
         # Calculos con nombre que un modulo aporta y el nucleo consulta sin
         # conocerlo. Es lo que evita que el nucleo importe un modulo para
         # afinar una cifra que el solo no puede calcular.
@@ -290,6 +333,24 @@ class Registry:
             except Exception:
                 logger.exception("Un proveedor de enlaces falló para %s", entity)
         return [link for link in salida if link.count] or []
+
+    def owed(self, fn):
+        """Lo que se debe en los dos sentidos.
+
+        `fn(household) -> list[Owed]`. Es lo que permite una sola pantalla de
+        "quien debe a quien" sin inventar una contabilidad paralela: la deuda
+        sigue viviendo en el prestamo, el contrato o la tarjeta que la conoce.
+        """
+        self.owed_providers.append(fn)
+
+    def owed_all(self, household) -> list:
+        salida = []
+        for fn in self.owed_providers:
+            try:
+                salida.extend(fn(household) or [])
+            except Exception:
+                logger.exception("Un proveedor de deudas falló")
+        return salida
 
     def classifier(self, *classifiers):
         """Reconocedores de lo que entra por la bandeja.

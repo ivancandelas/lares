@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Metas - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-baseline justify-between gap-4">
+  <h1 class="text-2xl font-light tracking-tight">Metas</h1>
+  <a href="{% url 'goals:new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Nueva meta</a>
+</div>
+<p class="mt-1 max-w-[56ch] text-sm text-soft">
+  Lo que quieres que pase, con la cuenta de si vas a llegar. Una provisión
+  aparta para lo que ya viene; una meta es para lo que decides tú.
+</p>
+
+{% if al_mes %}
+  <div class="mt-8 flex flex-wrap gap-x-12 gap-y-4 border-y border-rule py-5">
+    <div>
+      <div class="text-[13px] text-soft">Harían falta al mes</div>
+      <div class="mt-0.5 text-xl font-light tabular-nums">{% money0 al_mes %}</div>
+      <div class="mt-0.5 text-[12px] text-soft">para llegar a todas a tiempo</div>
+    </div>
+  </div>
+{% endif %}
+
+{% if juntar %}
+  <h2 class="mt-10 text-sm font-medium">Juntar</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for m in juntar %}{% include "goals/_row.html" with m=m %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if saldar %}
+  <h2 class="mt-10 text-sm font-medium">Dejar de deber</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule">
+    {% for m in saldar %}{% include "goals/_row.html" with m=m %}{% endfor %}
+  </ul>
+{% endif %}
+
+{% if not juntar and not saldar %}
+  <p class="mt-8 max-w-[52ch] leading-relaxed text-soft">
+    Ninguna meta abierta. Cambiar de coche, el enganche de una casa, quedar
+    libre de la tarjeta: con una fecha, el sistema puede decirte si vas a
+    llegar en vez de solo cuánto llevas.
+  </p>
+{% endif %}
+
+{% if cerradas %}
+  <h2 class="mt-10 text-sm font-medium text-soft">Cerradas</h2>
+  <ul class="mt-1 divide-y divide-rule border-y border-rule text-[14px] text-soft">
+    {% for m in cerradas %}
+      <li class="flex items-baseline justify-between gap-4 py-2.5">
+        <a href="{% url 'goals:detail' m.pk %}" class="hover:text-calm">{{ m.name }}</a>
+        <span class="shrink-0 tabular-nums">{% money0 m.current m.currency %}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+{% endblock %}
