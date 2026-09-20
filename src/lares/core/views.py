@@ -26,7 +26,8 @@ def dashboard(request):
     household = getattr(request, "household", None)
     completitud = assess(household) if household else None
     context = {
-        "agenda": week_ahead(household) if household else None,
+        "agenda": _agenda_visible(week_ahead(household), request)
+                  if household else None,
         # Los huecos ya vienen calculados dentro de la valoración: recalcularlos
         # recorrería todo el inventario una segunda vez por cada carga.
         "findings": _visibles(completitud["gaps"] if completitud else [],
@@ -83,6 +84,30 @@ def holdings(request):
         "neto": valor_total - deuda,
         "consolidado": consolidado,
     })
+
+
+def _agenda_visible(agenda, request):
+    """Lo que vence, sin los títulos que esta persona no alcanza.
+
+    Se filtra en la vista y no en `week_ahead`: el servicio contesta lo que hay
+    en el hogar, que es lo que necesitan las tareas de fondo y los avisos. Quién
+    puede leer qué es una pregunta de la petición, no del dominio.
+    """
+    from .permissions import visible_obligations
+
+    membership = getattr(request, "membership", None)
+    if membership is None:
+        return agenda
+
+    salida = dict(agenda)
+    for clave in ("overdue", "this_week", "later"):
+        salida[clave] = visible_obligations(agenda[clave], membership)
+    salida["total_amount"] = sum(
+        o.amount or 0
+        for clave in ("overdue", "this_week", "later")
+        for o in salida[clave]
+    )
+    return salida
 
 
 def _visibles(findings, request):
@@ -366,9 +391,23 @@ def responsibilities_view(request):
     lo que no lleva nadie: una obligación de la que no se encarga nadie es la
     que se pasa.
     """
+    from .permissions import visible_obligations
     from .services import responsibilities
 
+    from .models import Party
+
+    membership = getattr(request, "membership", None)
     datos = responsibilities.split(request.household)
+    datos["personas"] = Party.objects.filter(kind=Party.Kind.PERSON)
+    if membership is not None:
+        # Esta pantalla lista lo de todo el mundo: es justo donde más pesa que
+        # un título se vea de más.
+        datos["huerfanas"] = visible_obligations(datos["huerfanas"], membership)
+        for fila in datos["reparto"]:
+            fila["obligaciones"] = visible_obligations(fila["obligaciones"],
+                                                       membership)
+            fila["vencidas"] = visible_obligations(fila["vencidas"], membership)
+            fila["importe"] = sum(o.amount or 0 for o in fila["obligaciones"])
     return render(request, "core/responsibilities.html", datos)
 
 

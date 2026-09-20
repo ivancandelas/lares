@@ -1,0 +1,18 @@
+{% comment %}
+  Pasarle una obligación a alguien, desde donde se está mirando. Se envía al
+  elegir: obligar a pulsar un botón más por cada línea es la clase de fricción
+  que hace que el reparto se quede sin hacer.
+{% endcomment %}
+<form method="post" action="{% url 'core:obligation-assign' o.pk %}">
+  {% csrf_token %}
+  <input type="hidden" name="volver" value="{{ request.path }}">
+  <select name="party" onchange="this.form.submit()"
+          aria-label="Quién se encarga de {{ o.title }}"
+          class="rounded-sm border border-rule bg-white px-2 py-0.5 text-[13px] text-soft focus:border-calm focus:outline-none">
+    <option value="">— quien lleve la cosa</option>
+    {% for p in personas %}
+      <option value="{{ p.pk }}" {% if o.assigned_to_id == p.pk %}selected{% endif %}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button class="text-[13px] text-calm">Asignar</button></noscript>
+</form>

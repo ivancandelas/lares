@@ -82,7 +82,7 @@ def _error(message: str, status: int):
 
 @endpoint()
 def agenda(request):
-    data = week_ahead(request.household)
+    data = _visible(week_ahead(request.household), request)
     return JsonResponse({
         "today": data["today"].isoformat(),
         "overdue": [_obligation(o) for o in data["overdue"]],
@@ -99,7 +99,32 @@ def obligations(request):
         qs = qs.filter(status=status)
     if before := _date(request.GET.get("due_before")):
         qs = qs.filter(due_on__lte=before)
-    return JsonResponse({"results": [_obligation(o) for o in qs[:200]]})
+    from .permissions import visible_obligations
+
+    lista = visible_obligations(qs[:200], getattr(request, "membership", None)) \
+        if getattr(request, "membership", None) else list(qs[:200])
+    return JsonResponse({"results": [_obligation(o) for o in lista]})
+
+
+def _visible(data: dict, request) -> dict:
+    """La API devuelve lo mismo que la pantalla, ni más ni menos.
+
+    Aceptar la sesión del navegador y no medir los ámbitos convertiría
+    `/api/v1/agenda` en la puerta de atrás que ya se cerró una vez.
+    """
+    from .permissions import visible_obligations
+
+    membership = getattr(request, "membership", None)
+    if membership is None:
+        return data
+    salida = dict(data)
+    for clave in ("overdue", "this_week", "later"):
+        salida[clave] = visible_obligations(data[clave], membership)
+    salida["total_amount"] = sum(
+        o.amount or 0 for clave in ("overdue", "this_week", "later")
+        for o in salida[clave]
+    )
+    return salida
 
 
 @endpoint()

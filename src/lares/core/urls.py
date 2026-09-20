@@ -18,6 +18,8 @@ urlpatterns = [
     path("patrimonio/", views.holdings, name="holdings"),
     path("se-debe/", views.owed, name="owed"),
     path("reparto/", views.responsibilities_view, name="responsibilities"),
+    path("o/<uuid:pk>/encargado/", views_crud.obligation_assign,
+         name="obligation-assign"),
     path("hogar/", views_crud.household_members, name="household"),
     path("hogar/datos/", views_crud.household_edit, name="household-edit"),
     path("hogar/bitacora/", views.audit_view, name="audit"),

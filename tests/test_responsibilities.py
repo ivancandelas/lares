@@ -295,3 +295,64 @@ def test_la_pantalla_del_reparto_se_ve(casa, coche, client, django_user_model):
     assert "Mariana" in contenido
     assert "Mazda CX-5" in contenido
     assert "Verificación" in contenido
+
+
+# --- Pasarle una obligación a alguien, desde donde se está mirando ----------
+
+
+@pytest.mark.django_db
+def test_se_le_puede_pasar_una_obligacion_a_otro(casa, coche, client,
+                                                 django_user_model):
+    """Era la mitad de PER-03 que no tenía puerta: se leía y no se podía poner."""
+    luis = _persona(casa, "Luis")
+    user = django_user_model.objects.create_user(
+        username="yo@x.mx", email="yo@x.mx", password="x")
+    client.force_login(user)
+    with use_household(casa):
+        obligacion = _obligacion(casa, coche)
+
+    respuesta = client.post(f"/o/{obligacion.pk}/encargado/",
+                            {"party": luis.pk, "volver": "/reparto/"})
+
+    obligacion.refresh_from_db()
+    assert respuesta.status_code == 302
+    assert respuesta["Location"] == "/reparto/"
+    assert obligacion.assigned_to == luis
+
+
+@pytest.mark.django_db
+def test_se_le_puede_devolver_a_quien_lleve_la_cosa(casa, coche, client,
+                                                    django_user_model):
+    mariana = _persona(casa, "Mariana")
+    luis = _persona(casa, "Luis")
+    user = django_user_model.objects.create_user(
+        username="yo@x.mx", email="yo@x.mx", password="x")
+    client.force_login(user)
+    with use_household(casa):
+        responsibilities.set_responsible(casa, coche, mariana)
+        obligacion = _obligacion(casa, coche, assigned_to=luis)
+
+    client.post(f"/o/{obligacion.pk}/encargado/", {"party": ""})
+
+    obligacion.refresh_from_db()
+    assert obligacion.assigned_to is None
+    with use_household(casa):
+        mapa = responsibilities.responsible_map(casa)
+        [anotada] = responsibilities.annotate([obligacion], mapa)
+    assert anotada.responsible == mariana
+
+
+@pytest.mark.django_db
+def test_no_se_vuelve_a_donde_diga_un_tercero(casa, coche, client,
+                                              django_user_model):
+    """«//otrositio.com» es una dirección absoluta disfrazada de ruta."""
+    user = django_user_model.objects.create_user(
+        username="yo@x.mx", email="yo@x.mx", password="x")
+    client.force_login(user)
+    with use_household(casa):
+        obligacion = _obligacion(casa, coche)
+
+    respuesta = client.post(f"/o/{obligacion.pk}/encargado/",
+                            {"party": "", "volver": "//evil.example/"})
+
+    assert respuesta["Location"] == "/reparto/"

@@ -18,6 +18,7 @@ from lares.core.models import (
     Household,
     Location,
     Membership,
+    Obligation,
     ObligationRule,
     Party,
     User,
@@ -196,3 +197,13 @@ def _seed_care(household):
         if persona and not responsibilities.responsible_of(recurso.as_concrete()):
             responsibilities.set_responsible(household, recurso.as_concrete(),
                                              persona)
+
+    # Y una que este mes lleva otro, para que se vean los dos niveles: lo
+    # permanente es de quien lleva la cosa, lo de una vez se pasa a mano.
+    luis = personas.get("Luis")
+    suelta = Obligation.objects.filter(household=household,
+                                       status=Obligation.Status.PENDING,
+                                       assigned_to__isnull=True).first()
+    if luis and suelta:
+        suelta.assigned_to = luis
+        suelta.save(update_fields=["assigned_to", "updated_at"])

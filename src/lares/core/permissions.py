@@ -32,6 +32,7 @@ AMBITO_DE_RUTA = {
     # así que pesa más que la pantalla desde la que se pide.
     "core:parties": "people",
     "core:responsibilities": "people",
+    "core:obligation-assign": "people",
     "core:contact-points": "people",
     "core:contact-point-delete": "people",
     "core:contacts-vcf": "people",
@@ -136,6 +137,43 @@ def can_open(membership, url_name: str, namespace: str, method: str) -> bool:
     # Mirar no es registrar: el contador y el invitado no escriben.
     return not (method not in ("GET", "HEAD", "OPTIONS")
                 and not membership.can_write)
+
+
+def scope_of_obligation(obligation) -> str:
+    """A qué dominio pertenece un vencimiento.
+
+    Sale de `source`, que ya viene con el nombre del módulo delante:
+    `vehicles.verificacion`, `taxes.monthly`, `finance.card_payment`. Es la
+    misma convención que usan las claves de los huecos, así que se filtra con
+    el mismo criterio y no hay nada nuevo que mantener.
+
+    Las de un pack de jurisdicción llevan `packs.<tipo de recurso>`, y el tipo
+    sí sabe de qué módulo es: el refrendo de un coche es de los coches, aunque
+    la regla venga de un YAML.
+    """
+    prefijo, _, resto = (obligation.source or "").partition(".")
+    if prefijo == "packs" and resto:
+        from .registry import registry
+
+        modelo = registry.resource_kinds.get(resto)
+        if modelo is not None:
+            return modelo._meta.app_label
+    return prefijo or "core"
+
+
+def visible_obligations(obligations, membership) -> list:
+    """Los vencimientos que esta persona puede ver.
+
+    Un título ya cuenta de más: «Tarjeta ****9876, pago mínimo» en la pantalla
+    de alguien que no ve el dinero es una fuga aunque no pueda abrir nada. Es
+    exactamente el mismo argumento que ya se aplicaba al menú y a los huecos
+    del tablero; lo que faltaba era aplicarlo a la lista de lo que vence.
+    """
+    permitidos = visible_scopes(membership)
+    if permitidos is None:
+        return list(obligations)
+    return [o for o in obligations
+            if scope_of_obligation(o) in permitidos]
 
 
 def visible_scopes(membership) -> set | None:

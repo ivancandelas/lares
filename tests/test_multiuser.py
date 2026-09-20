@@ -526,3 +526,89 @@ def test_los_datos_del_hogar_son_de_quien_administra(multi, casa, client):
     hijo = _miembro(casa, "hijo@x.mx", Membership.Role.ADULT)
 
     assert _sesion(client, hijo).get("/hogar/datos/").status_code == 403
+
+
+# --- Los títulos también cuentan de más -------------------------------------
+
+
+def _vencimiento_de_dinero(casa):
+    """Una obligación del módulo de dinero, con un título que ya dice de más."""
+    import datetime as _dt
+
+    from lares.core.models import Obligation
+    from lares.core.scoping import use_household
+
+    with use_household(casa):
+        return Obligation.objects.create(
+            household=casa, dedupe_key="tarjeta-1", source="finance.card_payment",
+            title="Tarjeta ****9876, pago mínimo",
+            due_on=HOY + _dt.timedelta(days=3), amount=4200,
+        )
+
+
+@pytest.mark.django_db
+def test_el_tablero_no_enseña_vencimientos_de_lo_que_no_ve(multi, casa, client):
+    _vencimiento_de_dinero(casa)
+    hijo = _miembro(casa, "hijo@x.mx", Membership.Role.MEMBER, scopes=["tasks"])
+
+    html = _sesion(client, hijo).get("/").content.decode()
+
+    assert "9876" not in html
+
+
+@pytest.mark.django_db
+def test_el_reparto_tampoco(multi, casa, client):
+    """Es la pantalla que lista lo de todo el mundo: ahí pesa más."""
+    _vencimiento_de_dinero(casa)
+    hijo = _miembro(casa, "hijo@x.mx", Membership.Role.MEMBER,
+                    scopes=["tasks", "people"])
+
+    html = _sesion(client, hijo).get("/reparto/").content.decode()
+
+    assert "9876" not in html
+
+
+@pytest.mark.django_db
+def test_la_api_devuelve_lo_mismo_que_la_pantalla(multi, casa, client):
+    """Aceptar la sesión y no medir los ámbitos ya fue una puerta de atrás una vez."""
+    import json
+
+    _vencimiento_de_dinero(casa)
+    hijo = _miembro(casa, "hijo@x.mx", Membership.Role.MEMBER, scopes=["tasks"])
+    sesion = _sesion(client, hijo)
+
+    agenda = json.loads(sesion.get("/api/v1/agenda").content)
+    titulos = [o["title"] for clave in ("overdue", "this_week", "later")
+               for o in agenda[clave]]
+
+    assert all("9876" not in t for t in titulos)
+    assert agenda["total_amount"] == 0
+
+
+@pytest.mark.django_db
+def test_quien_ve_el_dinero_lo_sigue_viendo(multi, casa, client):
+    _vencimiento_de_dinero(casa)
+    pareja = _miembro(casa, "pareja@x.mx", Membership.Role.ADULT,
+                      scopes=["finance", "people"])
+    sesion = _sesion(client, pareja)
+
+    assert "9876" in sesion.get("/").content.decode()
+    assert "9876" in sesion.get("/reparto/").content.decode()
+
+
+@pytest.mark.django_db
+def test_un_vencimiento_de_un_pack_es_del_modulo_de_su_recurso(casa):
+    """El refrendo del coche es de los coches, aunque la regla venga de un YAML."""
+    import datetime as _dt
+
+    from lares.core.models import Obligation
+    from lares.core.permissions import scope_of_obligation
+    from lares.core.scoping import use_household
+
+    with use_household(casa):
+        refrendo = Obligation.objects.create(
+            household=casa, dedupe_key="refrendo-1", source="packs.vehicle",
+            title="Refrendo", due_on=HOY + _dt.timedelta(days=5),
+        )
+
+    assert scope_of_obligation(refrendo) == "vehicles"

@@ -244,6 +244,42 @@ def resource_lend(request, pk):
     })
 
 
+def obligation_assign(request, pk):
+    """«Esta vez le toca a otro.»
+
+    Es la mitad puntual de las responsabilidades: lo permanente se dice en la
+    ficha de la cosa, pero un mes concreto lo puede llevar otra persona sin que
+    eso cambie de quién es el coche.
+    """
+    from .models import Obligation
+
+    obligacion = get_object_or_404(Obligation, pk=pk)
+    elegido = request.POST.get("party")
+    obligacion.assigned_to = (get_object_or_404(Party, pk=elegido)
+                              if elegido else None)
+    obligacion.save(update_fields=["assigned_to", "updated_at"])
+
+    messages.success(
+        request,
+        f"«{obligacion.title}» es de {obligacion.assigned_to}." if elegido
+        else f"«{obligacion.title}» vuelve a quien se encargue de la cosa.")
+    return redirect(_de_vuelta(request, "core:responsibilities"))
+
+
+def _de_vuelta(request, por_defecto: str) -> str:
+    """A dónde volver tras una acción, sin dejar que lo elija un tercero.
+
+    El formulario dice de qué pantalla viene para no mandar a todo el mundo al
+    reparto. Un campo del POST lo puede escribir cualquiera, asi que solo se
+    aceptan rutas de esta instalacion: `//otrositio.com` es una direccion
+    absoluta disfrazada de ruta.
+    """
+    destino = request.POST.get("volver") or ""
+    if destino.startswith("/") and not destino.startswith("//"):
+        return destino
+    return por_defecto
+
+
 def resource_care(request, pk):
     """Quién se encarga de esto. Vacío lo deja sin dueño, que es un dato."""
     from .services import responsibilities

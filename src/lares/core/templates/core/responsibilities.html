@@ -6,8 +6,8 @@
 <h1 class="text-2xl font-light tracking-tight">Quién se encarga de qué</h1>
 <p class="mt-1 max-w-[58ch] text-sm text-soft">
   El tablero dice qué hay que hacer. Esta pantalla dice de quién es. Lo
-  permanente se pone en la ficha de cada cosa; para una vez concreta, se puede
-  asignar la obligación suelta.
+  permanente se pone en la ficha de cada cosa; lo de una vez, aquí mismo: si
+  este mes le toca a otro, se cambia sin tocar de quién es el coche.
 </p>
 
 {% if huerfanas %}
@@ -18,11 +18,14 @@
   </p>
   <ul class="mt-2 divide-y divide-rule border-y border-rule">
     {% for o in huerfanas|slice:":12" %}
-      <li class="flex items-baseline justify-between gap-3 py-2">
+      <li class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 py-2">
         <span class="text-[15px]">{{ o.title }}</span>
-        <span class="shrink-0 text-[13px] {% if o.urgency == 'overdue' %}text-overdue{% elif o.urgency == 'soon' %}text-soon{% else %}text-soft{% endif %}">
-          {{ o.due_on|date:"d/m/Y" }}
-        </span>
+        <div class="flex shrink-0 items-center gap-2">
+          {% include "core/_assign.html" with o=o personas=personas %}
+          <span class="text-[13px] {% if o.urgency == 'overdue' %}text-overdue{% elif o.urgency == 'soon' %}text-soon{% else %}text-soft{% endif %}">
+            {{ o.due_on|date:"d/m/Y" }}
+          </span>
+        </div>
       </li>
     {% endfor %}
   </ul>
@@ -50,13 +53,16 @@
 
   <ul class="mt-2 divide-y divide-rule border-y border-rule">
     {% for o in r.obligaciones|slice:":8" %}
-      <li class="flex items-baseline justify-between gap-3 py-2">
+      <li class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 py-2">
         <span class="text-[15px]">{{ o.title }}
-          {% if o.assigned_to %}<span class="text-[13px] text-soft">· esta vez le toca a él/ella</span>{% endif %}
+          {% if o.assigned_to %}<span class="text-[13px] text-soft">· se la pasaron a mano</span>{% endif %}
         </span>
-        <span class="shrink-0 text-[13px] {% if o.urgency == 'overdue' %}text-overdue{% elif o.urgency == 'soon' %}text-soon{% else %}text-soft{% endif %}">
-          {{ o.due_on|date:"d/m/Y" }}
-        </span>
+        <div class="flex shrink-0 items-center gap-2">
+          {% include "core/_assign.html" with o=o personas=personas %}
+          <span class="text-[13px] {% if o.urgency == 'overdue' %}text-overdue{% elif o.urgency == 'soon' %}text-soon{% else %}text-soft{% endif %}">
+            {{ o.due_on|date:"d/m/Y" }}
+          </span>
+        </div>
       </li>
     {% empty %}
       <li class="py-2 text-[15px] text-soft">Nada pendiente suyo.</li>
