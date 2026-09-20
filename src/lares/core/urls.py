@@ -8,6 +8,7 @@ from . import (
     views_contacts,
     views_crud,
     views_inbox,
+    views_succession,
 )
 
 app_name = "core"
@@ -16,7 +17,9 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("patrimonio/", views.holdings, name="holdings"),
     path("se-debe/", views.owed, name="owed"),
+    path("reparto/", views.responsibilities_view, name="responsibilities"),
     path("hogar/", views_crud.household_members, name="household"),
+    path("hogar/datos/", views_crud.household_edit, name="household-edit"),
     path("hogar/invitar/", views_crud.member_invite, name="member-invite"),
     path("hogar/miembro/<uuid:pk>/", views_crud.member_edit, name="member-edit"),
     path("hogar/miembro/<uuid:pk>/quitar/", views_crud.member_remove,
@@ -72,6 +75,24 @@ urlpatterns = [
     path("contacto/<uuid:pk>/quitar/", views_contacts.contact_point_delete,
          name="contact-point-delete"),
 
+    path("sucesion/", views_succession.succession_home, name="succession"),
+    path("sucesion/nuevo/", views_succession.contact_new, name="successor-new"),
+    path("sucesion/sigo-aqui/", views_succession.im_here, name="succession-here"),
+    path("sucesion/<uuid:pk>/editar/", views_succession.contact_edit,
+         name="successor-edit"),
+    path("sucesion/<uuid:pk>/alternar/", views_succession.contact_toggle,
+         name="successor-toggle"),
+    path("sucesion/<uuid:pk>/vista/", views_succession.package_preview,
+         name="succession-preview"),
+    path("sucesion/<str:token>/", views_succession.package_view,
+         name="succession-package"),
+    path("sucesion/<str:token>/paquete.zip", views_succession.package_download,
+         name="succession-download"),
+    path("sucesion/<str:token>/paquete.json", views_succession.package_json,
+         name="succession-json"),
+    path("sucesion/<str:token>/d/<uuid:pk>/", views_succession.package_document,
+         name="succession-document"),
+
     path("compartido/", views_contacts.shares, name="shares"),
     path("compartido/nuevo/", views_contacts.share_new, name="share-new"),
     path("compartido/<uuid:pk>/revocar/", views_contacts.share_revoke,
@@ -81,6 +102,7 @@ urlpatterns = [
     path("personas/<uuid:pk>/", views_crud.party_detail, name="party-detail"),
     path("personas/<uuid:pk>/editar/", views_crud.party_edit, name="party-edit"),
     path("r/<uuid:pk>/prestar/", views_crud.resource_lend, name="resource-lend"),
+    path("r/<uuid:pk>/encargado/", views_crud.resource_care, name="resource-care"),
     path("r/<uuid:pk>/devolver/", views_crud.resource_return, name="resource-return"),
 
     path("documentos/nuevo/", views_crud.document_new, name="document-new"),

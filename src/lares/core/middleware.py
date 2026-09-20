@@ -25,6 +25,7 @@ class HouseholdMiddleware:
         household, membership = self._resolve(request)
         request.household = household
         request.membership = membership
+        self._touch(request, household)
         token = set_current_household(household)
         try:
             return self.get_response(request)
@@ -62,6 +63,32 @@ class HouseholdMiddleware:
                 "Tu acceso a este hogar no llega hasta aquí."
             )
         return None
+
+    def _touch(self, request, household):
+        """Deja constancia de que hoy entraste.
+
+        Lo usa el interruptor de sucesion para medir el silencio del titular.
+        `last_login` no vale: solo cambia al iniciar sesion, y quien no cierra
+        nunca puede llevar meses usando el sistema con un `last_login` viejo, lo
+        que liberaria un paquete de sucesion estando perfectamente vivo.
+
+        Una escritura por persona y dia: la fecha se recuerda en la sesion.
+        """
+        import datetime as dt
+
+        if household is None:
+            return
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return
+
+        hoy = dt.date.today()
+        if request.session.get("seen_on") == hoy.isoformat():
+            return
+        Membership.objects.filter(household=household, user=user).update(
+            last_seen_on=hoy
+        )
+        request.session["seen_on"] = hoy.isoformat()
 
     def _resolve(self, request):
         if settings.TENANCY_MODE == "single":

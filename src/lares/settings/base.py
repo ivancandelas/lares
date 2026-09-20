@@ -128,6 +128,11 @@ LOGOUT_REDIRECT_URL = "/entrar/"
 vars().update(env.email_url("LARES_EMAIL_URL", default="consolemail://"))
 DEFAULT_FROM_EMAIL = env("LARES_FROM_EMAIL", default="lares@localhost")
 
+# Como se llega a esta instalacion desde fuera. Hace falta para los correos que
+# llevan enlace -el paquete de sucesion- porque una tarea de fondo no tiene
+# peticion de la que sacar el dominio.
+SITE_URL = env("LARES_SITE_URL", default="http://localhost:8000")
+
 # --- Cola de trabajos -------------------------------------------------------
 CELERY_BROKER_URL = env("LARES_REDIS_URL", default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
@@ -153,6 +158,12 @@ CELERY_BEAT_SCHEDULE = {
     "traer-de-los-conectores": {
         "task": "lares.core.tasks.poll_connectors",
         "schedule": crontab(minute="*/15"),
+    },
+    "revisar-sucesion": {
+        "task": "lares.core.tasks.review_succession",
+        # Una vez al dia basta: lo que mide son dias de silencio, y correrlo
+        # mas seguido no adelanta ninguna liberacion ni un minuto.
+        "schedule": crontab(hour=4, minute=20),
     },
 }
 

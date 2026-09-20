@@ -31,6 +31,7 @@ AMBITO_DE_RUTA = {
     # Personas y lo que se comparte. Un vCard saca la agenda entera de golpe,
     # así que pesa más que la pantalla desde la que se pide.
     "core:parties": "people",
+    "core:responsibilities": "people",
     "core:contact-points": "people",
     "core:contact-point-delete": "people",
     "core:contacts-vcf": "people",
@@ -50,10 +51,19 @@ AMBITO_DE_RUTA = {
     "core:connector-run": "admin",
     "core:api-webhooks": "admin",
     "core:household": "admin",
+    "core:household-edit": "admin",
     "core:member-invite": "admin",
     "core:member-edit": "admin",
     "core:member-remove": "admin",
     "core:calendar-settings": "admin",
+    # Sucesión: decide a quién se le abre todo el hogar el peor día. Eso lo
+    # toca quien administra, y nadie más.
+    "core:succession": "admin",
+    "core:successor-new": "admin",
+    "core:successor-edit": "admin",
+    "core:successor-toggle": "admin",
+    "core:succession-here": "admin",
+    "core:succession-preview": "admin",
 }
 
 # Rutas que se abren con un token y no con una membresía. Cada una valida el
@@ -70,6 +80,10 @@ LIBRES = {
     "core:service-worker",
     "core:shared",
     "core:shared-vcf",
+    "core:succession-package",
+    "core:succession-download",
+    "core:succession-json",
+    "core:succession-document",
 }
 
 # La API devuelve lo mismo que las pantallas, así que se mide igual. Va por

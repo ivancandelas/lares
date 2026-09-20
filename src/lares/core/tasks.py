@@ -7,7 +7,7 @@ from celery import shared_task
 
 from .connectors import run_connector
 from .models import Connector, Household
-from .services import checks, notify, obligations, webhooks
+from .services import checks, notify, obligations, succession, webhooks
 
 
 @shared_task
@@ -52,3 +52,16 @@ def poll_connectors():
         result = run_connector(connector)
         total[str(connector.pk)] = {"new": result.new, "error": result.error}
     return total
+
+
+@shared_task
+def review_succession():
+    """Avisa, libera o rearma los accesos diferidos.
+
+    Es idempotente como las demas: lo que decide son dias de silencio, asi que
+    correrla dos veces el mismo dia no adelanta ni repite nada.
+    """
+    return {
+        str(h.pk): succession.review(h)
+        for h in Household.objects.all()
+    }

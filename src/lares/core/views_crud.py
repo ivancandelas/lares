@@ -107,6 +107,8 @@ def resource_edit(request, pk):
 def resource_detail(request, pk):
     from django.contrib.contenttypes.models import ContentType
 
+    from .services import responsibilities
+
     base = get_object_or_404(Resource, pk=pk)
     obj = base.as_concrete()
     ctype = ContentType.objects.get_for_model(obj.__class__)
@@ -129,6 +131,7 @@ def resource_detail(request, pk):
         ],
         "enlaces": registry.links_for(obj),
         "prestado_a": related.borrower_of(obj),
+        "responsable": responsibilities.responsible_of(obj),
         "facts": obj.facts(),
         "documentos": documentos,
         "obligaciones": pendientes,
@@ -238,6 +241,30 @@ def resource_lend(request, pk):
     return render(request, "core/lend.html", {
         "obj": obj,
         "personas": Party.objects.filter(kind=Party.Kind.PERSON),
+    })
+
+
+def resource_care(request, pk):
+    """Quién se encarga de esto. Vacío lo deja sin dueño, que es un dato."""
+    from .services import responsibilities
+
+    base = get_object_or_404(Resource, pk=pk)
+    obj = base.as_concrete()
+
+    if request.method == "POST":
+        elegido = request.POST.get("party")
+        persona = get_object_or_404(Party, pk=elegido) if elegido else None
+        responsibilities.set_responsible(request.household, obj, persona)
+        messages.success(
+            request,
+            f"{obj} es cosa de {persona}." if persona
+            else f"{obj} se queda sin nadie a cargo.")
+        return redirect("core:resource-detail", pk=obj.pk)
+
+    return render(request, "core/care.html", {
+        "obj": obj,
+        "personas": Party.objects.filter(kind=Party.Kind.PERSON),
+        "actual": responsibilities.responsible_of(obj),
     })
 
 
@@ -549,6 +576,26 @@ def household_members(request):
         "yo": yo,
         "puedo_administrar": (yo.can_admin if yo
                               else settings.TENANCY_MODE == "single"),
+    })
+
+
+def household_edit(request):
+    """Cambiar el nombre del hogar y dónde vive."""
+    from .forms import HouseholdForm
+
+    # Sin `_asegurar_titular`: cambiar el nombre no es invitar a nadie, y no
+    # hay por qué crear una membresía como efecto secundario de abrir una
+    # pantalla. Quién puede entrar aquí ya lo decide el middleware.
+    form = HouseholdForm(request.POST or None, instance=request.household,
+                         household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Guardado.")
+        return redirect("core:household")
+
+    return render(request, "core/form.html", {
+        "form": form, "title": "Datos del hogar", "submit": "Guardar",
+        "cancel_url": "core:household",
     })
 
 

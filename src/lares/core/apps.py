@@ -23,7 +23,7 @@ class CoreConfig(AppConfig):
             DocumentExpiryProvider,
             UserRuleProvider,
         )
-        from .registry import NavItem, registry
+        from .registry import LinkRole, NavItem, registry
 
         registry.nav(
             NavItem("Bandeja", "core:inbox", icon="inbox", order=10, section="main"),
@@ -37,8 +37,12 @@ class CoreConfig(AppConfig):
                     section="money"),
             NavItem("Personas", "core:parties", icon="users", order=10,
                     section="more"),
+            NavItem("Quién se encarga de qué", "core:responsibilities",
+                    icon="users", order=12, section="more"),
             NavItem("Qué tengo compartido", "core:shares", icon="link",
                     order=28, section="more"),
+            NavItem("Si me pasa algo", "core:succession", icon="shield",
+                    order=29, section="more"),
             NavItem("Conectores", "core:connectors", icon="plug", order=20,
                     section="more"),
             NavItem("Calendario", "core:calendar-settings", icon="calendar",
@@ -46,6 +50,15 @@ class CoreConfig(AppConfig):
             NavItem("Por dónde seguir", "core:onboarding", icon="compass", order=30,
                     section="more"),
         )
+        # Quién se encarga de qué. Es una arista y no una columna porque es un
+        # papel que alguien juega frente a una cosa -como "propietario" o
+        # "asegurado por"- y porque tiene historia: quién se encargaba de la
+        # casa en 2025 se sigue pudiendo leer.
+        registry.link_role(LinkRole(
+            key="cared_by", label="A cargo de",
+            inverse_key="cares_for", inverse_label="Se encarga de",
+        ))
+
         from .checks import DuplicateRecurring
         registry.check(DuplicateRecurring)
 

@@ -356,3 +356,17 @@ def _render_widgets(household, request):
         rendered.append({"key": widget.key, "label": widget.label, "size": widget.size,
                          "html": html})
     return rendered
+
+
+def responsibilities_view(request):
+    """Quién se encarga de qué.
+
+    La pregunta que contesta no es «qué hay que hacer» -eso es el tablero- sino
+    **de quién es**. Por eso lo primero que se ve es el reparto, y lo segundo
+    lo que no lleva nadie: una obligación de la que no se encarga nadie es la
+    que se pasa.
+    """
+    from .services import responsibilities
+
+    datos = responsibilities.split(request.household)
+    return render(request, "core/responsibilities.html", datos)

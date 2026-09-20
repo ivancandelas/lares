@@ -1,37 +1,6 @@
 {% extends "base.html" %}
 {% load money %}
-{% block title %}Patrimonio - {{ product_name }}{% if ajenos %}
-  <h2 class="mt-12 text-sm font-medium">Administras, pero no son tuyos</h2>
-  <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
-    Generan gasto, documentos y obligaciones. No suman al patrimonio porque no
-    son tuyos.
-  </p>
-  <ul class="mt-2 divide-y divide-rule border-y border-rule">
-    {% for r in ajenos %}
-      <li class="flex items-baseline justify-between gap-4 py-3">
-        <a href="{% url 'core:resource-detail' r.pk %}" class="text-[15px] hover:text-calm">{{ r.name }}</a>
-        <span class="shrink-0 text-[13px] text-soft">{{ r.kind }}</span>
-      </li>
-    {% endfor %}
-  </ul>
-{% endif %}
-
-{% if idos %}
-  <h2 class="mt-12 text-sm font-medium text-soft">Ya no los tienes</h2>
-  <p class="mt-1 max-w-[52ch] text-[13px] text-soft">
-    No se borran: se quedan con su historia, y lo que se vendió ya no cuenta en
-    tu patrimonio.
-  </p>
-  <ul class="mt-2 divide-y divide-rule border-y border-rule">
-    {% for r in idos %}
-      <li class="flex items-baseline justify-between gap-4 py-3 text-soft">
-        <a href="{% url 'core:resource-detail' r.pk %}" class="text-[15px] hover:text-calm">{{ r.name }}</a>
-        <span class="shrink-0 text-[13px]">{{ r.disposal_line }}</span>
-      </li>
-    {% endfor %}
-  </ul>
-{% endif %}
-{% endblock %}
+{% block title %}Patrimonio - {{ product_name }}{% endblock %}
 
 {% block content %}
 <div class="flex items-baseline justify-between gap-4">

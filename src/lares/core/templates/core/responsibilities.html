@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Quién se encarga de qué - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Quién se encarga de qué</h1>
+<p class="mt-1 max-w-[58ch] text-sm text-soft">
+  El tablero dice qué hay que hacer. Esta pantalla dice de quién es. Lo
+  permanente se pone en la ficha de cada cosa; para una vez concreta, se puede
+  asignar la obligación suelta.
+</p>
+
+{% if huerfanas %}
+  <h2 class="mt-8 text-sm font-medium text-soon">No se encarga nadie</h2>
+  <p class="mt-1 max-w-[58ch] text-[13px] text-soft">
+    {{ huerfanas|length }} cosa{{ huerfanas|length|pluralize:"s" }} por hacer sin
+    dueño. No es que falte un dato: es la que se pasa.
+  </p>
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for o in huerfanas|slice:":12" %}
+      <li class="flex items-baseline justify-between gap-3 py-2">
+        <span class="text-[15px]">{{ o.title }}</span>
+        <span class="shrink-0 text-[13px] {% if o.urgency == 'overdue' %}text-overdue{% elif o.urgency == 'soon' %}text-soon{% else %}text-soft{% endif %}">
+          {{ o.due_on|date:"d/m/Y" }}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+  {% if huerfanas|length > 12 %}
+    <p class="mt-1 text-[13px] text-soft">y {{ huerfanas|length|add:"-12" }} más.</p>
+  {% endif %}
+{% endif %}
+
+{% for r in reparto %}
+  <h2 class="mt-10 flex flex-wrap items-baseline justify-between gap-3 text-sm font-medium">
+    <a href="{% url 'core:party-detail' r.party.pk %}" class="hover:text-calm">{{ r.party.name }}</a>
+    <span class="text-[13px] font-normal {% if r.vencidas %}text-overdue{% else %}text-soft{% endif %}">
+      {{ r.obligaciones|length }} pendiente{{ r.obligaciones|length|pluralize:"s" }}
+      {% if r.vencidas %}· {{ r.vencidas|length }} vencida{{ r.vencidas|length|pluralize:"s" }}{% endif %}
+      {% if r.importe %}· {% money r.importe %}{% endif %}
+    </span>
+  </h2>
+
+  {% if r.cosas %}
+    <p class="mt-1 text-[13px] text-soft">
+      A su cargo:
+      {% for c in r.cosas %}<a href="{% url 'core:resource-detail' c.pk %}" class="text-calm hover:underline">{{ c.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+    </p>
+  {% endif %}
+
+  <ul class="mt-2 divide-y divide-rule border-y border-rule">
+    {% for o in r.obligaciones|slice:":8" %}
+      <li class="flex items-baseline justify-between gap-3 py-2">
+        <span class="text-[15px]">{{ o.title }}
+          {% if o.assigned_to %}<span class="text-[13px] text-soft">· esta vez le toca a él/ella</span>{% endif %}
+        </span>
+        <span class="shrink-0 text-[13px] {% if o.urgency == 'overdue' %}text-overdue{% elif o.urgency == 'soon' %}text-soon{% else %}text-soft{% endif %}">
+          {{ o.due_on|date:"d/m/Y" }}
+        </span>
+      </li>
+    {% empty %}
+      <li class="py-2 text-[15px] text-soft">Nada pendiente suyo.</li>
+    {% endfor %}
+  </ul>
+  {% if r.obligaciones|length > 8 %}
+    <p class="mt-1 text-[13px] text-soft">y {{ r.obligaciones|length|add:"-8" }} más.</p>
+  {% endif %}
+{% empty %}
+  <p class="mt-8 max-w-[58ch] text-[15px] text-soft">
+    Nadie se encarga de nada todavía. Entra en la ficha de un coche o de la
+    casa y di de quién es: lo que venza de esa cosa saldrá aquí a su nombre.
+  </p>
+{% endfor %}
+
+{% if sin_dueno %}
+  <h2 class="mt-10 text-sm font-medium">Cosas sin nadie a cargo</h2>
+  <p class="mt-1 text-[13px] text-soft">
+    {% for c in sin_dueno|slice:":15" %}<a href="{% url 'core:resource-care' c.pk %}" class="text-calm hover:underline">{{ c.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if sin_dueno|length > 15 %} y {{ sin_dueno|length|add:"-15" }} más{% endif %}.
+  </p>
+{% endif %}
+{% endblock %}

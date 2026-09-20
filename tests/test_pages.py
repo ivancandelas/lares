@@ -206,3 +206,33 @@ def test_todo_formulario_sabe_agruparse(sesion):
         f"Estos formularios se renderizarían vacíos: {sin_groups}. "
         "Heredan de `GroupedForm` o no los pinta `core/form.html`."
     )
+
+
+@pytest.mark.django_db
+def test_ninguna_pantalla_mete_html_en_el_titulo(sesion, household):
+    """El `<title>` es texto: lo que se cuele ahí se lee en la pestaña.
+
+    La ficha de recurso tenía el bloque `title` sin cerrar, así que se tragaba
+    las previsualizaciones y las pestañas de los módulos: salían dentro del
+    título *y* otra vez en la página, renderizadas dos veces. Desde fuera es un
+    200 impecable.
+    """
+    import re
+
+    from django.core.management import call_command
+
+    from lares.core.models import Resource
+    from lares.core.scoping import use_household
+
+    call_command("seed_demo", name=household.name, verbosity=0)
+    with use_household(household):
+        recursos = list(Resource.objects.all())
+
+    rutas = [reverse(item.url_name) for item in registry.nav_items]
+    rutas += [reverse("core:resource-detail", args=[r.pk]) for r in recursos]
+
+    for ruta in rutas:
+        html = sesion.get(ruta).content.decode()
+        titulo = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
+        assert "<" not in titulo, f"{ruta}: hay marcado dentro del <title>"
+        assert len(titulo) < 120, f"{ruta}: el título son {len(titulo)} caracteres"

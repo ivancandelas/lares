@@ -1,0 +1,1 @@
+Sigues sin entrar: {{ contacto.who }} recibirá tu paquete el {{ contacto.releases_on|date:"d/m/Y" }}

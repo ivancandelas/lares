@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Si me pasa algo - {{ product_name }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+  <h1 class="text-2xl font-light tracking-tight">Si me pasa algo</h1>
+  <a href="{% url 'core:successor-new' %}"
+     class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Añadir a alguien</a>
+</div>
+<p class="mt-1 max-w-[58ch] text-sm text-soft">
+  Quién recibe qué si dejas de entrar. No es el sistema entero: es lo que un
+  tercero necesita para hacerse cargo. Antes de liberar nada se te avisa, y
+  volver a entrar lo cancela.
+</p>
+
+{% if abiertos %}
+  <div class="mt-6 rounded-sm border border-soon bg-white px-4 py-3">
+    <p class="text-[15px]">
+      {% if silencio %}Llevas {{ silencio }} día{{ silencio|pluralize }} sin que entre
+      nadie que administre este hogar.{% else %}Hay accesos abiertos.{% endif %}
+    </p>
+    <form method="post" action="{% url 'core:succession-here' %}" class="mt-2">
+      {% csrf_token %}
+      <button class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">
+        Sigo aquí
+      </button>
+    </form>
+    <p class="mt-2 text-[13px] text-soft">
+      Cancela los avisos y revoca lo que se haya liberado.
+    </p>
+  </div>
+{% endif %}
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for c in contactos %}
+    <li class="py-4" x-data="{ copiado: false }">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[15px] {% if c.state == 'off' %}text-soft line-through{% endif %}">
+            {{ c.who }}{% if c.relationship %} <span class="text-[13px] text-soft">· {{ c.relationship }}</span>{% endif %}
+          </div>
+          <div class="text-[13px] {% if c.state == 'released' %}text-overdue{% elif c.state == 'warned' %}text-soon{% else %}text-soft{% endif %}">
+            {{ c.state_label }}{% if c.hits %}, abierto {{ c.hits }} vez{{ c.hits|pluralize:"es" }}{% endif %}
+          </div>
+          <div class="text-[13px] text-soft">
+            Recibe: {% if c.sections %}{{ c.section_labels|join:", "|lower }}{% else %}el paquete completo{% endif %}
+          </div>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          {% if c.is_live %}
+            {% url 'core:succession-package' c.token as enlace %}
+            <button type="button"
+                    @click="navigator.clipboard.writeText(window.location.origin + '{{ enlace }}'); copiado = true; setTimeout(() => copiado = false, 2000)"
+                    class="rounded-sm border border-rule px-2.5 py-1 text-[13px] text-soft hover:border-calm hover:text-calm">
+              <span x-text="copiado ? 'Copiado' : 'Copiar enlace'">Copiar enlace</span>
+            </button>
+          {% endif %}
+        </div>
+      </div>
+      <div class="mt-2 flex flex-wrap gap-3 text-[13px]">
+        <a href="{% url 'core:succession-preview' c.pk %}" class="text-calm hover:underline">Ver lo que recibirá</a>
+        <a href="{% url 'core:successor-edit' c.pk %}" class="text-calm hover:underline">Cambiar</a>
+        <form method="post" action="{% url 'core:successor-toggle' c.pk %}">
+          {% csrf_token %}
+          <button class="text-soft hover:text-overdue">
+            {% if c.state == 'off' %}Volver a armar{% else %}Desactivar{% endif %}
+          </button>
+        </form>
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-4 text-[15px] text-soft">
+      No hay nadie. Si te pasa algo, lo que sabes de este hogar se va contigo:
+      qué pólizas existen, dónde están las escrituras y a quién hay que llamar.
+    </li>
+  {% endfor %}
+</ul>
+
+<h2 class="mt-10 text-sm font-medium">Cómo funciona</h2>
+<ol class="mt-2 max-w-[58ch] list-decimal space-y-1 pl-5 text-sm text-soft">
+  <li>Se cuentan los días sin que entre nadie que administre el hogar.
+    {% if ultimo %}El último fue el {{ ultimo|date:"j \d\e F \d\e Y"|lower }}.{% endif %}</li>
+  <li>Al llegar al plazo te avisamos a ti, no al contacto. Todavía no hay nada
+    que entregar y no hace falta preocupar a nadie.</li>
+  <li>Si sigue el silencio pasada la ventana de gracia, se libera el paquete y
+    le llega el enlace.</li>
+  <li>Si vuelves a entrar, el enlace deja de funcionar. Quien vuelve está vivo.</li>
+</ol>
+<p class="mt-3 max-w-[58ch] text-[13px] text-soft">
+  El enlace es de solo lectura y cada apertura queda contada. Los documentos
+  marcados como privados o secretos se nombran, pero no se entregan.
+</p>
+{% endblock %}

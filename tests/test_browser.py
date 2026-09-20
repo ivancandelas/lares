@@ -126,3 +126,64 @@ def test_la_pagina_no_lanza_errores_de_javascript(page):
     page.wait_for_timeout(300)
 
     assert errores == []
+
+
+@pytest.fixture
+def paquete_liberado():
+    """Un paquete ya liberado, creado ANTES de que arranque el navegador.
+
+    La ORM no se puede tocar desde el cuerpo de estas pruebas: el contexto de
+    Playwright deja un bucle de eventos vivo en el hilo y Django lo rechaza. En
+    una fixture que va delante de `page` no hay bucle todavia.
+    """
+    from lares.core.models import ContactPoint, EmergencyContact, Household, Party
+    from lares.core.scoping import use_household
+    from lares.core.services import succession
+
+    casa, _ = Household.objects.get_or_create(slug="casa",
+                                              defaults={"name": "Casa"})
+    with use_household(casa):
+        gnp = Party.objects.create(household=casa, name="Aseguradora GNP",
+                                   kind=Party.Kind.ORGANIZATION)
+        ContactPoint.objects.create(household=casa, party=gnp,
+                                    channel=ContactPoint.Channel.PHONE,
+                                    value="800 400 9000")
+        contacto = EmergencyContact.objects.create(
+            household=casa, name="Ana", email="ana@x.mx",
+            relationship="hermana",
+            note="La caja fuerte está en el clóset de arriba.")
+        succession.release(contacto)
+    return contacto
+
+
+def test_la_pantalla_de_sucesion_se_pinta_sin_errores(paquete_liberado, page,
+                                                      live_server):
+    """Lleva Alpine para copiar el enlace: un fallo suyo no se ve desde Django."""
+    errores = []
+    page.on("pageerror", lambda e: errores.append(str(e)))
+    base = live_server.url.replace("127.0.0.1", "localhost")
+    page.goto(f"{base}/sucesion/", wait_until="networkidle")
+
+    assert "Ana" in page.content()
+    assert page.locator("button", has_text="Copiar enlace").is_visible()
+    assert errores == []
+
+
+def test_el_paquete_se_ve_sin_sesion(paquete_liberado, page, live_server):
+    """Quien lo abre no tiene cuenta, y entra desde el teléfono."""
+    errores = []
+    page.on("pageerror", lambda e: errores.append(str(e)))
+    base = live_server.url.replace("127.0.0.1", "localhost")
+    page.set_viewport_size({"width": 390, "height": 780})
+    page.goto(f"{base}/sucesion/{paquete_liberado.token}/",
+              wait_until="networkidle")
+
+    contenido = page.content()
+    assert "La caja fuerte" in contenido
+    assert "Aseguradora GNP" in contenido
+    # Nada del armazón: ni menú, ni búsqueda, ni salir.
+    assert page.locator("nav").count() == 0
+    # Y no se sale de la pantalla en un teléfono.
+    assert page.evaluate(
+        "document.documentElement.scrollWidth <= window.innerWidth + 1")
+    assert errores == []

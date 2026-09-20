@@ -24,6 +24,7 @@ from .obligations import Obligation, ObligationRule, Reminder
 from .party import ContactPoint, Party
 from .resource import Location, Resource
 from .sharing import Share
+from .succession import EmergencyContact
 from .tagging import Tag, TaggedItem
 from .tenancy import Household, Membership, User
 
@@ -38,6 +39,6 @@ __all__ = [
     "Event", "lares_event",
     "ApiKey", "Webhook", "WebhookDelivery",
     "InboxItem", "Suggestion", "Connector",
-    "Tag", "TaggedItem", "Share",
+    "Tag", "TaggedItem", "Share", "EmergencyContact",
     "Account", "Entry", "Posting",
 ]

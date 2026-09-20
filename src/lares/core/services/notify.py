@@ -19,6 +19,7 @@ from django.utils import timezone
 
 from ..models import Membership, Obligation, Reminder
 from ..scoping import use_household
+from .responsibilities import responsible_map
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,12 @@ def send_due_reminders(household, on_date: dt.date | None = None) -> dict:
     sent = skipped = 0
 
     with use_household(household):
+        # De quién es cada obligación, en dos consultas para todo el lote.
+        encargados = responsible_map(household)
         pendientes = (
             Reminder.objects
             .filter(fire_on__lte=on_date, sent_at__isnull=True)
-            .select_related("obligation")
+            .select_related("obligation", "obligation__assigned_to")
             .order_by("fire_on")
         )
         for reminder in pendientes:
@@ -41,16 +44,44 @@ def send_due_reminders(household, on_date: dt.date | None = None) -> dict:
                 _mark(reminder)
                 skipped += 1
                 continue
-            if not recipients:
+            encargado = _responsible(reminder.obligation, encargados)
+            destinos = _to(encargado) or recipients
+            if not destinos:
                 skipped += 1
                 continue
-            if _deliver(household, reminder, recipients):
+            if _deliver(household, reminder, destinos, encargado):
                 _mark(reminder)
                 sent += 1
             else:
                 skipped += 1
 
     return {"sent": sent, "skipped": skipped, "date": on_date}
+
+
+def _responsible(obligation, encargados: dict):
+    """Quién se encarga: lo puntual manda sobre lo permanente."""
+    return obligation.assigned_to or encargados.get(
+        (obligation.subject_type_id, obligation.subject_id))
+
+
+def _to(party) -> list[str]:
+    """El correo de quien se encarga, si se le puede escribir.
+
+    Si no tiene usuario ni correo, el aviso **no** se pierde: vuelve a ir a
+    todo el hogar. Un aviso que no sale es peor que uno de mas, porque nadie se
+    entera de que falta.
+    """
+    if party is None:
+        return []
+    if party.user_id and party.user.email:
+        return [party.user.email]
+
+    from ..models import ContactPoint
+
+    punto = (ContactPoint.objects
+             .filter(party=party, channel=ContactPoint.Channel.EMAIL)
+             .order_by("-is_primary").first())
+    return [punto.value] if punto else []
 
 
 def _recipients(household) -> list[str]:
@@ -62,7 +93,7 @@ def _recipients(household) -> list[str]:
     )
 
 
-def _deliver(household, reminder, recipients) -> bool:
+def _deliver(household, reminder, recipients, encargado=None) -> bool:
     obligation = reminder.obligation
     dias = (obligation.due_on - reminder.fire_on).days
     context = {
@@ -70,6 +101,7 @@ def _deliver(household, reminder, recipients) -> bool:
         "dias": dias,
         "household": household,
         "product_name": settings.PRODUCT_NAME,
+        "encargado": encargado,
     }
     try:
         send_mail(

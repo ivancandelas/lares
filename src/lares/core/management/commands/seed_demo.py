@@ -14,6 +14,7 @@ from django.utils.text import slugify
 from lares.core.models import (
     ContactPoint,
     Document,
+    EmergencyContact,
     Household,
     Location,
     Membership,
@@ -57,6 +58,8 @@ class Command(BaseCommand):
             _seed_documents(household, titular)
             _seed_contacts(household)
             _seed_rules(household)
+            _seed_succession(household)
+            _seed_care(household)
 
             for seeder in registry.demo_seeders:
                 summary = seeder(household)
@@ -147,3 +150,49 @@ def _seed_contacts(household):
                 household=household, party=party, channel=canal, value=valor,
                 defaults={"label": etiqueta},
             )
+
+
+def _seed_succession(household):
+    """Un contacto de emergencia armado, que es como se ve en reposo.
+
+    Se siembra armado y no avisado a proposito: el demo tiene que ensenar el
+    estado normal -nadie ha dejado de entrar- y no el de la emergencia, que es
+    el que nadie quiere ver por sorpresa al abrir la pantalla.
+    """
+    mariana = Party.objects.filter(household=household, name="Mariana").first()
+    EmergencyContact.objects.get_or_create(
+        household=household, name="Mariana",
+        defaults={
+            "party": mariana,
+            "relationship": "pareja",
+            "email": "mariana@example.mx",
+            "note": ("La caja fuerte está en el clóset de arriba. La escritura "
+                     "de la casa y las pólizas están escaneadas aquí; los "
+                     "originales, en la carpeta verde."),
+            "quiet_days": 45,
+            "grace_days": 7,
+        },
+    )
+
+
+def _seed_care(household):
+    """Un reparto a medias, que es como está en la vida real.
+
+    Se deja algo sin nadie a cargo a proposito: el valor de esa pantalla no es
+    ver quien lleva que, es ver lo que no lleva nadie.
+    """
+    from lares.core.models.resource import Resource
+    from lares.core.services import responsibilities
+
+    quien = {
+        "property": "Mariana",
+        "vehicle": None,          # los coches, sin repartir
+    }
+    personas = {p.name: p for p in Party.objects.filter(household=household)}
+    for recurso in Resource.objects.filter(household=household,
+                                           status=Resource.Status.ACTIVE):
+        nombre = quien.get(recurso.kind)
+        persona = personas.get(nombre) if nombre else None
+        if persona and not responsibilities.responsible_of(recurso.as_concrete()):
+            responsibilities.set_responsible(household, recurso.as_concrete(),
+                                             persona)

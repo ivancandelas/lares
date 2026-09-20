@@ -1,0 +1,18 @@
+Hola{% if contacto.who %} {{ contacto.who }}{% endif %}:
+
+El titular de {{ household.name }} dejó preparada información para que la
+recibieras si dejaba de entrar. Ha pasado, y por eso te llega esto.
+
+{% if contacto.note %}Te dejó dicho:
+
+    {{ contacto.note }}
+
+{% endif %}Aquí está, de solo lectura:
+
+{{ url }}
+
+No es todo el sistema: es lo que él eligió que necesitarías. El enlace deja de
+funcionar si vuelve a entrar.
+
+--
+{{ product_name }}

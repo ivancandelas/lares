@@ -1,0 +1,204 @@
+{% comment %}
+  El paquete de sucesión. Lo abre alguien sin sesión, el peor día de su año,
+  probablemente desde el teléfono: fuera de la plantilla base, sin menú, sin
+  búsqueda y con lo que hay que hacer arriba del todo.
+{% endcomment %}
+{% load money %}<!doctype html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ household.name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: {
+      paper: '#FBFBF9', ink: '#17201C', soft: '#5A6560', rule: '#DDE2DD',
+      calm: '#2F6B4F', overdue: '#A3231C', soon: '#B26A00',
+    }}}}
+  </script>
+</head>
+<body class="h-full bg-paper text-ink antialiased">
+<div class="mx-auto max-w-2xl px-5 py-10">
+
+  {% if preview %}
+    <p class="mb-6 rounded-sm border border-rule bg-white px-4 py-2 text-[13px] text-soft">
+      Vista previa: esto es exactamente lo que verá {{ contacto.who }}.
+      <a href="{% url 'core:succession' %}" class="text-calm hover:underline">Volver</a>
+    </p>
+  {% endif %}
+
+  <h1 class="text-2xl font-light tracking-tight">{{ household.name }}</h1>
+  <p class="mt-1 text-sm text-soft">
+    {% if titular %}Lo que {{ titular.name }} dejó preparado{% else %}Lo que se dejó preparado{% endif %}
+    {% if contacto %}para {{ contacto.who }}{% endif %}, al {{ hoy|date:"j \d\e F \d\e Y"|lower }}.
+  </p>
+
+  {% if contacto.note %}
+    <blockquote class="mt-6 border-l-2 border-calm bg-white px-4 py-3 text-[15px]">
+      {{ contacto.note|linebreaksbr }}
+    </blockquote>
+  {% endif %}
+
+  {% if pasos %}
+    <h2 class="mt-10 text-sm font-medium">Qué hacer</h2>
+    <ol class="mt-2 list-decimal space-y-2 pl-5">
+      {% for paso in pasos %}
+        <li class="text-[15px]">{{ paso.titulo }}
+          <span class="block text-[13px] text-soft">{{ paso.detalle }}</span>
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  {% if personas %}
+    <h2 class="mt-10 text-sm font-medium">A quién llamar</h2>
+    <ul class="mt-1 divide-y divide-rule border-y border-rule">
+      {% for p in personas %}
+        <li class="py-3">
+          <div class="text-[15px]">{{ p.party.name }}
+            <span class="text-[13px] text-soft">· {{ p.party.get_kind_display|lower }}</span>
+          </div>
+          {% for c in p.puntos %}
+            <div class="text-[13px] text-soft">
+              {% if c.channel == "phone" %}<a href="tel:{{ c.value }}" class="text-calm hover:underline">{{ c.value }}</a>
+              {% elif c.channel == "email" %}<a href="mailto:{{ c.value }}" class="text-calm hover:underline">{{ c.value }}</a>
+              {% else %}{{ c.value }}{% endif %}
+              {% if c.label %}<span>· {{ c.label }}</span>{% endif %}
+            </div>
+          {% endfor %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if documentos %}
+    <h2 class="mt-10 text-sm font-medium">Dónde están los papeles</h2>
+    <ul class="mt-1 divide-y divide-rule border-y border-rule">
+      {% for d in documentos %}
+        <li class="py-3">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <span class="text-[15px]">{{ d.doc.title }}</span>
+            {% if d.abierto and token %}
+              <a href="{% url 'core:succession-document' token d.doc.pk %}"
+                 class="shrink-0 text-[13px] text-calm hover:underline">Abrir</a>
+            {% elif d.nota %}
+              <span class="shrink-0 text-[13px] text-soft">{{ d.nota }}</span>
+            {% endif %}
+          </div>
+          <div class="text-[13px] text-soft">
+            {% if d.doc.issuer %}{{ d.doc.issuer }}{% endif %}
+            {% if d.doc.expires_on %}· vence el {{ d.doc.expires_on|date:"d/m/Y" }}{% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if patrimonio %}
+    <h2 class="mt-10 text-sm font-medium">Qué hay</h2>
+    {% for grupo in patrimonio %}
+      <h3 class="mt-4 text-[13px] uppercase tracking-wide text-soft">{{ grupo.label }}</h3>
+      <ul class="mt-1 divide-y divide-rule border-y border-rule">
+        {% for r in grupo.items %}
+          <li class="flex items-baseline justify-between gap-3 py-2">
+            <span class="text-[15px]">{{ r.name }}</span>
+            {% if r.current_value or r.purchase_amount %}
+              <span class="shrink-0 text-[13px] text-soft tabular-nums">
+                {% money r.current_value|default:r.purchase_amount r.currency %}
+              </span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
+  {% endif %}
+
+  {% if recurrentes %}
+    <h2 class="mt-10 text-sm font-medium">Qué se paga cada mes</h2>
+    <ul class="mt-1 divide-y divide-rule border-y border-rule">
+      {% for r in recurrentes.salen %}
+        <li class="flex items-baseline justify-between gap-3 py-2">
+          <span class="text-[15px]">{{ r.title }}
+            <span class="text-[13px] text-soft">· {{ r.cycle_label }}</span></span>
+          <span class="shrink-0 text-[13px] text-soft tabular-nums">{% money r.amount r.currency %}</span>
+        </li>
+      {% empty %}
+        <li class="py-2 text-[15px] text-soft">Nada registrado.</li>
+      {% endfor %}
+    </ul>
+    {% if recurrentes.entran %}
+      <h3 class="mt-4 text-[13px] uppercase tracking-wide text-soft">Y lo que entra</h3>
+      <ul class="mt-1 divide-y divide-rule border-y border-rule">
+        {% for r in recurrentes.entran %}
+          <li class="flex items-baseline justify-between gap-3 py-2">
+            <span class="text-[15px]">{{ r.title }}
+              <span class="text-[13px] text-soft">· {{ r.cycle_label }}</span></span>
+            <span class="shrink-0 text-[13px] text-soft tabular-nums">{% money r.amount r.currency %}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+
+  {% if deudas %}
+    <h2 class="mt-10 text-sm font-medium">Qué se debe y a quién</h2>
+    <ul class="mt-1 divide-y divide-rule border-y border-rule">
+      {% for d in deudas %}
+        <li class="flex items-baseline justify-between gap-3 py-2">
+          <span class="text-[15px]">
+            {% if d.is_incoming %}Le deben{% else %}Debe{% endif %}: {{ d.title }}
+            {% if d.counterparty %}<span class="text-[13px] text-soft">· {{ d.counterparty }}</span>{% endif %}
+          </span>
+          <span class="shrink-0 text-[13px] {% if d.is_overdue %}text-overdue{% else %}text-soft{% endif %} tabular-nums">
+            {% money d.amount d.currency %}
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if obligaciones %}
+    <h2 class="mt-10 text-sm font-medium">Qué vence</h2>
+    <ul class="mt-1 divide-y divide-rule border-y border-rule">
+      {% for o in obligaciones.overdue %}
+        <li class="flex items-baseline justify-between gap-3 py-2">
+          <span class="text-[15px]">{{ o.title }}</span>
+          <span class="shrink-0 text-[13px] text-overdue">venció el {{ o.due_on|date:"d/m/Y" }}</span>
+        </li>
+      {% endfor %}
+      {% for o in obligaciones.this_week %}
+        <li class="flex items-baseline justify-between gap-3 py-2">
+          <span class="text-[15px]">{{ o.title }}</span>
+          <span class="shrink-0 text-[13px] text-soon">{{ o.due_on|date:"d/m/Y" }}</span>
+        </li>
+      {% endfor %}
+      {% for o in obligaciones.later %}
+        <li class="flex items-baseline justify-between gap-3 py-2">
+          <span class="text-[15px]">{{ o.title }}</span>
+          <span class="shrink-0 text-[13px] text-soft">{{ o.due_on|date:"d/m/Y" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if token %}
+    <div class="mt-10 border-t border-rule pt-6">
+      <a href="{% url 'core:succession-download' token %}"
+         class="inline-block rounded-sm bg-calm px-4 py-2 text-sm font-medium text-white hover:bg-ink">
+        Descargar todo
+      </a>
+      <p class="mt-2 max-w-[56ch] text-[13px] text-soft">
+        Un archivo .zip con estos datos y los documentos que se entregan.
+        Guárdalo: este enlace deja de funcionar si el titular vuelve a entrar,
+        y lo descargado se queda contigo.
+        <a href="{% url 'core:succession-json' token %}" class="text-calm hover:underline">También en JSON</a>.
+      </p>
+    </div>
+  {% endif %}
+
+  <p class="mt-8 text-[13px] text-soft">
+    Solo lectura. No es el sistema entero: es lo que se eligió que necesitarías.
+  </p>
+</div>
+</body>
+</html>

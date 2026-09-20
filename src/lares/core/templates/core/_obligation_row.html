@@ -27,7 +27,8 @@
       {% elif o.days_left == 0 %}Vence hoy
       {% elif o.days_left == 1 %}Mañana
       {% else %}En {{ o.days_left }} días{% endif %}
-      {% if o.counterparty %}, {{ o.counterparty }}{% endif %}</span>
+      {% if o.counterparty %}, {{ o.counterparty }}{% endif %}
+      {% if o.responsible %}· {{ o.responsible.name }}{% endif %}</span>
       <a href="{% url 'core:obligation-ics' o.pk %}"
          class="opacity-0 transition-opacity hover:underline focus:opacity-100 group-hover:opacity-100 text-calm">
         al calendario

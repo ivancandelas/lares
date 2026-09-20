@@ -106,6 +106,12 @@ class Membership(TimestampedModel):
     invite_token = models.CharField(max_length=43, blank=True, db_index=True)
     invited_on = models.DateField(null=True, blank=True)
 
+    # El ultimo dia que esta persona entro. `last_login` no sirve para medir
+    # silencio: solo cambia al iniciar sesion, y quien deja la sesion abierta
+    # puede usar el sistema a diario con un `last_login` de hace meses. Se
+    # escribe una vez por persona y dia desde el middleware.
+    last_seen_on = models.DateField(null=True, blank=True)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["household", "user"], name="uniq_membership"),

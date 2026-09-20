@@ -3,6 +3,7 @@
 Fecha límite: {{ obligation.due_on }}{% if dias > 0 %} (en {{ dias }} días){% else %} (hoy){% endif %}
 {% if obligation.amount %}Importe: {{ obligation.amount }} {{ obligation.currency }}
 {% endif %}{% if obligation.counterparty %}Con: {{ obligation.counterparty }}
+{% endif %}{% if encargado %}Se encarga: {{ encargado.name }}
 {% endif %}
 --
 {{ product_name }} · {{ household.name }}

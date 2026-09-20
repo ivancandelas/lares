@@ -1,0 +1,1 @@
+{{ household.name }}: información que {{ product_name }} guardaba para ti

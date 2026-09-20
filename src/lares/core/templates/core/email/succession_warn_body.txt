@@ -1,0 +1,13 @@
+Llevas {{ contacto.quiet_days }} días sin entrar a {{ household.name }}.
+
+Configuraste que, si eso pasaba, {{ contacto.who }} recibiera tu paquete de
+sucesión. Se libera el {{ contacto.releases_on|date:"d/m/Y" }}.
+
+Para que no se libere, basta con que entres:
+
+{{ url }}
+
+Entrar cancela el aviso. No hay nada más que hacer.
+
+--
+{{ product_name }} · {{ household.name }}

@@ -739,6 +739,54 @@ class IncomeEntryForm(GroupedForm, forms.Form):
         return entry
 
 
+class HouseholdForm(LaresForm):
+    """Los datos del hogar: cómo se llama y dónde vive.
+
+    El nombre no es decorativo: sale en los correos de aviso, en la cabecera
+    del paquete de sucesion y en el nombre del archivo de exportacion. Tenerlo
+    solo en `bootstrap_household` obligaba a entrar al admin de Django o a la
+    consola para corregir una errata.
+
+    El pais y el estado tampoco lo son: deciden **que packs de obligaciones
+    aplican** -refrendo, verificacion, predial-, asi que cambiarlos cambia el
+    calendario. Por eso va dicho en el formulario y no en la documentacion.
+    """
+
+    GROUPS = (
+        ("Cómo se llama", ["name"]),
+        ("Dónde está", ["country", "subdivision", "timezone"]),
+        ("Dinero", ["currency"]),
+    )
+
+    class Meta:
+        from .models import Household
+
+        model = Household
+        fields = ["name", "country", "subdivision", "timezone", "currency"]
+        labels = {
+            "name": "Nombre del hogar",
+            "country": "País",
+            "subdivision": "Estado",
+            "timezone": "Zona horaria",
+            "currency": "Moneda",
+        }
+        help_texts = {
+            "name": "Sale en los avisos por correo y en lo que compartes.",
+            "country": "Código de dos letras: MX, ES, US.",
+            "subdivision": "Decide qué obligaciones locales aplican: MX-JAL, "
+                           "MX-CMX. Cambiarlo cambia el calendario.",
+            "timezone": "Con qué reloj se cuentan los vencimientos.",
+            "currency": "La de casa. Las demás se siguen pudiendo usar donde "
+                        "haga falta.",
+        }
+
+    def clean_country(self):
+        return (self.cleaned_data.get("country") or "").upper()
+
+    def clean_currency(self):
+        return (self.cleaned_data.get("currency") or "").upper()
+
+
 class MemberForm(LaresForm):
     """Invitar a alguien o cambiar lo que puede ver.
 
@@ -846,3 +894,90 @@ class AcceptInviteForm(GroupedForm, forms.Form):
         if datos.get("password1") != datos.get("password2"):
             self.add_error("password2", "No coinciden.")
         return datos
+
+
+class EmergencyContactForm(LaresForm):
+    """A quién se le libera qué, y después de cuánto silencio.
+
+    Los dos plazos van juntos a proposito: sin ventana de gracia el silencio
+    libera de golpe, y un viaje largo acabaria con los datos de alguien en el
+    correo de su cunado sin que hubiera pasado nada.
+    """
+
+    GROUPS = (
+        ("Quién", ["party", "name", "email", "relationship"]),
+        ("Qué recibe", ["sections", "note"]),
+        ("Cuándo", ["quiet_days", "grace_days"]),
+    )
+
+    class Meta:
+        from .models import EmergencyContact
+
+        model = EmergencyContact
+        fields = ["party", "name", "email", "relationship", "sections", "note",
+                  "quiet_days", "grace_days"]
+        labels = {
+            "party": "Si ya está en tus contactos",
+            "name": "Cómo se llama",
+            "email": "A qué correo se le avisa",
+            "relationship": "Qué es tuyo",
+            "note": "Qué quieres que sepa",
+            "quiet_days": "Si no entras en",
+            "grace_days": "Avisarte y esperar",
+        }
+        help_texts = {
+            "party": "Así se usan sus teléfonos y correos, y no hay dos fichas "
+                     "de la misma persona.",
+            "email": "Solo si no está en contactos o quieres otro distinto.",
+            "relationship": "Hermana, albacea, abogado. Sale en el paquete.",
+            "note": "Lo primero que leerá. «La caja fuerte está en el clóset "
+                    "de arriba; la combinación la tiene mi hermana.»",
+            "quiet_days": "Días sin que entre nadie que administre el hogar.",
+            "grace_days": "Días entre el aviso y la entrega. Entrar lo cancela.",
+        }
+
+    def __init__(self, *args, **kwargs):
+        from .models import Party
+        from .services.succession import SECCIONES, secciones_de
+
+        super().__init__(*args, **kwargs)
+        self.fields["party"].queryset = Party.objects.all()
+        self.fields["party"].required = False
+        self.fields["party"].empty_label = "No está, lo escribo aquí"
+        self.fields["sections"] = forms.MultipleChoiceField(
+            choices=SECCIONES, required=False, label="Qué recibe",
+            widget=forms.CheckboxSelectMultiple,
+            help_text="Lo que un tercero necesita, no todo el sistema.",
+            initial=(secciones_de(self.instance) if not self.is_new
+                     else [c for c, _ in SECCIONES]),
+        )
+
+    def clean(self):
+        datos = super().clean()
+        party = datos.get("party")
+        if not party and not (datos.get("name") or "").strip():
+            self.add_error("name", "Dinos a quién, aunque no esté en contactos.")
+
+        # Sin correo no hay a dónde mandar el paquete el día que se libere, y
+        # eso no se descubre solo: se descubre el día que ya no hay a quién
+        # preguntarle.
+        correo = (datos.get("email") or "").strip()
+        if not correo and party:
+            from .models import ContactPoint
+
+            correo = (party.contact_points
+                      .filter(channel=ContactPoint.Channel.EMAIL)
+                      .exists())
+        if not correo:
+            self.add_error("email", "Hace falta un correo: es por donde le "
+                                    "llegará el enlace.")
+        return datos
+
+    def save(self, commit=True):
+        contacto = super().save(commit=False)
+        contacto.sections = self.cleaned_data.get("sections") or []
+        if contacto.party_id and not contacto.name:
+            contacto.name = contacto.party.name
+        if commit:
+            contacto.save()
+        return contacto

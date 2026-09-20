@@ -366,7 +366,10 @@ ARMAZON = {
     "core:document-edit", "core:inbox-file", "core:inbox-review",
     "core:inbox-restore", "core:inbox-reclassify-all",
     "core:resource-restore", "core:resource-return", "core:resource-verify",
+    "core:resource-care",
     "core:shared", "core:shared-vcf",
+    "core:succession-package", "core:succession-download",
+    "core:succession-json", "core:succession-document",
 }
 
 
@@ -391,9 +394,7 @@ def test_toda_pantalla_del_nucleo_esta_clasificada():
 
     Sin esto, alguien añade `core:saldos-de-todos` y por omisión la ve el hijo.
     """
-    from lares.core.permissions import AMBITO_DE_RUTA
-
-    from lares.core.permissions import AMBITO_DE_API
+    from lares.core.permissions import AMBITO_DE_API, AMBITO_DE_RUTA
 
     conocidas = set(AMBITO_DE_RUTA) | set(AMBITO_DE_API) | ARMAZON
     sin_clasificar = sorted(_rutas_del_nucleo() - conocidas)
@@ -495,3 +496,33 @@ def test_sin_el_ambito_de_personas_no_se_exporta_la_agenda(multi, casa, client):
     hijo = _miembro(casa, "hijo@x.mx", Membership.Role.MEMBER, scopes=["tasks"])
 
     assert _sesion(client, hijo).get("/contactos/todos.vcf").status_code == 403
+
+
+# --- Los datos del hogar ----------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_el_nombre_del_hogar_se_cambia_desde_la_pantalla(multi, casa, client):
+    """Sale en los correos y en el paquete de sucesión: una errata se corrige."""
+    yo = _miembro(casa, "yo@x.mx", Membership.Role.OWNER)
+    sesion = _sesion(client, yo)
+
+    assert sesion.get("/hogar/datos/").status_code == 200
+    respuesta = sesion.post("/hogar/datos/", {
+        "name": "Casa de los Candelas", "country": "mx",
+        "subdivision": "MX-JAL", "timezone": "America/Mexico_City",
+        "currency": "MXN",
+    })
+
+    casa.refresh_from_db()
+    assert respuesta.status_code == 302
+    assert casa.name == "Casa de los Candelas"
+    # El país se guarda en mayúsculas o los packs dejan de encontrarse.
+    assert casa.country == "MX"
+
+
+@pytest.mark.django_db
+def test_los_datos_del_hogar_son_de_quien_administra(multi, casa, client):
+    hijo = _miembro(casa, "hijo@x.mx", Membership.Role.ADULT)
+
+    assert _sesion(client, hijo).get("/hogar/datos/").status_code == 403

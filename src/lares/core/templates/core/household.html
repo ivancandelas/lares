@@ -5,8 +5,11 @@
 <div class="flex flex-wrap items-baseline justify-between gap-3">
   <h1 class="text-2xl font-light tracking-tight">{{ current_household.name }}</h1>
   {% if puedo_administrar %}
-    <a href="{% url 'core:member-invite' %}"
-       class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Invitar</a>
+    <div class="flex items-baseline gap-3">
+      <a href="{% url 'core:household-edit' %}" class="text-sm text-calm hover:underline">Cambiar los datos</a>
+      <a href="{% url 'core:member-invite' %}"
+         class="rounded-sm bg-calm px-3 py-1.5 text-sm font-medium text-white hover:bg-ink">Invitar</a>
+    </div>
   {% endif %}
 </div>
 <p class="mt-1 max-w-[58ch] text-sm text-soft">
