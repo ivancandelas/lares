@@ -8,7 +8,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PATH="/app/.venv/bin:$PATH" \
-    DJANGO_SETTINGS_MODULE=lares.settings.prod
+    DJANGO_SETTINGS_MODULE=lares.settings.prod \
+    PYTHONPATH=/app/src
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential libpq5 curl \

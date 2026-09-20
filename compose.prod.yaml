@@ -60,7 +60,7 @@ services:
 
   worker:
     <<: *app
-    command: celery -A lares.celery worker -l info --workdir src
+    command: celery -A lares.celery worker -l info
     # Solo la web migra y recoge estáticos: tres procesos haciendo lo mismo al
     # arrancar es una carrera que no hace falta correr. El candado del
     # entrypoint la evitaría igual, pero esto además arranca antes.
@@ -72,7 +72,7 @@ services:
       LARES_MIGRATE_ON_START: "0"
       LARES_COLLECTSTATIC: "0"
     healthcheck:
-      test: ["CMD-SHELL", "celery -A lares.celery inspect ping --workdir src -d celery@$$HOSTNAME || exit 1"]
+      test: ["CMD-SHELL", "celery -A lares.celery inspect ping -d celery@$$HOSTNAME || exit 1"]
       interval: 60s
       timeout: 15s
       retries: 3
@@ -80,7 +80,11 @@ services:
 
   beat:
     <<: *app
-    command: celery -A lares.celery beat -l info --workdir src
+    command: celery -A lares.celery beat -l info
+    # El healthcheck de la imagen pregunta por HTTP y aquí no hay HTTP: sin
+    # esto, el reloj sale "enfermo" para siempre y nadie se fía del panel.
+    healthcheck:
+      disable: true
     environment:
       DJANGO_SETTINGS_MODULE: lares.settings.prod
       LARES_DATABASE_URL: postgres://lares:${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en .env}@db:5432/lares

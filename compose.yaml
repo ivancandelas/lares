@@ -43,12 +43,13 @@ services:
 
   worker:
     build: .
-    command: celery -A lares.celery worker -l info --workdir src
+    command: celery -A lares.celery worker -l info
     env_file: .env
     environment:
       LARES_DATABASE_URL: postgres://lares:lares@db:5432/lares
       LARES_REDIS_URL: redis://redis:6379/0
       LARES_MEDIA_ROOT: /data/media
+      PYTHONPATH: /app/src
     volumes:
       - ./src:/app/src
       - media_data:/data/media
@@ -58,11 +59,12 @@ services:
 
   beat:
     build: .
-    command: celery -A lares.celery beat -l info --workdir src
+    command: celery -A lares.celery beat -l info
     env_file: .env
     environment:
       LARES_DATABASE_URL: postgres://lares:lares@db:5432/lares
       LARES_REDIS_URL: redis://redis:6379/0
+      PYTHONPATH: /app/src
     volumes:
       - ./src:/app/src
     depends_on:
