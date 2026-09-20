@@ -55,6 +55,9 @@ urlpatterns = [
     path("d/<uuid:pk>/ver/", views.document_preview, name="document-preview"),
     path("empezar/", views.onboarding, name="onboarding"),
 
+    path("salud", views.health, name="health"),
+    path("salud/base", views.health_db, name="health-db"),
+
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("sw.js", views.service_worker, name="service-worker"),
 

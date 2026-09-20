@@ -10,6 +10,7 @@ def product(request):
     return {
         "product_name": settings.PRODUCT_NAME,
         "product_tagline": settings.PRODUCT_TAGLINE,
+        "product_version": settings.VERSION,
         "tenancy_mode": settings.TENANCY_MODE,
         "nav_groups": registry.nav_grouped(membership),
         "membership": membership,

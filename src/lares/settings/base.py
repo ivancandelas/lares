@@ -20,6 +20,12 @@ environ.Env.read_env(PROJECT_ROOT / ".env")
 PRODUCT_NAME = "Lares"
 PRODUCT_TAGLINE = "Tu hogar, administrado."
 
+# Que version corre. Sale del archivo VERSION; la imagen de Docker la inyecta
+# por entorno para que una imagen etiquetada diga exactamente lo que es.
+from lares import __version__ as _version_del_paquete  # noqa: E402
+
+VERSION = env("LARES_VERSION", default=_version_del_paquete)
+
 # --- Nucleo -----------------------------------------------------------------
 SECRET_KEY = env("LARES_SECRET_KEY", default="dev-inseguro-no-usar-en-produccion")
 DEBUG = env.bool("LARES_DEBUG", default=False)

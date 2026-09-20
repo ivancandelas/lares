@@ -80,6 +80,9 @@ LIBRES = {
     "core:calendar-feed",
     "core:manifest",
     "core:service-worker",
+    # Las comprueba Docker y la actualización, sin sesión y sin llave.
+    "core:health",
+    "core:health-db",
     "core:shared",
     "core:shared-vcf",
     "core:succession-package",

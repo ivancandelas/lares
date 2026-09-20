@@ -56,6 +56,24 @@ Con todo en contenedores:
 make up && make logs
 ```
 
+## Instalarlo en casa
+
+```bash
+cp .env.example .env         # y define POSTGRES_PASSWORD
+make deploy                  # levanta la pila de producción
+make update                  # cuando haya versión nueva
+```
+
+`make update` hace copia de la base **antes** de migrar, baja la imagen nueva,
+levanta y comprueba que contesta; si algo falla, dice cómo volver atrás. La
+versión que corre se ve en la pantalla **El hogar** y en `GET /salud`.
+
+Si entras por IP en la red de casa, sin un proxy con HTTPS delante, pon
+`LARES_HTTPS=0`: con TLS exigido, todo responde 301 hacia una dirección que no
+existe.
+
+Detalles en la [guía de despliegue](docs/11-deployment.md).
+
 ## Documentación
 
 Vive en un **repositorio aparte**, que se clona en `docs/`. Por dónde empezar:

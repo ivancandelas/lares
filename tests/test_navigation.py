@@ -21,6 +21,8 @@ from django.urls import NoReverseMatch, Resolver404, get_resolver, resolve, reve
 SIN_PUERTA = {
     "core:login": "se llega sin sesión, y el menú no existe todavía",
     "core:service-worker": "lo pide el navegador, no una persona",
+    "core:health": "la consultan Docker y el actualizador, no una persona",
+    "core:health-db": "igual que la anterior, pero mirando la base",
     "core:inbox-share": "destino de «compartir» del sistema operativo; va en el manifest",
     "core:succession-here": "«Sigo aquí» solo aparece cuando hay un acceso abierto",
     "finance:import-confirm": "segundo paso del importador; se llega tras subir el archivo",

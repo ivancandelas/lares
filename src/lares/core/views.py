@@ -473,3 +473,38 @@ def audit_view(request):
         "quien": quien,
         "tipo": tipo,
     })
+
+
+@login_not_required
+def health(request):
+    """Si esto contesta, la aplicación está en pie. Lo mínimo y nada más.
+
+    Lo usan el `healthcheck` de Docker y la actualización, que necesita saber
+    si lo que acaba de levantar responde antes de dar el cambio por bueno.
+
+    Dice la versión a propósito: sin eso, «actualicé» y «está corriendo lo
+    nuevo» son dos cosas distintas y no hay forma de comprobar la segunda. No
+    dice nada más: ni cuántos hogares hay, ni si la base va bien, porque eso ya
+    es información de dentro.
+    """
+    from django.conf import settings
+
+    return JsonResponse({"ok": True, "version": settings.VERSION})
+
+
+@login_not_required
+def health_db(request):
+    """Como `health`, pero comprobando que la base contesta.
+
+    Va aparte porque son dos preguntas distintas: «¿arrancó el proceso?» y
+    «¿puede trabajar?». La primera tiene que ser barata, porque la responde
+    cada pocos segundos.
+    """
+    from django.db import connection
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        return JsonResponse({"ok": True})
+    except Exception as exc:
+        return JsonResponse({"ok": False, "error": str(exc)[:200]}, status=503)

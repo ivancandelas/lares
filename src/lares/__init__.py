@@ -5,6 +5,23 @@
 # hablar con un broker que no existe.
 from .celery import app as celery_app
 
-__version__ = "0.0.1"
+
+def _version() -> str:
+    """La version que corre, leida del archivo VERSION de la raiz.
+
+    Un solo sitio donde tocarla. En la imagen de Docker el archivo se copia, y
+    si no estuviera -alguien ejecutando desde un zip- se dice "desconocida" en
+    vez de mentir con un numero viejo.
+    """
+    from pathlib import Path
+
+    archivo = Path(__file__).resolve().parents[2] / "VERSION"
+    try:
+        return archivo.read_text().strip() or "desconocida"
+    except OSError:
+        return "desconocida"
+
+
+__version__ = _version()
 
 __all__ = ["celery_app"]

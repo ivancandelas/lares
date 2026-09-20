@@ -236,3 +236,47 @@ def test_ninguna_pantalla_mete_html_en_el_titulo(sesion, household):
         titulo = re.search(r"<title>(.*?)</title>", html, re.S).group(1)
         assert "<" not in titulo, f"{ruta}: hay marcado dentro del <title>"
         assert len(titulo) < 120, f"{ruta}: el título son {len(titulo)} caracteres"
+
+
+@pytest.mark.django_db
+def test_la_salud_se_contesta_sin_sesion_y_dice_la_version(client):
+    """La comprueban Docker y la actualización: no pueden iniciar sesión.
+
+    Y dice la versión a propósito: sin eso, «actualicé» y «está corriendo lo
+    nuevo» son dos cosas distintas que nadie puede distinguir.
+    """
+    import json
+
+    from django.conf import settings
+
+    respuesta = client.get("/salud")
+
+    assert respuesta.status_code == 200
+    assert json.loads(respuesta.content) == {"ok": True,
+                                             "version": settings.VERSION}
+
+
+@pytest.mark.django_db
+def test_la_salud_de_la_base_responde(client):
+    assert client.get("/salud/base").status_code == 200
+
+
+@pytest.mark.django_db
+def test_la_version_sale_de_un_solo_sitio(sesion, household):
+    """VERSION, pyproject y lo que se enseña tienen que decir lo mismo.
+
+    Tres sitios con la versión son tres sitios donde se olvida uno.
+    """
+    import re
+    from pathlib import Path
+
+    from django.conf import settings
+
+    raiz = Path(__file__).resolve().parents[1]
+    archivo = (raiz / "VERSION").read_text().strip()
+    pyproject = re.search(r'^version = "(.+?)"',
+                          (raiz / "pyproject.toml").read_text(), re.M).group(1)
+
+    assert settings.VERSION == archivo
+    assert pyproject == archivo
+    assert archivo in sesion.get(reverse("core:household")).content.decode()

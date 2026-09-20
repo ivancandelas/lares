@@ -64,6 +64,13 @@
   </p>
 {% endif %}
 
+<h2 class="mt-10 text-sm font-medium">Esta copia</h2>
+<p class="mt-1 max-w-[58ch] text-[13px] text-soft">
+  Versión <span class="tabular-nums">{{ product_version }}</span>.
+  Para actualizar, <code>make update</code> desde la carpeta del despliegue:
+  hace copia de la base antes de tocar nada y comprueba que la nueva contesta.
+</p>
+
 {% if households %}
   <h2 class="mt-10 text-sm font-medium">Otros hogares donde entras</h2>
   <ul class="mt-1 divide-y divide-rule border-y border-rule">

@@ -368,6 +368,7 @@ ARMAZON = {
     "core:resource-restore", "core:resource-return", "core:resource-verify",
     "core:resource-care",
     "core:shared", "core:shared-vcf",
+    "core:health", "core:health-db",
     "core:succession-package", "core:succession-download",
     "core:succession-json", "core:succession-document",
 }
