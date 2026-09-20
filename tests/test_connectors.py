@@ -66,31 +66,74 @@ def paperless(scoped):
 
 
 @pytest.mark.django_db
-def test_trae_documentos_de_paperless_con_su_texto_ya_reconocido(paperless):
+def test_trae_documentos_de_paperless_sin_copiar_el_binario(paperless):
+    """Paperless es el archivo; Lares, el significado.
+
+    Copiar el PDF dejaría dos repositorios documentales sin que nadie lo
+    hubiera decidido, y el doble de gigas para el mismo papel.
+    """
     listado = json.dumps({"results": [{
         "id": 42, "original_file_name": "poliza_mazda.pdf",
         "content": "Póliza de cobertura amplia del Mazda",
     }]}).encode()
 
     runner = PaperlessRunner()
-    with mock.patch.object(runner, "_get_bytes",
-                           side_effect=[listado, b"%PDF-1.4 contenido"]):
+    with mock.patch.object(runner, "_get_bytes", side_effect=[listado]) as trae:
         result = runner.run(paperless)
 
     assert result.new == 1
+    # Una sola llamada: la del listado. El binario no se baja.
+    assert trae.call_count == 1
+
     item = InboxItem.objects.get()
     assert item.source == InboxItem.Source.PAPERLESS
-    assert item.note == "paperless:42"
+    assert item.external_ref == "paperless:42"
+    assert not item.file
+    assert item.is_reference
     # El OCR de Paperless vale más que el nuestro: no se vuelve a hacer.
     assert "cobertura amplia" in item.text
     assert item.suggestion.plan["document"]["doc_type"] == "policy"
 
 
 @pytest.mark.django_db
+def test_el_mismo_documento_dos_veces_no_entra_dos_veces(paperless):
+    """El repaso periódico repite lo reciente: es su trabajo, no un fallo."""
+    listado = json.dumps({"results": [{
+        "id": 42, "original_file_name": "poliza.pdf", "content": "Póliza",
+    }]}).encode()
+
+    runner = PaperlessRunner()
+    with mock.patch.object(runner, "_get_bytes", side_effect=[listado, listado]):
+        runner.run(paperless)
+        segunda = runner.run(paperless)
+
+    assert segunda.new == 0
+    assert InboxItem.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_el_xml_de_un_cfdi_si_se_baja(paperless):
+    """No se lee: se parsea. Está firmado, y esa firma no está en el texto."""
+    listado = json.dumps({"results": [{
+        "id": 7, "original_file_name": "factura.xml", "content": "texto plano",
+    }]}).encode()
+
+    runner = PaperlessRunner()
+    with mock.patch.object(runner, "_get_bytes",
+                           side_effect=[listado, b"<xml/>"]) as trae:
+        runner.run(paperless)
+
+    assert trae.call_count == 2
+    item = InboxItem.objects.get()
+    assert item.file
+    assert item.external_ref == "paperless:7"
+
+
+@pytest.mark.django_db
 def test_paperless_no_crea_documentos_solo(paperless):
     listado = json.dumps({"results": [{"id": 1, "content": "Factura"}]}).encode()
     runner = PaperlessRunner()
-    with mock.patch.object(runner, "_get_bytes", side_effect=[listado, b"datos"]):
+    with mock.patch.object(runner, "_get_bytes", side_effect=[listado]):
         runner.run(paperless)
 
     assert Document.objects.count() == 0       # sigue esperando a una persona

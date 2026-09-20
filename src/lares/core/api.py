@@ -186,6 +186,52 @@ def complete_obligation(request, pk):
 
 
 @endpoint(write=True)
+def inbox_paperless(request):
+    """Paperless avisa de que acaba de consumir un documento.
+
+    Es el camino principal desde que Paperless tiene acciones de webhook en sus
+    workflows (2.14). El repaso periodico del conector se queda como **red de
+    seguridad**: recoge lo que el webhook perdiera porque Lares estuviera
+    reiniciando o Paperless sin red.
+
+    Del aviso solo se usa el identificador. El titulo y el texto reconocido se
+    piden a Paperless: el cuerpo de un webhook se puede escribir a mano, y de
+    lo que llega asi no se puede uno fiar para clasificar.
+
+    Es idempotente: la entrada se identifica por `paperless:<id>`, asi que un
+    aviso repetido -y se repiten- no crea una segunda.
+    """
+    if request.method != "POST":
+        return _error("Usa POST.", 405)
+
+    try:
+        datos = json.loads(request.body or b"{}")
+    except ValueError:
+        datos = {}
+    # Segun la version, la plantilla del workflow manda una clave u otra.
+    identificador = (datos.get("doc_pk") or datos.get("document_id")
+                     or datos.get("id") or request.POST.get("doc_pk"))
+    if not identificador:
+        return _error("Falta el identificador del documento (doc_pk).", 400)
+
+    from .connectors import PaperlessRunner
+    from .services import paperless
+
+    try:
+        documento = paperless.metadata(request.household, identificador)
+    except paperless.Inalcanzable as exc:
+        # 502 y no 500: Lares está bien, Paperless no contesta. Paperless
+        # reintenta, y si no, el repaso periódico lo recoge.
+        return _error(f"No se pudo leer el documento en Paperless: {exc}", 502)
+
+    item, es_nuevo = PaperlessRunner().absorb(request.household, documento)
+    if item is None:
+        return _error("No se pudo incorporar ese documento.", 502)
+    return JsonResponse({"inbox": str(item.pk), "created": es_nuevo,
+                         "external_ref": item.external_ref}, status=201 if es_nuevo else 200)
+
+
+@endpoint(write=True)
 def webhooks(request):
     if request.method == "GET":
         return JsonResponse({"results": [{

@@ -18,7 +18,12 @@
     <li class="flex items-baseline justify-between gap-4 py-3">
       <div class="min-w-0">
         <a href="{% url 'core:document-edit' d.pk %}" class="text-[15px] hover:text-calm">{{ d.title }}</a>
-        {% if d.issuer %}<div class="text-[13px] text-soft">{{ d.issuer }}</div>{% endif %}
+        <div class="text-[13px] text-soft">
+          {% if d.issuer %}{{ d.issuer }}{% endif %}
+          {% if d.external_url %}
+            {% if d.issuer %} · {% endif %}<a href="{{ d.external_url }}" target="_blank" rel="noopener" class="text-calm hover:underline">abrir en Paperless</a>
+          {% endif %}
+        </div>
       </div>
       <span class="shrink-0 tabular-nums text-sm text-soft">{{ d.expires_on|date:"j M Y"|lower }}</span>
     </li>
@@ -33,7 +38,12 @@
   <h2 class="mt-10 text-sm font-medium">Sin vencimiento</h2>
   <ul class="mt-1 divide-y divide-rule border-y border-rule">
     {% for d in sin_vencimiento %}
-      <li class="py-3 text-[15px]"><a href="{% url 'core:document-edit' d.pk %}" class="hover:text-calm">{{ d.title }}</a></li>
+      <li class="py-3 text-[15px]">
+        <a href="{% url 'core:document-edit' d.pk %}" class="hover:text-calm">{{ d.title }}</a>
+        {% if d.external_url %}
+          <a href="{{ d.external_url }}" target="_blank" rel="noopener" class="text-[13px] text-soft hover:text-calm">· en Paperless</a>
+        {% endif %}
+      </li>
     {% endfor %}
   </ul>
 {% endif %}

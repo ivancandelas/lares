@@ -17,8 +17,11 @@
     {% endif %}
     <p class="mt-2 text-[13px] text-soft">
       Archivo: {{ item.original_name }}
-      {% if item.file %}
+      {% if item.file or item.external_ref %}
         · <a href="{% url 'core:inbox-file' item.pk %}" target="_blank" rel="noopener" class="text-calm hover:underline">abrir</a>
+      {% endif %}
+      {% if item.is_reference %}
+        · <span title="El archivo vive en Paperless; aquí está lo que significa">está en Paperless</span>
       {% endif %}
     </p>
   </div>

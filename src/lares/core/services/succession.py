@@ -324,17 +324,24 @@ def _documentos() -> list:
     existe una escritura es la mitad del valor- pero el binario no se entrega
     por este enlace.
     """
+    from . import paperless
+
     salida = []
     for doc in Document.objects.filter(archived_at__isnull=True).select_related("issuer"):
+        fuera = bool(paperless.doc_id(doc.external_ref))
         if doc.confidentiality != Document.Confidentiality.NORMAL:
             nota = "no se entrega por este enlace"
-        elif not doc.file:
+        elif not (doc.file or fuera):
             # No es lo mismo que negarlo: aqui solo esta anotado que existe, y
             # quien lo lea tiene que salir a buscar el papel.
             nota = "está registrado, no escaneado"
         else:
             nota = ""
-        salida.append({"doc": doc, "abierto": not nota, "nota": nota})
+        # Lo que vive en Paperless tambien se entrega: se trae al empaquetar.
+        # Un paquete de sucesion que solo funciona mientras el servidor de casa
+        # siga encendido no es una sucesion.
+        salida.append({"doc": doc, "abierto": not nota, "nota": nota,
+                       "fuera": fuera})
     return salida
 
 

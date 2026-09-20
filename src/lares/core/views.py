@@ -168,10 +168,15 @@ def owed(request):
 
 
 def documents(request):
+    from .services import paperless
+
     docs = Document.objects.filter(archived_at__isnull=True)
+    enlazar = paperless.annotate_links
     return render(request, "core/documents.html", {
-        "vencen": docs.filter(expires_on__isnull=False).order_by("expires_on"),
-        "sin_vencimiento": docs.filter(expires_on__isnull=True),
+        "vencen": enlazar(request.household,
+                          docs.filter(expires_on__isnull=False).order_by("expires_on")),
+        "sin_vencimiento": enlazar(request.household,
+                                   docs.filter(expires_on__isnull=True)),
     })
 
 
@@ -255,7 +260,7 @@ def document_preview(request, pk):
 
     documento = get_object_or_404(Document, pk=pk)
     if not documento.file:
-        raise Http404("Ese documento no tiene archivo.")
+        return _desde_paperless(request, documento)
 
     respuesta = FileResponse(documento.file.open("rb"))
     tipo = documento.mime_type or _guess_type(documento.file.name)
@@ -274,9 +279,46 @@ def _guess_type(nombre: str) -> str:
     return mimetypes.guess_type(nombre)[0] or "application/octet-stream"
 
 
+def _desde_paperless(request, documento):
+    """El archivo vive en Paperless: se sirve por aquí, no se redirige.
+
+    Redirigir obligaría a que quien mira tenga acceso a Paperless —y a que
+    Paperless esté expuesto—, que es justo lo que no queremos para un enlace
+    compartido o un paquete de sucesión. El token se queda de este lado.
+    """
+    from django.http import HttpResponse
+
+    from .services import paperless
+
+    if not paperless.doc_id(documento.external_ref):
+        raise Http404("Ese documento no tiene archivo.")
+
+    try:
+        contenido, tipo = paperless.fetch(documento.household, documento.external_ref)
+    except paperless.Inalcanzable as exc:
+        # Un 502 y no un 500: no está roto Lares, está callado Paperless. El
+        # documento sigue existiendo aquí con sus fechas y sus avisos.
+        return HttpResponse(
+            f"El archivo vive en Paperless y ahora mismo no responde ({exc}). "
+            "Lo que sabe Lares de este documento sigue estando.",
+            content_type="text/plain; charset=utf-8", status=502,
+        )
+
+    respuesta = HttpResponse(contenido, content_type=tipo or "application/pdf")
+    respuesta["Content-Disposition"] = f'inline; filename="{documento.pk}"'
+    respuesta["X-Frame-Options"] = "SAMEORIGIN"
+    return respuesta
+
+
 def preview_kind(documento) -> str:
     """Cómo se puede mostrar: incrustado, como imagen, o de ninguna manera."""
     if not documento.file:
+        from .services import paperless
+
+        # Lo de Paperless se puede ver aunque aquí no haya archivo: se sirve
+        # por proxy. Casi todo lo que guarda es PDF.
+        if paperless.doc_id(documento.external_ref):
+            return PREVISUALIZABLES.get(documento.mime_type or "", "pdf")
         return ""
     tipo = documento.mime_type or _guess_type(documento.file.name)
     return PREVISUALIZABLES.get(tipo, "")
@@ -391,10 +433,9 @@ def responsibilities_view(request):
     lo que no lleva nadie: una obligación de la que no se encarga nadie es la
     que se pasa.
     """
+    from .models import Party
     from .permissions import visible_obligations
     from .services import responsibilities
-
-    from .models import Party
 
     membership = getattr(request, "membership", None)
     datos = responsibilities.split(request.household)

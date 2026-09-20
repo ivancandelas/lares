@@ -125,9 +125,13 @@
         {% if d.expires_on %}
           <div class="text-[13px] text-soft">vence {{ d.expires_on|date:"j M Y"|lower }}</div>
         {% endif %}
-        {% if d.file %}
+        {% if d.file or d.external_ref %}
           <a href="{% url 'core:document-preview' d.pk %}" target="_blank" rel="noopener"
              class="text-[13px] text-calm hover:underline">ver</a>
+        {% endif %}
+        {% if d.external_url %}
+          <a href="{{ d.external_url }}" target="_blank" rel="noopener"
+             class="block text-[13px] text-soft hover:text-calm">en Paperless</a>
         {% endif %}
       </div>
     </li>

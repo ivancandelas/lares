@@ -40,6 +40,11 @@ class InboxItem(HouseholdScopedModel):
     # Reenviar dos veces el mismo correo no debe crear nada dos veces.
     checksum = models.CharField(max_length=64, db_index=True)
 
+    # De donde viene, cuando el binario vive fuera: "paperless:1827".
+    # Lares no quiere ser un gestor documental -Paperless ya lo es- asi que lo
+    # que entra por ahi se referencia en vez de copiarse. Ver docs/07-ingestion.md
+    external_ref = models.CharField(max_length=200, blank=True, db_index=True)
+
     # Texto extraido, para poder reclasificar sin volver a abrir el archivo.
     text = models.TextField(blank=True)
     note = models.CharField(max_length=300, blank=True)
@@ -54,6 +59,14 @@ class InboxItem(HouseholdScopedModel):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(fields=["household", "checksum"], name="uniq_inbox_item"),
+            # Lo de fuera se identifica por su referencia y no por sus bytes,
+            # que a proposito no tenemos. Sin esto, un webhook que se repite
+            # -y se repite- crearia dos entradas del mismo documento.
+            models.UniqueConstraint(
+                fields=["household", "external_ref"],
+                condition=models.Q(external_ref__gt=""),
+                name="uniq_inbox_external_ref",
+            ),
         ]
 
     def __str__(self):
@@ -62,6 +75,11 @@ class InboxItem(HouseholdScopedModel):
     @property
     def suggestion(self):
         return self.suggestions.order_by("-confidence").first()
+
+    @property
+    def is_reference(self) -> bool:
+        """El archivo vive fuera: aquí solo está lo que significa."""
+        return bool(self.external_ref) and not self.file
 
 
 class Suggestion(HouseholdScopedModel):

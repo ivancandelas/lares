@@ -148,16 +148,34 @@ def export_household(household, destination: Path) -> Path:
 
 
 def _copy_files(household, target: Path) -> list:
+    """Los binarios, incluidos los que viven fuera.
+
+    Un documento de Paperless se referencia en el dia a dia -no tiene sentido
+    tener dos veces el mismo PDF- pero una exportacion que no lo lleve deja de
+    ser «la prueba de que los datos son del usuario»: seria una lista de
+    titulos que solo sirve mientras la otra aplicacion siga en pie. Asi que
+    aqui, y solo aqui, se trae.
+    """
     from ..models import Document
+    from . import paperless
 
     copiados = []
-    for doc in Document._base_manager.filter(household=household).exclude(file=""):
-        try:
-            with doc.file.open("rb") as origen:
-                contenido = origen.read()
-        except (FileNotFoundError, ValueError):
+    for doc in Document._base_manager.filter(household=household):
+        contenido = None
+        if doc.file:
+            try:
+                with doc.file.open("rb") as origen:
+                    contenido = origen.read()
+            except (FileNotFoundError, ValueError):
+                contenido = None
+            sufijo = Path(doc.file.name).suffix
+        else:
+            contenido = paperless.materialize(household, doc)
+            sufijo = ".pdf"
+
+        if contenido is None:
             continue
-        nombre = f"{doc.pk}{Path(doc.file.name).suffix}"
+        nombre = f"{doc.pk}{sufijo}"
         (target / nombre).write_bytes(contenido)
         copiados.append({
             "document": str(doc.pk),

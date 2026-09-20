@@ -82,29 +82,62 @@ class PaperlessRunner(ConnectorRunner):
         result = Result()
         for doc in datos.get("results", []):
             result.fetched += 1
-            try:
-                contenido = self._get_bytes(
-                    f"{base}/api/documents/{doc['id']}/download/", token
-                )
-            except Exception:
-                logger.warning("No se pudo descargar el documento %s", doc.get("id"))
-                continue
-
-            nombre = doc.get("original_file_name") or f"paperless-{doc['id']}.pdf"
-            archivo = ContentFile(contenido, name=nombre)
-            item, es_nuevo = ingest.receive(
-                connector.household, archivo, source=InboxItem.Source.PAPERLESS,
-                note=f"paperless:{doc['id']}",
-            )
-            if es_nuevo:
-                result.new += 1
-                # El texto ya reconocido por Paperless vale más que el nuestro.
-                if texto := (doc.get("content") or "").strip():
-                    item.text = texto[:ingest.MAX_TEXT]
-                    item.save(update_fields=["text", "updated_at"])
-                    item.suggestions.all().delete()
-                    ingest.classify(item)
+            _, es_nuevo = self.absorb(connector.household, doc)
+            result.new += es_nuevo
         return result
+
+    def absorb(self, household, doc: dict) -> tuple:
+        """Mete un documento de Paperless en la bandeja. Devuelve (item, es_nuevo).
+
+        Lo usa tanto el repaso periodico como el webhook, para que los dos
+        caminos acaben exactamente en el mismo sitio.
+
+        **No se copia el binario**: se guarda `paperless:<id>` y el texto que
+        Paperless ya reconocio. La excepcion es el XML de un CFDI, que no se
+        lee sino que se parsea: ahi el archivo lleva informacion que el texto
+        plano no tiene -esta firmado- y sin el se perderia la unica fuente que
+        no hay que adivinar.
+        """
+        nombre = doc.get("original_file_name") or f"paperless-{doc['id']}.pdf"
+        ref = f"paperless:{doc['id']}"
+        texto = (doc.get("content") or "").strip()
+
+        if nombre.lower().endswith(".xml"):
+            return self._absorb_xml(household, doc, nombre, ref, texto)
+
+        return ingest.receive_reference(
+            household, ref=ref, name=nombre, text=texto,
+            source=InboxItem.Source.PAPERLESS,
+            mime="application/pdf" if nombre.lower().endswith(".pdf") else "",
+        )
+
+    def _absorb_xml(self, household, doc, nombre, ref, texto):
+        conector = self._conector(household)
+        try:
+            contenido = self._get_bytes(
+                f"{conector['base']}/api/documents/{doc['id']}/download/",
+                conector["token"])
+        except Exception:
+            logger.warning("No se pudo bajar el XML %s", doc.get("id"))
+            return None, False
+
+        item, es_nuevo = ingest.receive(
+            household, ContentFile(contenido, name=nombre),
+            source=InboxItem.Source.PAPERLESS, note=ref,
+        )
+        if es_nuevo and not item.external_ref:
+            item.external_ref = ref
+            item.save(update_fields=["external_ref", "updated_at"])
+        return item, es_nuevo
+
+    def _conector(self, household) -> dict:
+        from .services import paperless
+
+        conector = paperless.connector_for(household)
+        return {
+            "base": (conector.config.get("base_url") or "").rstrip("/") if conector else "",
+            "token": conector.secret if conector else "",
+        }
 
     def _get_json(self, url, token):
         return json.loads(self._get_bytes(url, token))

@@ -60,6 +60,43 @@ def receive(household, uploaded, source=InboxItem.Source.UPLOAD, note="") -> tup
     return item, True
 
 
+@transaction.atomic
+def receive_reference(household, ref: str, name: str, text: str = "",
+                      source=InboxItem.Source.PAPERLESS, note: str = "",
+                      mime: str = "") -> tuple:
+    """Mete en la bandeja algo cuyo archivo vive fuera. Devuelve (item, es_nuevo).
+
+    Lares no copia el binario de Paperless: guarda la referencia y el texto que
+    Paperless ya reconocio. Duplicarlo dejaria dos repositorios documentales sin
+    que nadie lo hubiera decidido, y el doble de gigas para el mismo PDF.
+
+    La identidad de lo referenciado **es la referencia**, no sus bytes -que a
+    proposito no tenemos-, asi que el checksum se calcula sobre ella. Es lo que
+    hace idempotente un webhook que se repite.
+    """
+    if not ref:
+        raise ValueError("Una entrada por referencia necesita su referencia.")
+
+    checksum = hashlib.sha256(ref.encode()).hexdigest()
+    existente = InboxItem.all_objects.filter(
+        household=household, external_ref=ref
+    ).first()
+    if existente:
+        return existente, False
+
+    item = InboxItem.objects.create(
+        household=household, source=source,
+        original_name=(name or ref)[:300],
+        mime_type=mime, checksum=checksum, external_ref=ref, note=note,
+        text=(text or "")[:MAX_TEXT],
+    )
+    classify(item)
+    lares_event.send(sender="ingest", household=household, verb="inbox.received",
+                     subject=item, summary=item.original_name,
+                     payload={"external_ref": ref})
+    return item, True
+
+
 def extract_text(contenido: bytes, name: str = "", mime: str = "") -> str:
     """Texto plano de lo que se pueda leer sin OCR.
 
@@ -163,6 +200,13 @@ def apply(item, document: Document) -> InboxItem:
         document.issuer = emisor
         document.save(update_fields=["issuer", "updated_at"])
 
+    if item.external_ref and not document.external_ref:
+        # Sin esto, el enlace con Paperless se perdía justo al confirmar, que
+        # es el momento en que empieza a valer para algo.
+        document.external_ref = item.external_ref
+        document.save(update_fields=["external_ref", "updated_at"])
+        _devolver_el_enlace(document)
+
     item.status = InboxItem.Status.APPLIED
     item.applied_document = document
     item.save(update_fields=["status", "applied_document", "updated_at"])
@@ -179,3 +223,21 @@ def discard(item) -> InboxItem:
     item.status = InboxItem.Status.DISCARDED
     item.save(update_fields=["status", "updated_at"])
     return item
+
+
+def _devolver_el_enlace(document) -> None:
+    """Deja en Paperless un enlace de vuelta a Lares, si está configurado.
+
+    Va después de confirmar y nunca antes: hasta que una persona no dice qué
+    es el documento, en Lares no hay nada a lo que apuntar.
+    """
+    from django.conf import settings
+
+    from . import paperless
+
+    try:
+        url = f"{settings.SITE_URL.rstrip('/')}/documentos/{document.pk}/editar/"
+        paperless.write_back(document.household, document.external_ref, url)
+    except Exception:
+        # La vuelta es una comodidad: que falle no puede impedir registrar.
+        logger.info("No se pudo escribir la vuelta en Paperless", exc_info=True)

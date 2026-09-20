@@ -61,7 +61,11 @@ def _preview_of(item):
     import mimetypes
 
     if not item.file:
-        return ""
+        from .services import paperless
+
+        # Referenciado: el archivo está en Paperless y se mira por proxy. Sin
+        # esto habría que confirmar a ciegas lo que propone el clasificador.
+        return "pdf" if paperless.doc_id(item.external_ref) else ""
     tipo = item.mime_type or mimetypes.guess_type(item.file.name)[0] or ""
     if tipo == "application/pdf":
         return "pdf"
@@ -108,7 +112,7 @@ def inbox_file(request, pk):
 
     item = get_object_or_404(InboxItem, pk=pk)
     if not item.file:
-        raise Http404("Esa entrada no tiene archivo.")
+        return _desde_paperless(item)
 
     tipo = item.mime_type or mimetypes.guess_type(item.file.name)[0] \
         or "application/octet-stream"
@@ -140,3 +144,25 @@ def inbox_share(request):
                        note=request.POST.get("title", "")[:300])
     messages.success(request, "Recibido. Revísalo cuando puedas.")
     return redirect("core:inbox")
+
+
+def _desde_paperless(item):
+    """Lo referenciado se mira por proxy: el token no sale de aquí."""
+    from django.http import HttpResponse
+
+    from .services import paperless
+
+    if not paperless.doc_id(item.external_ref):
+        raise Http404("Esa entrada no tiene archivo.")
+
+    try:
+        contenido, tipo = paperless.fetch(item.household, item.external_ref)
+    except paperless.Inalcanzable as exc:
+        return HttpResponse(
+            f"El archivo está en Paperless y ahora no responde ({exc}).",
+            content_type="text/plain; charset=utf-8", status=502)
+
+    respuesta = HttpResponse(contenido, content_type=tipo or "application/pdf")
+    respuesta["Content-Disposition"] = f'inline; filename="{item.original_name}"'
+    respuesta["Content-Security-Policy"] = "sandbox; frame-ancestors 'self'"
+    return respuesta

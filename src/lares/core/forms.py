@@ -536,7 +536,7 @@ class ConnectorForm(LaresForm):
 
 class PaperlessConnectorForm(ConnectorForm):
     CONNECTOR_KEY = "paperless"
-    CONFIG_FIELDS = ("base_url", "tag", "page_size")
+    CONFIG_FIELDS = ("base_url", "tag", "page_size", "write_back")
 
     base_url = forms.URLField(
         label="Dirección de Paperless", assume_scheme="https",
@@ -545,7 +545,14 @@ class PaperlessConnectorForm(ConnectorForm):
     tag = forms.CharField(required=False, label="Solo esta etiqueta",
                           help_text="Vacío: trae todo lo reciente.")
     page_size = forms.IntegerField(min_value=1, max_value=200, initial=25,
-                                   label="Cuántos revisar cada vez")
+                                   label="Cuántos revisar cada vez",
+                                   help_text="Es la red de seguridad del "
+                                             "webhook, no la vía principal.")
+    write_back = forms.BooleanField(
+        required=False, label="Escribir el enlace de vuelta en Paperless",
+        help_text="Rellena el campo personalizado «lares_url» de cada "
+                  "documento. Hay que crearlo antes en Paperless.",
+    )
 
 
 class ImapConnectorForm(ConnectorForm):

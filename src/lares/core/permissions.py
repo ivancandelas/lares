@@ -98,6 +98,8 @@ AMBITO_DE_API = {
     "core:api-resources": "core",
     "core:api-gaps": "core",
     "core:api-search": "core",
+    # Entra por llave de API, no por sesión: es Paperless quien llama.
+    "core:api-inbox-paperless": "core",
 }
 
 

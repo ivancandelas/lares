@@ -122,8 +122,10 @@ def resource_detail(request, pk):
         subject_type=ctype, subject_id=obj.pk,
         status__in=[Obligation.Status.PENDING, Obligation.Status.OVERDUE],
     )
+    from .services import paperless
     from .views import preview_kind
 
+    documentos = paperless.annotate_links(request.household, documentos)
     return render(request, "core/resource_detail.html", {
         "obj": obj,
         "documentos_vista": [
