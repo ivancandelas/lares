@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# `manage.py` de la instalación nativa, con el entorno ya puesto.
+#
+#   lares-manage createsuperuser
+#   lares-manage seed_demo
+set -euo pipefail
+RAIZ="/opt/lares"
+set -a; . "$RAIZ/lares.env"; set +a
+export DJANGO_SETTINGS_MODULE=lares.settings.prod PYTHONPATH="$RAIZ/current/src"
+cd "$RAIZ/current"
+exec sudo -u lares --preserve-env "$RAIZ/current/.venv/bin/python" src/manage.py "$@"

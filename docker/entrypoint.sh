@@ -30,26 +30,10 @@ espera_a_la_base() {
 }
 
 migra_con_candado() {
-    # El candado es de la sesion: si el contenedor muere a media migracion,
-    # Postgres lo suelta solo y el siguiente arranque lo vuelve a intentar.
-    python - <<'PY'
-import django, os, sys
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "lares.settings.prod")
-sys.path.insert(0, "src")
-django.setup()
-
-from django.core.management import call_command
-from django.db import connection
-
-CANDADO = 8712345678901234   # arbitrario y fijo: identifica "migrar Lares"
-
-with connection.cursor() as cursor:
-    cursor.execute("SELECT pg_advisory_lock(%s)", [CANDADO])
-    try:
-        call_command("migrate", interactive=False, verbosity=1)
-    finally:
-        cursor.execute("SELECT pg_advisory_unlock(%s)", [CANDADO])
-PY
+    # La regla vive en el comando `migrate_locked` y no aqui: la instalacion
+    # nativa migra con el mismo, y un candado implementado dos veces acaba
+    # siendo dos candados distintos.
+    python src/manage.py migrate_locked
 }
 
 espera_a_la_base

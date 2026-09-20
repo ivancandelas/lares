@@ -1,0 +1,37 @@
+[Unit]
+Description=Lares — la aplicación
+Documentation=https://github.com/ivancandelas/lares
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=notify
+User=lares
+Group=lares
+# `current` es un enlace simbólico a la versión que corre. Actualizar es
+# moverlo y reiniciar; volver atrás, moverlo de vuelta.
+WorkingDirectory=/opt/lares/current
+EnvironmentFile=/opt/lares/lares.env
+Environment=PYTHONPATH=/opt/lares/current/src
+Environment=DJANGO_SETTINGS_MODULE=lares.settings.prod
+ExecStart=/opt/lares/current/.venv/bin/gunicorn lares.wsgi:application \
+    --chdir src --bind 0.0.0.0:8000 --workers 3 --timeout 120 \
+    --access-logfile - --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+# Lo que este proceso no tiene por qué poder hacer. Si algún día un parser de
+# PDF resulta tener un agujero, que se lo encuentre con las manos atadas.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/lares/data /opt/lares/releases
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

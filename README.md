@@ -58,6 +58,20 @@ make up && make logs
 
 ## Instalarlo en casa
 
+En un Proxmox, una sola orden desde el shell del nodo:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/ivancandelas/lares/main/deploy/proxmox/ct/lares.sh)"
+```
+
+En cualquier Debian o Ubuntu, sin Docker:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ivancandelas/lares/main/deploy/native/install.sh | bash
+```
+
+Y con Docker:
+
 ```bash
 cp .env.example .env         # y define POSTGRES_PASSWORD
 make deploy                  # levanta la pila de producción
