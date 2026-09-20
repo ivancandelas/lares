@@ -43,6 +43,10 @@ class FinanceModule(LaresModule):
         reg.nav(
             NavItem("Cuentas y tarjetas", "finance:accounts", icon="wallet",
                     order=10, section="money"),
+            # La pantalla existía desde F4 y no se enlazaba desde ninguna
+            # parte: solo se llegaba tecleando la dirección.
+            NavItem("Importar del banco", "finance:import", icon="upload",
+                    order=15, section="money"),
             NavItem("Entra y sale", "finance:spending", icon="pie",
                     order=15, section="money"),
             NavItem("Cómo te fue", "finance:statement", icon="scale",
