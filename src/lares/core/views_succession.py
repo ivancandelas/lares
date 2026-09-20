@@ -24,7 +24,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import Document, EmergencyContact
 from .scoping import use_household
-from .services import succession
+from .services import audit, succession
 
 # ---------------------------------------------------------------------------
 # El titular
@@ -140,6 +140,8 @@ def _por_token(token) -> EmergencyContact:
 def package_view(request, token):
     contacto = _por_token(token)
     datos = succession.package(contacto.household, contacto)
+    audit.link_opened(contacto.household, contacto,
+                      f"Paquete de sucesión de {contacto.who}", "succession")
     contacto.touch()
     return render(request, "core/succession_package.html", {
         **datos, "preview": False, "token": token,
@@ -156,6 +158,8 @@ def package_download(request, token):
     """
     contacto = _por_token(token)
     datos = succession.package(contacto.household, contacto)
+    audit.link_opened(contacto.household, contacto,
+                      f"Paquete de {contacto.who} (descarga)", "succession")
     contacto.touch()
 
     buffer = io.BytesIO()

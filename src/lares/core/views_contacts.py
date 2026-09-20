@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import INPUT
 from .models import ContactPoint, Party, Share, Tag
 from .models.tagging import tagged, tags_of
-from .services import vcard
+from .services import audit, vcard
 
 
 def contacts(request):
@@ -176,6 +176,7 @@ def shared_view(request, token):
         with use_household(share.household):
             gente = tagged(tag, Party)
 
+    audit.link_opened(share.household, share, f"«{share.label}»", "share")
     share.touch()
     return render(request, "core/shared.html", {
         "share": share, "tag": tag, "people": gente,
@@ -196,6 +197,8 @@ def shared_vcard(request, token):
         gente = tagged(tag, Party) if tag else []
         contenido = vcard.export(gente)
 
+    audit.link_opened(share.household, share,
+                      f"«{share.label}» (descarga)", "share")
     share.touch()
     return _vcf(contenido, share.target or "contactos")
 

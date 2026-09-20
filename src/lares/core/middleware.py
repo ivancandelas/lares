@@ -15,6 +15,7 @@ from django.core.exceptions import PermissionDenied
 from .models import Household, Membership
 from .permissions import can_open
 from .scoping import set_current_household
+from .services import audit
 
 
 class HouseholdMiddleware:
@@ -28,7 +29,11 @@ class HouseholdMiddleware:
         self._touch(request, household)
         token = set_current_household(household)
         try:
-            return self.get_response(request)
+            response = self.get_response(request)
+            # La bitacora va aqui por lo mismo que los permisos: algo de lo que
+            # hay que acordarse en cada pantalla nueva acaba faltando en una.
+            audit.record(request, response)
+            return response
         finally:
             from .scoping import _current_household
 

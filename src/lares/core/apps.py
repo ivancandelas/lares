@@ -43,6 +43,8 @@ class CoreConfig(AppConfig):
                     order=28, section="more"),
             NavItem("Si me pasa algo", "core:succession", icon="shield",
                     order=29, section="more"),
+            NavItem("Qué ha pasado", "core:audit", icon="history", order=18,
+                    section="more"),
             NavItem("Conectores", "core:connectors", icon="plug", order=20,
                     section="more"),
             NavItem("Calendario", "core:calendar-settings", icon="calendar",

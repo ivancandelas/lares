@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Qué ha pasado - {{ product_name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-light tracking-tight">Qué ha pasado</h1>
+<p class="mt-1 max-w-[58ch] text-sm text-soft">
+  La línea de tiempo del hogar: lo que cambió, quién lo cambió y quién ha
+  mirado. De las lecturas solo se apuntan las de quien mira y no toca —el
+  contador, un invitado—, una por pantalla y día. No se guarda ninguna IP.
+</p>
+
+<form method="get" class="mt-6 flex flex-wrap items-end gap-3">
+  <label class="block">
+    <span class="text-[13px] text-soft">Quién</span>
+    <select name="quien" class="mt-1 rounded-sm border border-rule bg-white px-3 py-1.5 text-sm focus:border-calm focus:outline-none">
+      <option value="">Cualquiera</option>
+      {% for m in gente %}
+        <option value="{{ m.user.pk }}" {% if quien == m.user.pk|stringformat:"s" %}selected{% endif %}>{{ m.user }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="block">
+    <span class="text-[13px] text-soft">Qué</span>
+    <select name="tipo" class="mt-1 rounded-sm border border-rule bg-white px-3 py-1.5 text-sm focus:border-calm focus:outline-none">
+      <option value="">Todo</option>
+      <option value="accesos" {% if tipo == "accesos" %}selected{% endif %}>Quién ha mirado</option>
+      <option value="cambios" {% if tipo == "cambios" %}selected{% endif %}>Qué ha cambiado</option>
+    </select>
+  </label>
+  <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">Filtrar</button>
+</form>
+
+<ul class="mt-8 divide-y divide-rule border-y border-rule">
+  {% for fila in eventos %}
+    <li class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+      <div class="min-w-0">
+        <span class="text-[15px]">{{ fila.label }}</span>
+        <span class="text-[13px] text-soft">{{ fila.e.summary }}</span>
+      </div>
+      <div class="shrink-0 text-[13px] text-soft">
+        {% if fila.e.actor %}{{ fila.e.actor }}{% else %}desde fuera{% endif %}
+        · {{ fila.e.at|date:"j M, H:i"|lower }}
+      </div>
+    </li>
+  {% empty %}
+    <li class="py-3 text-[15px] text-soft">
+      Nada todavía. Se irá llenando solo.
+    </li>
+  {% endfor %}
+</ul>
+
+{% if eventos|length >= 200 %}
+  <p class="mt-3 text-[13px] text-soft">
+    Se muestran los 200 últimos. Para el resto, la exportación completa los
+    lleva todos.
+  </p>
+{% endif %}
+{% endblock %}

@@ -52,6 +52,7 @@ AMBITO_DE_RUTA = {
     "core:api-webhooks": "admin",
     "core:household": "admin",
     "core:household-edit": "admin",
+    "core:audit": "admin",
     "core:member-invite": "admin",
     "core:member-edit": "admin",
     "core:member-remove": "admin",

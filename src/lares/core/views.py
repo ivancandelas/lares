@@ -370,3 +370,26 @@ def responsibilities_view(request):
 
     datos = responsibilities.split(request.household)
     return render(request, "core/responsibilities.html", datos)
+
+
+def audit_view(request):
+    """La línea de tiempo del hogar: quién hizo qué, y quién miró qué.
+
+    La primitiva existía desde el primer día y no se veía en ninguna pantalla,
+    así que la mitad de lo que promete -«el acceso del contador queda en la
+    línea de tiempo»- no se podía comprobar aunque fuera cierto.
+    """
+    from .models import Membership
+    from .services import audit
+
+    quien = request.GET.get("quien") or ""
+    tipo = request.GET.get("tipo") or ""
+    eventos = audit.timeline(request.household, quien=quien or None, tipo=tipo)
+
+    return render(request, "core/audit.html", {
+        "eventos": [{"e": e, "label": audit.label_of(e)} for e in eventos],
+        "gente": Membership.objects.filter(household=request.household)
+                 .select_related("user"),
+        "quien": quien,
+        "tipo": tipo,
+    })
