@@ -38,7 +38,7 @@ jobs:
           LARES_DATABASE_URL: postgres://lares:lares@127.0.0.1:5432/lares
         # Una imagen que no pasa las pruebas no se publica: quien la baje la
         # va a instalar en su casa.
-        run: uv run pytest -q --ignore=tests/test_browser.py
+        run: uv run pytest -q -n auto --ignore=tests/test_browser.py
 
   imagen:
     needs: pruebas

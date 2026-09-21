@@ -312,10 +312,14 @@ uv run src/manage.py runserver
 ```
 
 ```bash
-make test      # batería de pruebas
-make lint      # estilo
-make check     # chequeo de Django
+make test          # batería completa, repartida entre los núcleos
+make test-rapido   # igual, reutilizando la base: para el bucle de trabajo
+make lint          # estilo
+make check         # chequeo de Django
 ```
+
+`make test-rapido` no vale después de tocar un modelo: la base reutilizada
+conserva el esquema viejo y los fallos no significan nada.
 
 Con todo en contenedores: `make up && make logs`.
 

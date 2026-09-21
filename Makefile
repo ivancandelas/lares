@@ -1,4 +1,4 @@
-.PHONY: help setup up down logs shell migrations migrate check test lint fmt rename \
+.PHONY: help setup up down logs shell migrations migrate check test test-rapido lint fmt rename \
         version build release deploy update backup restore-last
 
 help:
@@ -29,8 +29,14 @@ migrate:    ## Aplica migraciones
 check:      ## Chequeo de integridad de Django
 	uv run src/manage.py check
 
-test:       ## Corre la bateria de pruebas
-	uv run pytest
+test:       ## Corre la bateria de pruebas, repartida entre los nucleos
+	uv run pytest -n auto
+
+test-rapido: ## Como `test`, pero reutilizando la base de pruebas
+	@# Para el bucle de trabajo: ahorra crear ocho bases y migrarlas. OJO:
+	@# si cambiaste un modelo, la base reutilizada tiene el esquema viejo y
+	@# los fallos no significan nada. Tras tocar migraciones, `make test`.
+	uv run pytest -n auto --reuse-db
 
 lint:       ## Revisa estilo
 	uv run ruff check src
