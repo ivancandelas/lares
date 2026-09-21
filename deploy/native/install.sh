@@ -25,11 +25,34 @@ paso() { printf '\033[36m==>\033[0m %s\n' "$*"; }
 
 [ "$(id -u)" -eq 0 ] || { rojo "Esto se instala como root."; exit 1; }
 
+# La versión a la que ir. Se pregunta primero por el Release publicado y, si no
+# hay ninguno, por la etiqueta más nueva.
+#
+# El orden importa y la segunda mitad no es paranoia: empujar una etiqueta NO
+# crea un Release en GitHub. Sin este respaldo, quien acaba de publicar su
+# primera versión ve morir la instalación con un «404» crudo justo después de
+# veinte minutos instalando dependencias, y no hay nada en ese mensaje que diga
+# qué le falta.
+ultima_version() {
+    local v
+    v="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
+        | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -1 || true)"
+    [ -n "$v" ] || v="$(curl -fsSL "https://api.github.com/repos/$REPO/tags" 2>/dev/null \
+        | sed -n 's/.*"name": *"v\{0,1\}\([^"]*\)".*/\1/p' | sort -V | tail -1 || true)"
+    printf '%s' "$v"
+}
+
+sin_versiones() {
+    rojo "No hay ninguna versión publicada en $REPO."
+    rojo "Publica una:   make release V=0.7.0 && git push --follow-tags"
+    rojo "O pásala:      $1 0.7.0"
+    exit 1
+}
+
 if [ -z "$VERSION" ]; then
     paso "Buscando la última versión publicada"
-    VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-        | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -1)"
-    [ -n "$VERSION" ] || { rojo "No pude averiguar la última versión. Pásala: install.sh 0.7.0"; exit 1; }
+    VERSION="$(ultima_version)"
+    [ -n "$VERSION" ] || sin_versiones install.sh
 fi
 paso "Instalando Lares $VERSION"
 

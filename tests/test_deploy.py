@@ -86,3 +86,22 @@ def test_la_imagen_migra_con_el_mismo_comando():
     entrypoint = (RAIZ / "docker/entrypoint.sh").read_text()
 
     assert "migrate_locked" in entrypoint
+
+
+@pytest.mark.parametrize("script", ["install.sh", "update.sh"])
+def test_hay_respaldo_cuando_no_existe_el_release(script):
+    """Empujar una etiqueta no crea un Release, y el instalador preguntaba solo
+    por el Release.
+
+    La primera instalación de la primera versión moría con un `404` crudo
+    después de veinte minutos compilando dependencias. Que consulte también las
+    etiquetas es lo que separa «funciona recién publicado» de «funciona si
+    además te acordaste de publicar el Release a mano».
+    """
+    texto = (RAIZ / "deploy/native" / script).read_text()
+
+    assert "/releases/latest" in texto
+    assert "/tags" in texto
+    # Y si de verdad no hay ninguna, se dice qué hacer en vez de morir con el
+    # código de salida de curl.
+    assert "sin_versiones" in texto

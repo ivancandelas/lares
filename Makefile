@@ -47,14 +47,24 @@ build:      ## Construye la imagen con la version del archivo VERSION
 	docker build --build-arg LARES_VERSION=$$(cat VERSION) \
 		-t lares:$$(cat VERSION) -t lares:latest .
 
-release:    ## Marca una version:  make release V=0.7.0
+release:    ## Etiqueta una version EN LOCAL:  make release V=0.7.0
 	@test -n "$(V)" || (echo "Uso: make release V=0.7.0" && exit 1)
 	@echo "$(V)" > VERSION
 	@sed -i 's/^version = ".*"/version = "$(V)"/' pyproject.toml
-	@git add VERSION pyproject.toml
+	@# El lock lleva dentro la version del propio paquete. Sin esto, el commit
+	@# etiquetado queda sucio y el tarball que se instala trae un lock que dice
+	@# otra version.
+	@uv lock --quiet
+	@git add VERSION pyproject.toml uv.lock
 	@git commit -m "Version $(V)"
 	@git tag -a v$(V) -m "Lares $(V)"
-	@echo "Etiquetado v$(V). Falta empujarlo:  git push --follow-tags"
+	@echo
+	@echo "Etiquetado v$(V) EN LOCAL. Todavia no existe nada en GitHub."
+	@echo "El Release -que es lo que buscan los instaladores- lo crea el"
+	@echo "workflow al recibir la etiqueta. Falta empujarla:"
+	@echo
+	@echo "    git push --follow-tags"
+	@echo
 
 deploy:     ## Levanta el despliegue de produccion
 	docker compose -f compose.prod.yaml up -d
