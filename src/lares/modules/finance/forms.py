@@ -18,8 +18,40 @@ class CreditCardForm(ResourceForm):
     GROUPS = (
         ("Qué tarjeta es", ["name", "issuer", "last_four", "owner"]),
         ("Fechas y límite", ["credit_limit", "cut_day", "due_day", "apr"]),
-        ("Dónde viven sus movimientos", ["account", "currency", "status"]),
+        ("Dónde se apuntan sus movimientos", ["account", "currency", "status"]),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._banco_solo_organizaciones()
+        self._cuenta_solo_pasivos()
+
+    def _banco_solo_organizaciones(self):
+        """Ninguna persona emite una tarjeta de credito.
+
+        El desplegable salia con la agenda entera -la suegra, el plomero- y
+        entre cincuenta nombres hay que buscar el banco. `owner` se deja como
+        esta a proposito: el titular SI puede ser una organizacion, porque una
+        empresarial va a nombre de la empresa.
+        """
+        from lares.core.models import Party
+
+        campo = self.fields.get("issuer")
+        if campo is not None and getattr(campo, "queryset", None) is not None:
+            campo.queryset = campo.queryset.filter(
+                kind=Party.Kind.ORGANIZATION)
+
+    def _cuenta_solo_pasivos(self):
+        """Lo que se debe con la tarjeta es un pasivo, no un activo.
+
+        Colgarla de la cuenta de nomina hacia que cada compra restara del
+        saldo del banco: el gasto se contaba dos veces y el patrimonio salia
+        mal. Ofrecer solo pasivos evita el error en vez de explicarlo.
+        """
+        campo = self.fields.get("account")
+        if campo is not None and getattr(campo, "queryset", None) is not None:
+            campo.queryset = campo.queryset.filter(
+                type=Account.Type.LIABILITY)
 
     class Meta:
         model = CreditCard
@@ -28,7 +60,7 @@ class CreditCardForm(ResourceForm):
         labels = {
             "name": "Cómo la llamas",
             "issuer": "Banco",
-            "account": "Cuenta donde viven sus movimientos",
+            "account": "Cuenta de la tarjeta",
             "last_four": "Últimos 4 dígitos",
             "credit_limit": "Límite",
             "cut_day": "Día de corte",
@@ -41,6 +73,13 @@ class CreditCardForm(ResourceForm):
         help_texts = {
             "last_four": "Nunca guardes el número completo.",
             "due_day": "De aquí sale el aviso de pago cada mes.",
+            "issuer": "Quién la emite: el banco. Solo salen organizaciones.",
+            "account": "El saldo que debes vive aquí, no en la tarjeta. "
+                       "Créala en Dinero → Cuentas como pasivo, con el mismo "
+                       "nombre. Sin ella la tarjeta se registra igual, pero no "
+                       "sabremos cuánto llevas gastado ni cuánto te queda.",
+            "owner": "Puede ser una persona o una empresa: una tarjeta "
+                     "empresarial va a nombre de la empresa.",
         }
 
 

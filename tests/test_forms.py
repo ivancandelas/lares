@@ -197,3 +197,79 @@ def test_un_documento_con_vencimiento_avisa_en_cuanto_se_guarda(sesion, househol
     with use_household(household):
         assert Document.objects.count() == 1
         assert Obligation.objects.filter(source="core.document_expiry").exists()
+
+
+@pytest.mark.django_db
+def test_una_organizacion_no_cumple_anos(household):
+    """El campo viaja igual, pero no se pinta y no se guarda."""
+    from lares.core.forms import PartyForm
+    from lares.core.models import Party
+
+    form = PartyForm({
+        "kind": Party.Kind.ORGANIZATION, "name": "Ferretería El Tornillo",
+        "birth_date": "1980-05-01",
+    }, household=household)
+
+    assert form.is_valid(), form.errors
+    assert form.save().birth_date is None
+
+
+@pytest.mark.django_db
+def test_una_persona_si_conserva_su_fecha(household):
+    import datetime as dt
+
+    from lares.core.forms import PartyForm
+    from lares.core.models import Party
+
+    form = PartyForm({
+        "kind": Party.Kind.PERSON, "name": "Iván", "birth_date": "1980-05-01",
+    }, household=household)
+
+    assert form.is_valid(), form.errors
+    assert form.save().birth_date == dt.date(1980, 5, 1)
+
+
+@pytest.mark.django_db
+def test_el_banco_de_una_tarjeta_solo_ofrece_organizaciones(household):
+    """Entre cincuenta contactos hay que encontrar el banco."""
+    from lares.core.models import Party
+    from lares.modules.finance.forms import CreditCardForm
+
+    banco = Party.objects.create(household=household, name="BBVA",
+                                 kind=Party.Kind.ORGANIZATION)
+    suegra = Party.objects.create(household=household, name="Suegra",
+                                  kind=Party.Kind.PERSON)
+
+    ofrecidos = CreditCardForm(household=household).fields["issuer"].queryset
+
+    assert banco in ofrecidos
+    assert suegra not in ofrecidos
+
+
+@pytest.mark.django_db
+def test_el_titular_de_una_tarjeta_si_puede_ser_una_empresa(household):
+    """Una tarjeta empresarial va a nombre de la empresa, no de quien la lleva."""
+    from lares.core.models import Party
+    from lares.modules.finance.forms import CreditCardForm
+
+    empresa = Party.objects.create(household=household, name="Mi S.A. de C.V.",
+                                   kind=Party.Kind.ORGANIZATION)
+
+    assert empresa in CreditCardForm(household=household).fields["owner"].queryset
+
+
+@pytest.mark.django_db
+def test_la_cuenta_de_una_tarjeta_solo_ofrece_pasivos(household):
+    """Colgarla de la nómina contaba cada compra dos veces."""
+    from lares.core.models import Account
+    from lares.modules.finance.forms import CreditCardForm
+
+    deuda = Account.objects.create(household=household, name="Tarjeta BBVA",
+                                   type=Account.Type.LIABILITY)
+    nomina = Account.objects.create(household=household, name="Nómina",
+                                    type=Account.Type.ASSET)
+
+    ofrecidas = CreditCardForm(household=household).fields["account"].queryset
+
+    assert deuda in ofrecidas
+    assert nomina not in ofrecidas

@@ -5,7 +5,12 @@
 <div class="max-w-2xl">
   <h1 class="text-2xl font-light tracking-tight">{{ title }}</h1>
 
-  <form method="post" class="mt-8"
+  {% comment %}
+    `x_data` lo pone el formulario cuando alguno de sus campos solo aplica
+    según lo que se haya elegido en otro. Sin eso, el atributo no se pinta y
+    aquí no pasa nada: la inmensa mayoría de los formularios no lo usan.
+  {% endcomment %}
+  <form method="post" class="mt-8"{% if form.x_data %} x-data='{{ form.x_data }}'{% endif %}
         {% if multipart %}enctype="multipart/form-data"{% endif %}>
     {% csrf_token %}
 
@@ -24,7 +29,20 @@
         {% endif %}
         <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
           {% for field in campos %}
-            <div{% if field.field.widget.input_type == "textarea" or field.name == "description" or field.name == "notes" %} class="sm:col-span-2"{% endif %}>
+            {% comment %}
+              `x_show` es una condición que el formulario cuelga del campo:
+              existe y se envía, pero no se enseña mientras no aplique.
+              Preguntar la fecha de nacimiento de una ferretería no es solo
+              ruido: hace dudar de si se está rellenando bien.
+
+              Va en el campo y no en `widget.attrs` a propósito: lo que se
+              pone ahí Django lo pinta como atributo del `<input>`, y acabaría
+              saliendo un `x_show="..."` en el HTML que no significa nada.
+
+              Va con `x-cloak` porque, sin él, el campo aparece un instante
+              antes de que Alpine arranque y desaparece a la vista del usuario.
+            {% endcomment %}
+            <div{% if field.field.x_show %} x-show="{{ field.field.x_show }}" x-cloak{% endif %}{% if field.field.widget.input_type == "textarea" or field.name == "description" or field.name == "notes" %} class="sm:col-span-2"{% endif %}>
               <label for="{{ field.id_for_label }}" class="block text-sm text-soft">
                 {{ field.label }}{% if field.field.required %} <span class="text-soon" title="obligatorio">·</span>{% endif %}
               </label>

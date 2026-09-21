@@ -264,6 +264,33 @@ class PartyForm(LaresForm):
             self.fields["tags"].initial = ", ".join(
                 t.name for t in tags_of(self.instance)
             )
+        self._nacimiento_solo_para_personas()
+
+    def _nacimiento_solo_para_personas(self):
+        """Una ferreteria no cumple anos.
+
+        El campo sigue existiendo y viajando en el POST; lo que cambia es que
+        no se ensena mientras el tipo sea organizacion. Y si alguien lo puso y
+        luego cambio el tipo, `clean` lo borra: un dato invisible que sigue
+        guardado reaparece el dia que alguien exporta.
+        """
+        import json
+
+        from .models import Party
+
+        actual = (self.data.get("kind") or self.initial.get("kind")
+                  or getattr(self.instance, "kind", "") or Party.Kind.PERSON)
+        self.x_data = json.dumps({"kind": str(actual)})
+        self.fields["kind"].widget.attrs["x-model"] = "kind"
+        self.fields["birth_date"].x_show = f"kind === '{Party.Kind.PERSON}'"
+
+    def clean(self):
+        from .models import Party
+
+        datos = super().clean()
+        if datos.get("kind") == Party.Kind.ORGANIZATION:
+            datos["birth_date"] = None
+        return datos
 
     def save(self, commit=True):
         party = super().save(commit=commit)

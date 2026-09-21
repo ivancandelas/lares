@@ -118,6 +118,27 @@ def test_se_puede_navegar_desde_el_desplegable(page):
     assert "/inmuebles/" in page.url
 
 
+def test_la_fecha_de_nacimiento_solo_sale_en_personas(page, live_server):
+    """Una ferretería no cumple años.
+
+    Lo decide Alpine en el navegador: desde Django el campo está en el HTML
+    en los dos casos, así que ninguna prueba de las otras puede verlo.
+    """
+    page.goto(f"{live_server.url.replace('127.0.0.1', 'localhost')}/personas/nueva/",
+              wait_until="networkidle")
+    campo = page.locator("div:has(> label[for=id_birth_date])")
+
+    assert campo.is_visible(), "con «Persona» debería verse"
+
+    page.select_option("#id_kind", "organization")
+    page.wait_for_timeout(250)
+    assert not campo.is_visible(), "con «Organización» no debería verse"
+
+    page.select_option("#id_kind", "person")
+    page.wait_for_timeout(250)
+    assert campo.is_visible(), "al volver a «Persona» tiene que reaparecer"
+
+
 def test_la_pagina_no_lanza_errores_de_javascript(page):
     errores = []
     page.on("pageerror", lambda e: errores.append(str(e)))
