@@ -171,5 +171,11 @@
       navigator.serviceWorker.register("{% url 'core:service-worker' %}");
     }
   </script>
+  {% comment %}
+    Al final del cuerpo y no en la cabecera: lo que se ponga aquí se ejecuta
+    ANTES que Alpine -que va con `defer`- y eso es justo lo que hace falta
+    para que sus expresiones encuentren definido lo que usan.
+  {% endcomment %}
+  {% block scripts %}{% endblock %}
 </body>
 </html>

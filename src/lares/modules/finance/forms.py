@@ -15,6 +15,8 @@ from .models_provision import Provision
 
 
 class CreditCardForm(ResourceForm):
+    QUICK_ADD = {"account": "account:liability", "issuer": "party:organization"}
+
     GROUPS = (
         ("Qué tarjeta es", ["name", "issuer", "last_four", "owner"]),
         ("Fechas y límite", ["credit_limit", "cut_day", "due_day", "apr"]),

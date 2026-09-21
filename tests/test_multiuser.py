@@ -365,6 +365,9 @@ ARMAZON = {
     # Tu propia cuenta no es un dominio del hogar: la usa cualquiera, y quien
     # tenga el dinero restringido tiene que poder cambiar su clave igual.
     "core:password-change",
+    # El alta rápida sirve a doce desplegables de ámbitos distintos, así que
+    # no tiene uno propio: mide el suyo cada llamada, según lo que se cree.
+    "core:quick-add",
     "core:invite-accept", "core:household-switch",
     "core:document-edit", "core:inbox-file", "core:inbox-review",
     "core:inbox-restore", "core:inbox-reclassify-all",
@@ -616,3 +619,47 @@ def test_un_vencimiento_de_un_pack_es_del_modulo_de_su_recurso(casa):
         )
 
     assert scope_of_obligation(refrendo) == "vehicles"
+
+
+# --- El alta rápida no es una puerta de atrás -------------------------------
+
+
+@pytest.mark.django_db
+def test_el_alta_rapida_mide_el_ambito_de_lo_que_se_crea(multi, casa, client):
+    """Crear una cuenta desde un desplegable sigue siendo crear una cuenta.
+
+    Es el riesgo de todo atajo: la puerta de la pantalla cerrada y la de al
+    lado abierta. Quien tiene el dinero restringido no crea cuentas por aquí.
+    """
+    hijo = _miembro(casa, "hijo@x.mx", Membership.Role.MEMBER, scopes=["tasks"])
+    sesion = _sesion(client, hijo)
+
+    assert sesion.get("/rapido/account/").status_code == 403
+    assert sesion.post("/rapido/account/",
+                       {"name": "Cuenta secreta", "type": "asset",
+                        "currency": "MXN"}).status_code == 403
+    from lares.core.models import Account
+    assert not Account.all_objects.filter(name="Cuenta secreta").exists()
+
+
+@pytest.mark.django_db
+def test_con_el_ambito_concedido_el_alta_rapida_si_crea(multi, casa, client):
+    pareja = _miembro(casa, "pareja@x.mx", Membership.Role.ADULT,
+                      scopes=["finance"])
+    sesion = _sesion(client, pareja)
+
+    respuesta = sesion.post("/rapido/account/",
+                            {"name": "Ahorro", "type": "asset",
+                             "currency": "MXN"})
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["label"] == "Ahorro"
+
+
+@pytest.mark.django_db
+def test_quien_solo_mira_no_crea_por_el_atajo(multi, casa, client):
+    invitado = _miembro(casa, "invitado@x.mx", Membership.Role.VIEWER)
+
+    assert _sesion(client, invitado).post(
+        "/rapido/party/", {"kind": "person", "name": "Alguien"}
+    ).status_code == 403

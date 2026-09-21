@@ -77,6 +77,11 @@ class CoreConfig(AppConfig):
         from .related import for_party
         registry.related(for_party)
 
+        # Lo que se puede crear al vuelo desde un desplegable, sin perder el
+        # formulario que se estaba llenando. Ver `quickadd.py`.
+        from . import quickadd
+        quickadd.poblar()
+
         # Las reglas que cambian por estado y por año viven en packs/*.yaml.
         # Cambiar una fecha no debería exigir un despliegue.
         packs.register(registry)

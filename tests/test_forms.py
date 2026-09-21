@@ -408,3 +408,83 @@ def test_las_fechas_se_pintan_en_iso_o_el_navegador_las_deja_en_blanco(scoped):
 
     assert 'value="2026-09-18"' in str(form["on_date"])
     assert 'type="date"' in str(form["on_date"])
+
+
+# --- Alta rápida desde el desplegable ---------------------------------------
+
+
+@pytest.mark.django_db
+def test_un_modulo_hereda_el_boton_sin_pedirlo(scoped):
+    """Se deduce del modelo, no de una lista a mano.
+
+    Los campos que piden una parte están repartidos por doce módulos. Con una
+    lista escrita a mano, el módulo trece se queda sin botón y nadie se entera
+    hasta que alguien pierde un formulario a medio llenar.
+
+    `PolicyForm` no declara nada: el botón le sale porque «aseguradora»
+    apunta a `Party`.
+    """
+    from lares.modules.insurance.forms import PolicyForm
+
+    campo = PolicyForm(household=scoped).fields["insurer"]
+
+    assert campo.quick_add == "party"
+    assert campo.quick_preset == ""
+
+
+@pytest.mark.django_db
+def test_un_desplegable_que_no_crea_nada_no_lleva_boton(scoped):
+    """«Persona u organización» es una lista fija, no algo que se dé de alta."""
+    from lares.core.forms import PartyForm
+
+    assert not hasattr(PartyForm(household=scoped).fields["kind"], "quick_add")
+
+
+@pytest.mark.django_db
+def test_la_categoria_de_un_gasto_solo_crea_categorias_de_gasto(scoped):
+    """Sin fijar el tipo, desde «categoría» se crearía una cuenta de activo
+    que luego no sale en el desplegable: el usuario ve que su alta «no hizo
+    nada»."""
+    from lares.core.forms import ExpenseForm
+
+    campo = ExpenseForm(household=scoped).fields["category"]
+
+    assert campo.quick_add == "account"
+    assert campo.quick_preset == "expense"
+
+
+@pytest.mark.django_db
+def test_poner_el_saldo_al_lado_no_se_lleva_el_boton_por_delante(scoped):
+    """`_saldos_en` SUSTITUYE el campo, y se llevaba el atributo con él."""
+    from lares.core.forms import ExpenseForm
+
+    campo = ExpenseForm(household=scoped).fields["paid_from"]
+
+    assert campo.quick_add == "account"
+    assert campo.quick_preset == "asset"
+
+
+@pytest.mark.django_db
+def test_el_alta_rapida_devuelve_lo_justo_para_actualizar_el_desplegable(
+        sesion_admin, household):
+    respuesta = sesion_admin.post("/rapido/party/",
+                                  {"kind": "organization", "name": "Qualitas"})
+
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["label"] == "Qualitas"
+    assert datos["id"]
+
+
+@pytest.mark.django_db
+def test_el_tipo_viene_fijo_y_no_se_puede_cambiar(sesion_admin, household):
+    """Abierto desde «categoría de gasto», no se puede crear otra cosa."""
+    html = sesion_admin.get("/rapido/account/?preset=expense").content.decode()
+
+    assert "Nueva categoría de gasto" in html
+    assert "disabled" in html
+
+
+@pytest.mark.django_db
+def test_un_alta_rapida_que_no_existe_no_abre_nada(sesion_admin, household):
+    assert sesion_admin.get("/rapido/inventada/").status_code == 404

@@ -1,0 +1,30 @@
+{% comment %}
+  El contenido de la ventana, sin <html> ni nada: llega por fetch y se inserta
+  con x-html. Por eso no extiende `base.html` y por eso no lleva <form>: el de
+  fuera lo pone Alpine, que es quien intercepta el envío.
+
+  Si se anidara un <form> dentro del formulario grande, el navegador lo
+  descarta en silencio -HTML no admite formularios anidados- y el botón
+  acabaría enviando el formulario de atrás, a medio llenar.
+{% endcomment %}
+<h2 class="text-lg font-light tracking-tight">{{ title }}</h2>
+
+{% if form.non_field_errors %}
+  <div class="mt-3 border-l-2 border-overdue pl-3 text-sm text-overdue">
+    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% endif %}
+
+<div class="mt-5 space-y-4">
+  {% for field in form %}
+    <div{% if field.field.disabled %} class="opacity-60"{% endif %}>
+      <label for="{{ field.id_for_label }}" class="block text-sm text-soft">
+        {{ field.label }}{% if field.field.required %} <span class="text-soon" title="obligatorio">·</span>{% endif %}
+      </label>
+      <div class="mt-1">{{ field }}</div>
+      {% for error in field.errors %}
+        <p class="mt-1 text-[13px] text-overdue">{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endfor %}
+</div>

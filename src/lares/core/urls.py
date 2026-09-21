@@ -8,6 +8,7 @@ from . import (
     views_contacts,
     views_crud,
     views_inbox,
+    views_quickadd,
     views_succession,
 )
 
@@ -134,6 +135,8 @@ urlpatterns = [
     path("api/v1/webhooks", api.webhooks, name="api-webhooks"),
     path("api/v1/inbox/paperless", api.inbox_paperless,
          name="api-inbox-paperless"),
+
+    path("rapido/<str:key>/", views_quickadd.quick_add, name="quick-add"),
 
     path("cuenta/contrasena/", views_crud.password_change,
          name="password-change"),

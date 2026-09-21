@@ -169,6 +169,51 @@ def test_el_navegador_acepta_las_fechas_que_pintamos(page, live_server):
     assert page.input_value("#id_date"), "el navegador rechazó la fecha de hoy"
 
 
+def test_dar_de_alta_lo_que_falta_sin_perder_el_formulario(page, live_server):
+    """El caso que lo motiva, de principio a fin.
+
+    Estás registrando algo, la organización que necesitas no existe, la creas
+    desde la ventana y **lo que ya habías escrito sigue ahí**. Eso último es
+    lo que importa: perder diez campos hace que la próxima vez no lo
+    registres.
+    """
+    base = live_server.url.replace("127.0.0.1", "localhost")
+    page.goto(f"{base}/nuevo/policy/", wait_until="networkidle")
+
+    # Lo que ya llevaba escrito.
+    page.fill("#id_name", "Seguro del Mazda")
+    antes = page.locator("#id_insurer option").count()
+
+    page.click("button[data-alta=id_insurer]")
+    page.wait_for_selector("[data-dialogo=id_insurer] #id_name", state="visible")
+
+    page.fill("[data-dialogo=id_insurer] #id_name", "Qualitas")
+    page.click("[data-guardar=id_insurer]")
+    page.wait_for_selector("[data-dialogo=id_insurer]", state="hidden")
+
+    # La nueva quedó creada Y seleccionada.
+    assert page.locator("#id_insurer option").count() == antes + 1
+    assert page.locator("#id_insurer option:checked").inner_text() == "Qualitas"
+
+    # Y lo de antes no se movió.
+    assert page.input_value("#id_name") == "Seguro del Mazda"
+
+
+def test_el_alta_rapida_avisa_de_lo_que_falta(page, live_server):
+    """Si se equivoca dentro de la ventana, se corrige dentro de la ventana."""
+    base = live_server.url.replace("127.0.0.1", "localhost")
+    page.goto(f"{base}/nuevo/policy/", wait_until="networkidle")
+
+    page.click("button[data-alta=id_insurer]")
+    page.wait_for_selector("[data-dialogo=id_insurer] #id_name", state="visible")
+    page.click("[data-guardar=id_insurer]")
+    page.wait_for_timeout(600)
+
+    assert page.locator("[data-dialogo=id_insurer]").is_visible(), \
+        "no puede cerrarse sin crear"
+    assert page.locator("[data-dialogo=id_insurer] #id_name").is_visible()
+
+
 def test_la_pagina_no_lanza_errores_de_javascript(page):
     errores = []
     page.on("pageerror", lambda e: errores.append(str(e)))

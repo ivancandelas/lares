@@ -83,8 +83,16 @@ class GroupedForm:
         instancia = getattr(self, "instance", None)
         return instancia is None or instancia._state.adding
 
+    # Que se puede crear al vuelo desde cada desplegable. Por omision se
+    # deduce del modelo al que apunta; un formulario concreto lo afina con
+    # `QUICK_ADD` -la categoria de un gasto es una cuenta, pero solo de gasto-
+    # o lo apaga poniendo None.
+    POR_MODELO = {"Party": "party", "Account": "account", "Location": "location"}
+    QUICK_ADD: dict = {}
+
     def _estilar(self):
         self._moneda_como_lista()
+        self._ofrecer_altas_rapidas()
         for field in self.fields.values():
             widget = field.widget
             if isinstance(widget, forms.CheckboxInput):
@@ -106,6 +114,27 @@ class GroupedForm:
             widget.attrs.setdefault("class", INPUT)
             if isinstance(widget, forms.Textarea):
                 widget.attrs.setdefault("rows", 3)
+
+    def _ofrecer_altas_rapidas(self):
+        """Cuelga de cada desplegable lo que se puede crear desde el.
+
+        Se hace por modelo y no campo a campo porque los campos que piden una
+        parte estan repartidos por doce modulos: una lista a mano se queda
+        corta en cuanto alguien escribe el modulo trece, y justo ahi es donde
+        no se nota que falta.
+        """
+        for nombre, field in self.fields.items():
+            if nombre in self.QUICK_ADD:
+                valor = self.QUICK_ADD[nombre]
+            else:
+                modelo = getattr(getattr(field, "queryset", None), "model", None)
+                valor = self.POR_MODELO.get(modelo.__name__) if modelo else None
+            if valor:
+                # Partido aqui y no en la plantilla: "account:expense" son dos
+                # datos, y separarlos con filtros de plantilla sale ilegible.
+                from .quickadd import parse
+
+                field.quick_add, field.quick_preset = parse(valor)
 
     def _moneda_como_lista(self):
         """La moneda se elige, no se teclea.
@@ -153,6 +182,11 @@ class GroupedForm:
             nuevo.widget.attrs.update(campo.widget.attrs)
             nuevo.initial = campo.initial
             self.fields[nombre] = nuevo
+
+        # Este metodo SUSTITUYE el campo, asi que se lleva por delante lo que
+        # se le hubiera colgado antes. Volver a pasar es mas barato que
+        # acordarse de copiar cada atributo nuevo que alguien anada.
+        self._ofrecer_altas_rapidas()
 
     def groups(self):
         """[(titulo, [campos])] para la plantilla. Sin GROUPS, un solo bloque."""
@@ -332,6 +366,34 @@ class LocationForm(LaresForm):
         model = Location
         fields = ["name", "parent", "code"]
         labels = {"name": "Nombre", "parent": "Está dentro de", "code": "Etiqueta QR o NFC"}
+
+
+class QuickPartyForm(LaresForm):
+    """Lo minimo para que una parte exista y se pueda seguir escribiendo.
+
+    Nombre y tipo. El RFC entra porque en Mexico es lo que permite conciliar
+    un CFDI despues, y teclearlo aqui cuesta lo mismo que volver manana.
+    """
+
+    class Meta:
+        model = Party
+        fields = ["kind", "name", "tax_id"]
+        labels = {"kind": "Persona u organización", "name": "Cómo lo llamas",
+                  "tax_id": "RFC"}
+
+
+class QuickAccountForm(LaresForm):
+    class Meta:
+        model = Account
+        fields = ["name", "type", "currency"]
+        labels = {"name": "Nombre", "type": "Qué es", "currency": "Moneda"}
+
+
+class QuickLocationForm(LaresForm):
+    class Meta:
+        model = Location
+        fields = ["name"]
+        labels = {"name": "Nombre"}
 
 
 class DocumentForm(LaresForm):
@@ -582,6 +644,8 @@ class ExpenseForm(GroupedForm, forms.Form):
     usuario tiene que entender contabilidad, la interfaz falló.
     """
 
+    QUICK_ADD = {"paid_from": "account:asset", "category": "account:expense"}
+
     GROUPS = (
         ("Qué y cuánto", ["date", "description", "amount"]),
         ("De dónde sale", ["paid_from", "category"]),
@@ -799,6 +863,8 @@ class TransferForm(GroupedForm, forms.Form):
     aparece en "en que se va el dinero", que es exactamente lo correcto.
     """
 
+    QUICK_ADD = {"origin": "account:asset", "destination": "account:asset"}
+
     GROUPS = (
         ("Cuánto y cuándo", ["date", "amount"]),
         ("Entre qué cuentas", ["origin", "destination"]),
@@ -861,6 +927,8 @@ class IncomeEntryForm(GroupedForm, forms.Form):
     El gasto tenia formulario y el ingreso no, asi que la unica forma de
     meter un sueldo era el importador de estados de cuenta o la consola.
     """
+
+    QUICK_ADD = {"into": "account:asset", "category": "account:income"}
 
     GROUPS = (
         ("Qué y cuánto", ["date", "description", "amount"]),

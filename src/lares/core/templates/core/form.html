@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ title }} - {{ product_name }}{% endblock %}
 
 {% block content %}
@@ -46,7 +47,44 @@
               <label for="{{ field.id_for_label }}" class="block text-sm text-soft">
                 {{ field.label }}{% if field.field.required %} <span class="text-soon" title="obligatorio">·</span>{% endif %}
               </label>
-              <div class="mt-1">{{ field }}</div>
+              {% if field.field.quick_add %}
+                {% comment %}
+                  El «+» de al lado. Todo el estado vive en este x-data, así
+                  que dos desplegables en la misma pantalla no se pisan.
+                {% endcomment %}
+                <div class="mt-1 flex items-start gap-2"
+                     x-data="altaRapida('{{ field.field.quick_add }}', '{{ field.field.quick_preset }}', '{{ field.id_for_label }}')">
+                  <div class="min-w-0 flex-1">{{ field }}</div>
+                  <button type="button" @click="abrir()"
+                          data-alta="{{ field.id_for_label }}"
+                          title="Dar de alta uno nuevo sin salir de aquí"
+                          class="shrink-0 rounded-sm border border-rule bg-white px-2.5 py-2
+                                 text-sm text-soft hover:border-calm hover:text-calm">+</button>
+
+                  <div x-show="abierto" x-cloak @keydown.escape.window="cerrar()"
+                       class="fixed inset-0 z-30 flex items-start justify-center
+                              overflow-y-auto bg-ink/30 px-5 py-16">
+                    <div @click.outside="cerrar()" role="dialog" aria-modal="true"
+                         data-dialogo="{{ field.id_for_label }}"
+                         class="w-full max-w-sm rounded-sm border border-rule bg-paper p-6 shadow-lg">
+                      <div x-ref="cuerpo" x-html="html"></div>
+                      <p x-show="cargando" class="text-sm text-soft">Un momento…</p>
+                      <div class="mt-6 flex items-center gap-4 border-t border-rule pt-4">
+                        <button type="button" @click="guardar()" :disabled="cargando"
+                                data-guardar="{{ field.id_for_label }}"
+                                class="rounded-sm bg-calm px-4 py-2 text-sm font-medium
+                                       text-white hover:bg-ink disabled:opacity-50">
+                          Guardar
+                        </button>
+                        <button type="button" @click="cerrar()"
+                                class="text-sm text-soft hover:text-ink">Cancelar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% else %}
+                <div class="mt-1">{{ field }}</div>
+              {% endif %}
               {% if field.help_text %}
                 <p class="mt-1 text-[13px] leading-snug text-soft">{{ field.help_text }}</p>
               {% endif %}
@@ -69,4 +107,8 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'quickadd.js' %}"></script>
 {% endblock %}
