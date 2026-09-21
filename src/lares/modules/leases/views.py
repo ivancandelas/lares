@@ -7,7 +7,7 @@ from lares.core.services import obligations as obligation_service
 
 from .forms import RentPaymentForm
 from .models import Lease, RentPayment
-from .services import ensure_periods, performance
+from .services import ensure_periods, limpiar_lo_anterior, performance
 
 
 def lease_list(request):
@@ -38,6 +38,34 @@ def lease_detail(request, pk):
         "atrasados": lease.overdue_payments,
         "proxima_renta": next_rent(lease),
     })
+
+
+def start_tracking_here(request, pk):
+    """«De aquí para atrás, saldado»: pone la fecha de control en hoy.
+
+    Es la salida para quien ya tiene el destrozo hecho. Dar de alta un
+    contrato de hace cuatro anos creaba 48 meses sin cobrar, y la unica forma
+    de limpiarlos era registrar cuarenta y ocho pagos a mano. Nadie hace eso:
+    lo que hace es dejar de mirar la pantalla.
+
+    Solo borra los meses intactos. Uno con cobro anotado es un dato de
+    alguien, y para recuperar los borrados basta con bajar la fecha.
+    """
+    lease = get_object_or_404(Lease, pk=pk)
+    lease.tracked_from = dt.date.today()
+    lease.save(update_fields=["tracked_from", "updated_at"])
+
+    borrados = limpiar_lo_anterior(lease)
+    obligation_service.materialize(request.household)
+    messages.success(
+        request,
+        f"{borrados} mes{'es' if borrados != 1 else ''} anterior"
+        f"{'es' if borrados != 1 else ''} dado"
+        f"{'s' if borrados != 1 else ''} por saldado"
+        f"{'s' if borrados != 1 else ''} fuera de aquí."
+        if borrados else "A partir de hoy se lleva el control aquí."
+    )
+    return redirect("leases:detail", pk=lease.pk)
 
 
 def payment_register(request, pk):

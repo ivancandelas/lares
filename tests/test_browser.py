@@ -139,6 +139,36 @@ def test_la_fecha_de_nacimiento_solo_sale_en_personas(page, live_server):
     assert campo.is_visible(), "al volver a «Persona» tiene que reaparecer"
 
 
+def test_el_saldo_inicial_solo_sale_en_cuentas_de_verdad(page, live_server):
+    """«Supermercado» es una categoría: preguntarle un saldo no significa nada."""
+    page.goto(f"{live_server.url.replace('127.0.0.1', 'localhost')}/cuentas/nueva/",
+              wait_until="networkidle")
+    campo = page.locator("div:has(> label[for=id_opening_balance])")
+
+    assert campo.is_visible(), "una cuenta de activo sí tiene saldo"
+
+    page.select_option("#id_type", "expense")
+    page.wait_for_timeout(250)
+    assert not campo.is_visible(), "una categoría de gasto no tiene saldo"
+
+    page.select_option("#id_type", "liability")
+    page.wait_for_timeout(250)
+    assert campo.is_visible(), "una tarjeta sí: es lo que ya debes"
+
+
+def test_el_navegador_acepta_las_fechas_que_pintamos(page, live_server):
+    """La prueba de Django mira el HTML; esta mira lo que el navegador hace con él.
+
+    Un `<input type="date">` con un valor que no entiende no da error: se
+    queda vacío. Preguntarle su `value` al propio navegador es la única forma
+    de saber si la fecha llegó.
+    """
+    page.goto(f"{live_server.url.replace('127.0.0.1', 'localhost')}/gastos/nuevo/",
+              wait_until="networkidle")
+
+    assert page.input_value("#id_date"), "el navegador rechazó la fecha de hoy"
+
+
 def test_la_pagina_no_lanza_errores_de_javascript(page):
     errores = []
     page.on("pageerror", lambda e: errores.append(str(e)))

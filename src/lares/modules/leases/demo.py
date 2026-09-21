@@ -74,7 +74,7 @@ def _pagar_todo_menos(household, lease, sin_pagar: int):
     esto la renta cobrada no aparece como ingreso en ninguna parte: ni en el
     flujo, ni en el rendimiento, ni en la base de impuestos.
     """
-    from lares.core.models import Account, Entry, Posting
+    from lares.core.models import Entry, Posting
 
     ensure_periods(lease)
     banco, categoria = _cuentas_de(household, lease)

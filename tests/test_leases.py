@@ -18,7 +18,12 @@ import pytest
 from lares.core.models import Account, Entry, Obligation, Party, Posting
 from lares.core.services import checks, obligations
 from lares.modules.leases.models import Lease, RentPayment
-from lares.modules.leases.services import ensure_periods, next_rent, performance
+from lares.modules.leases.services import (
+    ensure_periods,
+    limpiar_lo_anterior,
+    next_rent,
+    performance,
+)
 from lares.modules.property.models import Property
 
 HOY = dt.date.today()
@@ -386,3 +391,67 @@ def test_se_avisa_del_mes_que_viene_ademas_del_corriente(scoped):
     rentas = Obligation.objects.filter(source="leases.rent").order_by("due_on")
     assert rentas.count() == 2
     assert rentas.first().amount == 14500
+
+
+@pytest.mark.django_db
+def test_un_contrato_viejo_no_inventa_cuatro_anos_sin_cobrar(scoped):
+    """El peor primer día posible: 48 meses sin cobrar el día del alta.
+
+    Lo que importa no es cuántos meses cree, sino que **ninguno nazca en
+    mora**: la deuda de 432.000 que salía no la debía nadie.
+    """
+    lease = _contrato(scoped, starts_on=HOY - dt.timedelta(days=4 * 365),
+                      tracked_from=HOY,
+                      prop=_inmueble(scoped, name="Casa Nogal"))
+    ensure_periods(lease)
+
+    assert lease.payments.count() <= 1
+    assert [p for p in lease.payments.all() if p.is_late()] == []
+
+
+@pytest.mark.django_db
+def test_sin_fecha_de_control_se_comporta_como_siempre(scoped):
+    """Las instalaciones que ya existen no cambian de conducta solas."""
+    lease = _contrato(scoped, starts_on=HOY - dt.timedelta(days=365),
+                      tracked_from=None)
+    ensure_periods(lease)
+
+    assert lease.payments.count() >= 12
+
+
+@pytest.mark.django_db
+def test_poner_al_dia_borra_lo_intacto_y_respeta_lo_anotado(scoped):
+    """Un mes con cobro anotado es un dato de alguien: no se borra por una fecha."""
+    lease = _contrato(scoped, starts_on=HOY - dt.timedelta(days=365),
+                      tracked_from=None)
+    ensure_periods(lease)
+    antes = lease.payments.count()
+    assert antes >= 12
+
+    cobrado = lease.payments.order_by("due_on").first()
+    cobrado.paid_on = cobrado.due_on
+    cobrado.amount_paid = Decimal("9000")
+    cobrado.save()
+
+    lease.tracked_from = HOY
+    lease.save()
+    borrados = limpiar_lo_anterior(lease)
+
+    assert borrados == antes - 1
+    assert lease.payments.filter(pk=cobrado.pk).exists()
+
+
+@pytest.mark.django_db
+def test_bajar_la_fecha_recupera_los_meses(scoped):
+    """Borrar tiene que ser reversible, o nadie se atreve a pulsar el botón."""
+    lease = _contrato(scoped, starts_on=HOY - dt.timedelta(days=365),
+                      tracked_from=HOY)
+    ensure_periods(lease)
+    limpiar_lo_anterior(lease)
+    assert lease.payments.count() <= 1
+
+    lease.tracked_from = None
+    lease.save()
+    ensure_periods(lease)
+
+    assert lease.payments.count() >= 12

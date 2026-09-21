@@ -92,6 +92,17 @@ class GroupedForm:
                 continue
             if isinstance(field, forms.DateField):
                 widget.input_type = "date"
+                # ISO obligatorio, y no es un detalle de estilo. Un
+                # `<input type="date">` solo entiende AAAA-MM-DD; con el
+                # formato local -18/09/2026- el navegador considera el valor
+                # invalido y **pinta el campo vacio**.
+                #
+                # Se comio dos cosas a la vez sin un solo error a la vista:
+                # ninguna fecha inicial aparecia -el "hoy" de registrar un
+                # gasto nunca estuvo puesto- y al editar una ficha salian en
+                # blanco todas sus fechas, asi que guardar borraba las
+                # opcionales y hacia fallar las obligatorias.
+                widget.format = "%Y-%m-%d"
             widget.attrs.setdefault("class", INPUT)
             if isinstance(widget, forms.Textarea):
                 widget.attrs.setdefault("rows", 3)
@@ -446,6 +457,106 @@ class ObligationRuleForm(LaresForm):
 
 
 class AccountForm(LaresForm):
+    """Alta de cuenta, con el saldo que ya trae puesto.
+
+    Nadie empieza a usar esto el dia que nacio: la nomina ya tiene catorce mil
+    y la tarjeta ya debe tres. Sin una forma de decirlo, la unica salida era
+    inventarse un ingreso falso -que ensucia "de donde viene el dinero" para
+    siempre- o empezar con todos los saldos en cero y no creerse ninguna
+    pantalla. La captura es el cuello de botella; esto es parte del cuello.
+
+    Por dentro es lo que hace cualquier libro contable: un asiento contra una
+    cuenta de patrimonio llamada "Saldos iniciales". Asi el asiento cuadra,
+    el saldo sale bien y ese arranque no aparece como ingreso ni como gasto.
+    """
+
+    SALDO_INICIAL = "Saldos iniciales"
+
+    # Solo tienen saldo las cuentas de verdad. "Supermercado" o "Sueldo" son
+    # categorias: preguntarles un saldo inicial no significa nada.
+    CON_SALDO = (Account.Type.ASSET, Account.Type.LIABILITY)
+
+    opening_balance = forms.DecimalField(
+        max_digits=16, decimal_places=2, required=False, min_value=0,
+        label="Saldo de hoy",
+        help_text="Lo que tiene ahora mismo. En una tarjeta o un préstamo, "
+                  "lo que debes. Déjalo vacío si empieza en cero.",
+    )
+    opening_date = forms.DateField(
+        required=False, label="A qué fecha", initial=dt.date.today,
+        help_text="Los movimientos anteriores a esta fecha ya están dentro "
+                  "del saldo: no los registres otra vez.",
+    )
+
+    GROUPS = (
+        ("Qué cuenta es", ["name", "type", "institution", "last_four",
+                           "currency"]),
+        ("Con qué saldo empieza", ["opening_balance", "opening_date"]),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.is_new:
+            self._saldo_solo_donde_aplica()
+        else:
+            # Editando no se ofrece: el libro es inmutable y un saldo inicial
+            # que se puede reescribir deja de cuadrar con sus apuntes. Para
+            # corregirlo se registra un ajuste, que es lo que deja rastro.
+            for campo in ("opening_balance", "opening_date"):
+                self.fields.pop(campo, None)
+
+    def _saldo_solo_donde_aplica(self):
+        import json
+
+        actual = (self.data.get("type") or self.initial.get("type")
+                  or Account.Type.ASSET)
+        self.x_data = json.dumps({"type": str(actual)})
+        self.fields["type"].widget.attrs["x-model"] = "type"
+        condicion = " || ".join(f"type === '{t}'" for t in self.CON_SALDO)
+        for campo in ("opening_balance", "opening_date"):
+            self.fields[campo].x_show = condicion
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get("type") not in self.CON_SALDO:
+            datos["opening_balance"] = None
+        if datos.get("opening_balance") and not datos.get("opening_date"):
+            self.add_error("opening_date", "Di a qué fecha es ese saldo.")
+        return datos
+
+    @transaction.atomic
+    def save(self, commit=True):
+        cuenta = super().save(commit=commit)
+        if commit:
+            self._asentar_saldo_inicial(cuenta)
+        return cuenta
+
+    def _asentar_saldo_inicial(self, cuenta):
+        importe = self.cleaned_data.get("opening_balance")
+        if not importe:
+            return
+
+        contrapartida, _ = Account.all_objects.get_or_create(
+            household=cuenta.household, name=self.SALDO_INICIAL,
+            type=Account.Type.EQUITY,
+            defaults={"currency": cuenta.currency},
+        )
+        entry = Entry.objects.create(
+            household=cuenta.household,
+            date=self.cleaned_data["opening_date"],
+            source="opening",
+            description=f"Saldo inicial de {cuenta.name}",
+        )
+        # Un pasivo vive en negativo: `Account.balance` le da la vuelta para
+        # ensenarlo, asi que para que diga "debes 3.000" hay que asentar
+        # -3.000. Si no, la tarjeta aparece como dinero a favor.
+        signo = -1 if cuenta.type in (Account.Type.LIABILITY,
+                                      Account.Type.INCOME) else 1
+        Posting.objects.create(household=cuenta.household, entry=entry,
+                               account=cuenta, amount=signo * importe)
+        Posting.objects.create(household=cuenta.household, entry=entry,
+                               account=contrapartida, amount=-signo * importe)
+
     class Meta:
         model = Account
         fields = ["name", "type", "institution", "last_four", "currency"]

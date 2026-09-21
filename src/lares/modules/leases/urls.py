@@ -10,5 +10,7 @@ urlpatterns = [
     path("arrendamiento/<uuid:pk>/", views.lease_detail, name="detail"),
     path("arrendamiento/<uuid:pk>/deposito/", views.deposit_returned,
          name="deposit-returned"),
+    path("arrendamiento/<uuid:pk>/al-dia/", views.start_tracking_here,
+         name="start-tracking"),
     path("renta/<uuid:pk>/registrar/", views.payment_register, name="payment"),
 ]

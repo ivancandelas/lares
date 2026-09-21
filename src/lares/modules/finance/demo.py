@@ -159,6 +159,7 @@ def _seed_plan(household, cuentas):
 def _obra(household):
     """El presupuesto de un proyecto, que es donde más se desvía."""
     from lares.core.models import Entry, Posting
+
     from .models_plan import Plan, PlanLine
 
     hoy = dt.date.today()

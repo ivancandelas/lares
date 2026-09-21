@@ -273,3 +273,138 @@ def test_la_cuenta_de_una_tarjeta_solo_ofrece_pasivos(household):
 
     assert deuda in ofrecidas
     assert nomina not in ofrecidas
+
+
+@pytest.mark.django_db
+def test_una_cuenta_de_debito_arranca_con_lo_que_ya_tiene(scoped):
+    """Nadie empieza a usar esto el día que nació."""
+    from decimal import Decimal
+
+    from lares.core.forms import AccountForm
+    from lares.core.models import Account
+
+    form = AccountForm({
+        "name": "Nómina", "type": Account.Type.ASSET, "currency": "MXN",
+        "opening_balance": "14500", "opening_date": "2026-09-21",
+    }, household=scoped)
+
+    assert form.is_valid(), form.errors
+    assert form.save().balance == Decimal("14500")
+
+
+@pytest.mark.django_db
+def test_una_tarjeta_arranca_debiendo_y_no_a_favor(scoped):
+    """El signo es la trampa: un pasivo vive en negativo en el libro.
+
+    Sin darle la vuelta, la tarjeta que debe 3.000 aparecería como 3.000 a
+    favor y el patrimonio saldría 6.000 de más.
+    """
+    from decimal import Decimal
+
+    from lares.core.forms import AccountForm
+    from lares.core.models import Account
+
+    form = AccountForm({
+        "name": "Tarjeta BBVA", "type": Account.Type.LIABILITY,
+        "currency": "MXN", "opening_balance": "3000",
+        "opening_date": "2026-09-21",
+    }, household=scoped)
+
+    assert form.is_valid(), form.errors
+    assert form.save().balance == Decimal("3000")
+
+
+@pytest.mark.django_db
+def test_el_saldo_inicial_no_es_ingreso_ni_gasto(scoped):
+    """Si entrara como ingreso, «de dónde viene el dinero» mentiría siempre."""
+    from lares.core.forms import AccountForm
+    from lares.core.models import Account
+
+    AccountForm({
+        "name": "Nómina", "type": Account.Type.ASSET, "currency": "MXN",
+        "opening_balance": "14500", "opening_date": "2026-09-21",
+    }, household=scoped).save()
+
+    contrapartida = Account.objects.get(name=AccountForm.SALDO_INICIAL)
+    assert contrapartida.type == Account.Type.EQUITY
+    assert not Account.objects.filter(
+        type__in=[Account.Type.INCOME, Account.Type.EXPENSE]).exists()
+
+
+@pytest.mark.django_db
+def test_el_asiento_del_saldo_inicial_cuadra(scoped):
+    """Un asiento que no suma cero rompe el libro entero."""
+    from django.db.models import Sum
+
+    from lares.core.forms import AccountForm
+    from lares.core.models import Account, Entry
+
+    AccountForm({
+        "name": "Tarjeta", "type": Account.Type.LIABILITY, "currency": "MXN",
+        "opening_balance": "3000", "opening_date": "2026-09-21",
+    }, household=scoped).save()
+
+    entry = Entry.objects.get(source="opening")
+    assert entry.postings.aggregate(t=Sum("amount"))["t"] == 0
+
+
+@pytest.mark.django_db
+def test_sin_saldo_inicial_no_se_inventa_un_asiento(scoped):
+    from lares.core.forms import AccountForm
+    from lares.core.models import Account, Entry
+
+    AccountForm({"name": "Ahorro", "type": Account.Type.ASSET,
+                 "currency": "MXN"}, household=scoped).save()
+
+    assert not Entry.objects.exists()
+    assert not Account.objects.filter(type=Account.Type.EQUITY).exists()
+
+
+@pytest.mark.django_db
+def test_una_categoria_no_tiene_saldo_inicial(scoped):
+    """«Supermercado» no arranca con nada: es una categoría, no una cuenta."""
+    from lares.core.forms import AccountForm
+    from lares.core.models import Account, Entry
+
+    form = AccountForm({
+        "name": "Supermercado", "type": Account.Type.EXPENSE,
+        "currency": "MXN", "opening_balance": "500",
+        "opening_date": "2026-09-21",
+    }, household=scoped)
+
+    assert form.is_valid(), form.errors
+    form.save()
+    assert not Entry.objects.exists()
+
+
+@pytest.mark.django_db
+def test_editar_una_cuenta_no_reescribe_su_saldo(scoped):
+    """El libro es inmutable: un saldo que se puede reescribir deja de cuadrar."""
+    from lares.core.forms import AccountForm
+    from lares.core.models import Account
+
+    cuenta = Account.objects.create(household=scoped, name="Nómina",
+                                    type=Account.Type.ASSET)
+
+    assert "opening_balance" not in AccountForm(instance=cuenta,
+                                                household=scoped).fields
+
+
+@pytest.mark.django_db
+def test_las_fechas_se_pintan_en_iso_o_el_navegador_las_deja_en_blanco(scoped):
+    """Un `<input type="date">` solo entiende AAAA-MM-DD.
+
+    Con el formato local -18/09/2026- el navegador da el valor por inválido y
+    pinta el campo vacío. Se comía dos cosas sin un solo error visible: el
+    «hoy» de registrar un gasto nunca aparecía, y al editar una ficha salían
+    en blanco todas sus fechas, así que guardar borraba las opcionales.
+    """
+    import datetime as dt
+
+    from lares.core.forms import ObligationRuleForm
+
+    form = ObligationRuleForm(household=scoped,
+                              initial={"on_date": dt.date(2026, 9, 18)})
+
+    assert 'value="2026-09-18"' in str(form["on_date"])
+    assert 'type="date"' in str(form["on_date"])

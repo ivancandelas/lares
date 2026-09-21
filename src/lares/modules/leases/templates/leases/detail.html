@@ -41,11 +41,31 @@
 </div>
 
 {% if atrasados %}
-  <p class="mt-4 border-l-2 border-overdue pl-4 text-[15px]">
-    {{ atrasados|length }} mes{{ atrasados|length|pluralize:"es" }} sin
-    {% if lease.is_landlord %}cobrar{% else %}pagar{% endif %}.
-    El más viejo lleva {{ atrasados.0.days_late }} días.
-  </p>
+  <div class="mt-4 border-l-2 border-overdue pl-4">
+    <p class="text-[15px]">
+      {{ atrasados|length }} mes{{ atrasados|length|pluralize:"es" }} sin
+      {% if lease.is_landlord %}cobrar{% else %}pagar{% endif %}.
+      El más viejo lleva {{ atrasados.0.days_late }} días.
+    </p>
+    {% comment %}
+      La salida para el contrato que se dio de alta con años de antigüedad:
+      esos meses no los debe nadie, los inventó el alta. Sin esto, la única
+      forma de quitarlos era registrar cada uno a mano, y con cuarenta y ocho
+      lo que se deja de usar es la pantalla.
+    {% endcomment %}
+    {% if atrasados|length > 2 %}
+      <form action="{% url 'leases:start-tracking' lease.pk %}" method="post"
+            class="mt-2">{% csrf_token %}
+        <button class="text-[13px] text-soft underline hover:text-ink">
+          ¿Ya estaban saldados? Llevar el control desde hoy
+        </button>
+      </form>
+      <p class="mt-1 text-[13px] text-soft">
+        Quita los meses anteriores que nadie ha tocado. Los que tengan cobro
+        anotado se quedan.
+      </p>
+    {% endif %}
+  </div>
 {% endif %}
 
 {% if lease.guarantor or lease.legal_policy %}

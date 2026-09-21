@@ -277,7 +277,6 @@ def _por_categoria(tipo, desde: dt.date, hasta: dt.date) -> dict:
 
 def statement(household, year: int, month: int | None = None) -> Statement:
     """Lo que entró, lo que salió y lo que quedó, contra el periodo anterior."""
-    import calendar
 
     from django.utils.formats import date_format
 

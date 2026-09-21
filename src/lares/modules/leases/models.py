@@ -54,6 +54,17 @@ class Lease(Resource):
 
     starts_on = models.DateField("desde")
     ends_on = models.DateField("hasta", null=True, blank=True)
+
+    # Desde cuando lleva Lares la cuenta de los meses. Va aparte de
+    # `starts_on` porque son dos hechos distintos: cuando empezo el contrato
+    # -que manda para el incremento anual y para la vigencia- y desde cuando
+    # se controlan los cobros aqui.
+    #
+    # Sin esto, registrar un contrato de hace cuatro anos materializaba 48
+    # meses sin cobrar y el detector de huecos gritaba una deuda de 432.000
+    # que nadie debe. Lo anterior a esta fecha se dio por saldado fuera.
+    tracked_from = models.DateField("llevar el control desde",
+                                    null=True, blank=True)
     rent_amount = models.DecimalField("renta mensual", max_digits=12,
                                       decimal_places=2)
     rent_day = models.PositiveSmallIntegerField("día de pago", default=1)

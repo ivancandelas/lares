@@ -10,10 +10,19 @@ from .models import Lease, RentPayment
 
 
 class LeaseForm(ResourceForm):
+    """El alta de un contrato que puede llevar anos firmado.
+
+    De aqui salio el peor primer dia posible: alguien registra el contrato de
+    su casa en renta, que empezo en 2022, y la pantalla le recibe con 48 meses
+    sin cobrar y una deuda de 432.000 que nadie debe. El sistema no se habia
+    equivocado -nadie le dijo que los cuatro anos anteriores ya estaban
+    cobrados- pero el efecto es que no te puedes creer nada de lo que ves.
+    """
+
     GROUPS = (
         ("Qué contrato es", ["name", "direction", "property_ref", "counterpart"]),
         ("Vigencia y renta", ["starts_on", "ends_on", "rent_amount", "rent_day",
-                              "currency"]),
+                              "currency", "tracked_from"]),
         ("Depósito", ["deposit_amount", "deposit_returned_on",
                       "deposit_returned_amount"]),
         ("Incremento anual", ["increase_kind", "increase_percent",
@@ -26,6 +35,7 @@ class LeaseForm(ResourceForm):
         model = Lease
         fields = ["name", "direction", "property_ref", "counterpart",
                   "starts_on", "ends_on", "rent_amount", "rent_day", "currency",
+                  "tracked_from",
                   "deposit_amount", "deposit_returned_on",
                   "deposit_returned_amount", "increase_kind", "increase_percent",
                   "increase_month", "guarantor", "legal_policy", "status",
@@ -37,6 +47,7 @@ class LeaseForm(ResourceForm):
             "counterpart": "Con quién",
             "starts_on": "Desde",
             "ends_on": "Hasta",
+            "tracked_from": "Llevar el control desde",
             "rent_amount": "Renta mensual",
             "rent_day": "Día de pago",
             "currency": "Moneda",
@@ -55,11 +66,25 @@ class LeaseForm(ResourceForm):
             "direction": "«Se lo rento a alguien» es cuando tú eres el inquilino.",
             "ends_on": "Avisa con 90 días: renovar o mudarse lleva su tiempo.",
             "rent_day": "De aquí sale el cobro o el pago de cada mes.",
+            "tracked_from": "Lo anterior a esta fecha se da por saldado fuera "
+                            "de aquí. Si el contrato viene de años atrás, "
+                            "déjala en hoy: si no, aparecerán como sin cobrar "
+                            "todos los meses desde que empezó.",
             "deposit_amount": "Sin registrarlo, recuperarlo depende de la memoria.",
             "increase_month": "El incremento pactado se pierde si nadie lo aplica.",
             "description": "Cómo estaba al entrar. Vale más que cualquier "
                            "discusión al salir.",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.is_new:
+            # Hoy por defecto, y no la fecha del contrato: quien registra un
+            # contrato viejo casi nunca quiere reconstruir su historia de
+            # cobros, y quien si la quiere solo tiene que bajar la fecha. El
+            # que se equivoca en un sentido pierde un campo; en el otro, la
+            # confianza en la pantalla.
+            self.fields["tracked_from"].initial = dt.date.today
 
     def clean(self):
         datos = super().clean()

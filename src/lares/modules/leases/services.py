@@ -27,6 +27,12 @@ def ensure_periods(lease: Lease, until: dt.date | None = None) -> int:
     Se materializan en vez de calcularse al vuelo porque un mes de renta tiene
     estado propio: se paga tarde, se paga a medias, se condona. Eso no cabe en
     una formula.
+
+    Empieza en `tracked_from` y no en `starts_on` cuando esta puesto. Es la
+    diferencia entre "el contrato empezo en 2022" -que sigue siendo verdad y
+    manda para el incremento y la vigencia- y "de los cobros me encargo yo
+    desde hoy". Sin esa distincion, dar de alta un contrato viejo inventaba
+    cuarenta y ocho meses sin cobrar el primer dia.
     """
     import calendar
 
@@ -34,18 +40,49 @@ def ensure_periods(lease: Lease, until: dt.date | None = None) -> int:
     if lease.ends_on:
         hasta = min(hasta, lease.ends_on)
 
+    desde = max(lease.starts_on, lease.tracked_from or lease.starts_on)
+
     creados = 0
-    cursor = lease.starts_on.replace(day=1)
+    cursor = desde.replace(day=1)
     while cursor <= hasta:
         dia = min(lease.rent_day, calendar.monthrange(cursor.year, cursor.month)[1])
         vence = dt.date(cursor.year, cursor.month, dia)
+        # El mes que vencio ANTES de empezar el control tampoco se crea, no
+        # solo los anos anteriores. Poner el control hoy, dia 21, con la renta
+        # del dia 5, no puede estrenarse con un mes ya en mora.
+        if vence < desde:
+            cursor = (cursor + dt.timedelta(days=32)).replace(day=1)
+            continue
         _, nuevo = RentPayment.objects.get_or_create(
             household=lease.household, lease=lease, period=f"{cursor:%Y-%m}",
             defaults={"due_on": vence, "amount": lease.rent_amount},
         )
         creados += nuevo
         cursor = (cursor + dt.timedelta(days=32)).replace(day=1)
+
+    limpiar_lo_anterior(lease, desde)
     return creados
+
+
+def limpiar_lo_anterior(lease: Lease, desde: dt.date | None = None) -> int:
+    """Borra los meses previos que el sistema invento y nadie toco.
+
+    Hace falta porque el dano ya esta hecho cuando alguien pone la fecha: los
+    48 meses existen desde que dio de alta el contrato, y una fecha que no los
+    quita no arregla nada.
+
+    Solo se van los que estan intactos. Un mes con cobro anotado o con asiento
+    es un dato que alguien metio, y eso no se borra por mover una fecha: si
+    estorba, se baja la fecha y vuelve a salir.
+    """
+    if not lease.tracked_from:
+        return 0
+    desde = desde or max(lease.starts_on, lease.tracked_from)
+    borrados, _ = RentPayment.objects.filter(
+        lease=lease, due_on__lt=desde,
+        paid_on__isnull=True, amount_paid__isnull=True, entry__isnull=True,
+    ).delete()
+    return borrados
 
 
 @dataclass(frozen=True)
