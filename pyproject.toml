@@ -1,6 +1,6 @@
 [project]
 name = "lares"
-version = "0.6.0"
+version = "0.7.0"
 description = "Lares - plataforma de gestion de recursos personales y del hogar (Personal Resource Planning, self-hosted)."
 requires-python = ">=3.12"
 dependencies = [
