@@ -362,6 +362,9 @@ ARMAZON = {
     "core:location-new", "core:obligation-done", "core:obligation-waive",
     "core:obligation-ics", "core:calendar-feed", "core:manifest",
     "core:service-worker", "core:login", "core:logout",
+    # Tu propia cuenta no es un dominio del hogar: la usa cualquiera, y quien
+    # tenga el dinero restringido tiene que poder cambiar su clave igual.
+    "core:password-change",
     "core:invite-accept", "core:household-switch",
     "core:document-edit", "core:inbox-file", "core:inbox-review",
     "core:inbox-restore", "core:inbox-reclassify-all",

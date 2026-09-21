@@ -637,6 +637,35 @@ def household_edit(request):
     })
 
 
+def password_change(request):
+    """Cambiar tu propia contrasena, sin pasar por el admin de Django.
+
+    Es de las pocas pantallas que no son del hogar sino de la persona, y por
+    eso no lleva ambito: `sees("core")` concede siempre. Un miembro al que se
+    le restringio el dinero o los coches tiene que poder cambiar su clave
+    igual, y una instalacion donde solo el titular puede hacerlo acaba con
+    contrasenas compartidas por mensaje.
+    """
+    from django.contrib.auth import update_session_auth_hash
+
+    from .forms import PasswordChangeForm
+
+    form = PasswordChangeForm(user=request.user, data=request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        # Sin esto, cambiar la contrasena te expulsa de tu propia sesion: el
+        # hash de la sesion deja de cuadrar y la peticion siguiente va a la
+        # pantalla de entrada. Parece que fallo cuando en realidad funciono.
+        update_session_auth_hash(request, form.user)
+        messages.success(request, "Contrasena cambiada.")
+        return redirect("core:dashboard")
+
+    return render(request, "core/form.html", {
+        "form": form, "title": "Cambiar la contraseña", "submit": "Cambiar",
+        "cancel_url": "core:dashboard",
+    })
+
+
 def member_invite(request):
     from .forms import MemberForm
 

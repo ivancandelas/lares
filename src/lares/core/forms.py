@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as dt
 
 from django import forms
+from django.contrib.auth import forms as auth_forms
 from django.db import transaction
 
 from .models import (
@@ -159,6 +160,31 @@ class GroupedForm:
         if sobrantes:
             salida.append(("Otros datos", sobrantes))
         return salida
+
+
+class PasswordChangeForm(GroupedForm, auth_forms.PasswordChangeForm):
+    """La de Django, con el aspecto del resto de formularios.
+
+    Se hereda en vez de escribirla: las comprobaciones de contrasena -que no se
+    parezca al correo, que no este en la lista de las mas usadas, el largo
+    minimo- ya viven en los validadores de Django y configurarlas dos veces
+    acaba en dos politicas distintas.
+
+    Lo unico propio son los rotulos. Los de Django estan bien traducidos pero
+    hablan de "contrasena antigua"; aqui se tutea, como en el resto.
+    """
+
+    GROUPS = (
+        ("Confirma que eres tú", ["old_password"]),
+        ("La contraseña nueva", ["new_password1", "new_password2"]),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["old_password"].label = "Tu contraseña de ahora"
+        self.fields["new_password1"].label = "La nueva"
+        self.fields["new_password2"].label = "La nueva, otra vez"
+        self._estilar()
 
 
 class LaresForm(GroupedForm, forms.ModelForm):

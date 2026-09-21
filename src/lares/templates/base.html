@@ -51,6 +51,15 @@
                  class="w-full rounded-sm border border-rule bg-white px-2.5 py-1 text-sm
                         placeholder:text-soft focus:border-calm focus:outline-none">
         </form>
+        {% comment %}
+          Aquí y no en «El hogar»: esa pantalla es de ámbito `admin`, así que un
+          miembro con acceso restringido no la abre, y cambiar tu propia
+          contraseña no puede depender de que alguien te administre.
+        {% endcomment %}
+        <a href="{% url 'core:password-change' %}"
+           class="shrink-0 text-sm {% if current_url_name == 'core:password-change' %}font-medium text-ink{% else %}text-soft hover:text-ink{% endif %}">
+          Tu cuenta
+        </a>
         <form action="{% url 'core:logout' %}" method="post">{% csrf_token %}
           <button class="text-sm text-soft hover:text-ink">Salir</button>
         </form>

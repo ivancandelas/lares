@@ -155,8 +155,18 @@ systemctl daemon-reload
 
 # Las dos órdenes que va a teclear una persona. Apuntan a `current`, así que
 # siguen valiendo después de actualizar.
-ln -sf "$RAIZ/current/deploy/native/update.sh" /usr/local/bin/lares-update
-ln -sf "$RAIZ/current/deploy/native/lares-manage" /usr/local/bin/lares-manage
+#
+# Y van a DOS sitios a propósito. `/usr/local/bin` es el correcto, y es donde
+# las encuentra una sesión normal por SSH. Pero a un LXC se entra desde el nodo
+# Proxmox con `pct enter`, que abre la shell con un PATH mínimo sin
+# `/usr/local/bin`: el enlace está puesto, y aun así `lares-update` contesta
+# «command not found». El primero que actualiza se queda ahí parado, con la
+# orden que le dijimos que teclease y un error que no admite. `/usr/bin` sí
+# está en ese PATH.
+for bin_dir in /usr/local/bin /usr/bin; do
+    ln -sf "$RAIZ/current/deploy/native/update.sh" "$bin_dir/lares-update"
+    ln -sf "$RAIZ/current/deploy/native/lares-manage" "$bin_dir/lares-manage"
+done
 
 paso "Preparando la base y los estáticos"
 cd "$RAIZ/current"

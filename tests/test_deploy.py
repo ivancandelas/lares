@@ -128,3 +128,20 @@ def test_salud_no_dice_la_version_a_cualquiera(client):
 
     remoto = client.get("/salud", REMOTE_ADDR="192.168.1.50").json()
     assert remoto == {"ok": True}
+
+
+@pytest.mark.parametrize("script", ["install.sh", "update.sh"])
+def test_las_ordenes_quedan_en_un_path_minimo(script):
+    """`pct enter` -cómo se entra a un LXC desde el nodo Proxmox- abre la shell
+    con un PATH mínimo que no incluye `/usr/local/bin`.
+
+    Con el enlace solo ahí, `lares-update` contesta «command not found» aunque
+    esté perfectamente instalado, y la persona se queda parada en la orden que
+    le dijimos que tecleara. `/usr/bin` sí está en ese PATH.
+    """
+    texto = (RAIZ / "deploy/native" / script).read_text()
+
+    assert "/usr/local/bin" in texto
+    assert "/usr/bin" in texto
+    for orden in ("lares-update", "lares-manage"):
+        assert f'"$bin_dir/{orden}"' in texto

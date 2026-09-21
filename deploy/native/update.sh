@@ -111,6 +111,15 @@ sudo -u "$USUARIO" --preserve-env "$DESTINO/.venv/bin/python" src/manage.py coll
 paso "4/5 Cambiando a $NUEVA"
 install -m 644 "$DESTINO/deploy/native/systemd/"*.service /etc/systemd/system/
 systemctl daemon-reload
+
+# Se rehacen los enlaces de las órdenes, igual que las units. No es
+# decorativo: una instalación vieja puede tenerlos solo en `/usr/local/bin`, y
+# ahí no los ve la shell que abre `pct enter`. Actualizar es el momento en que
+# eso se corrige sin que nadie tenga que enterarse.
+for bin_dir in /usr/local/bin /usr/bin; do
+    ln -sf "$RAIZ/current/deploy/native/update.sh" "$bin_dir/lares-update"
+    ln -sf "$RAIZ/current/deploy/native/lares-manage" "$bin_dir/lares-manage"
+done
 ln -sfn "$DESTINO" "$RAIZ/current"
 systemctl start lares-web lares-worker lares-beat
 

@@ -135,6 +135,9 @@ urlpatterns = [
     path("api/v1/inbox/paperless", api.inbox_paperless,
          name="api-inbox-paperless"),
 
+    path("cuenta/contrasena/", views_crud.password_change,
+         name="password-change"),
+
     path("entrar/", auth_views.LoginView.as_view(), name="login"),
     path("salir/", auth_views.LogoutView.as_view(), name="logout"),
 ]
