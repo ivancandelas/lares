@@ -14,6 +14,10 @@ from lares.core.models import Resource
 class Policy(Resource):
     resource_kind = "policy"
 
+    # Una póliza no se presta ni se pierde: se vence o se cancela.
+    can_be_lent = False
+    can_be_checked = False
+
     class Branch(models.TextChoices):
         VEHICLE = "vehicle", "Automóvil"
         HOME = "home", "Hogar"

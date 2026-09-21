@@ -26,6 +26,10 @@ CENTAVO = Decimal("0.01")
 class Loan(Resource):
     resource_kind = "loan"
 
+    # Prestar un préstamo no significa nada.
+    can_be_lent = False
+    can_be_checked = False
+
     class Direction(models.TextChoices):
         BORROWED = "borrowed", "Me lo prestaron"
         LENT = "lent", "Lo presté"

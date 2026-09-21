@@ -22,6 +22,10 @@ class PolicyForm(ResourceForm):
         help_text="El coche, la casa, la guitarra. Puedes elegir varios.",
     )
 
+    # Sin la vigencia no hay aviso de renovación, que es la razón
+    # por la que una póliza se registra aquí.
+    ESENCIALES = ("name", "insurer", "covers", "ends_on")
+
     GROUPS = (
         ("Qué póliza es", ["name", "branch", "policy_number", "insurer", "agent"]),
         ("Qué cubre", ["covers", "coverage_amount", "deductible", "beneficiaries"]),

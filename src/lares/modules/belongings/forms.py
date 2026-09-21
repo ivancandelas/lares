@@ -4,6 +4,8 @@ from .models import Belonging
 
 
 class BelongingForm(ResourceForm):
+    ESENCIALES = ("name", "owner", "location")
+
     GROUPS = (
         ("Qué es", ["name", "category", "brand", "model_name", "serial_number"]),
         ("De quién y dónde", ["owner", "location", "acquired_on"]),

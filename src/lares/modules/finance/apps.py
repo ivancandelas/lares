@@ -45,19 +45,19 @@ class FinanceModule(LaresModule):
                     order=10, section="money"),
             # La pantalla existía desde F4 y no se enlazaba desde ninguna
             # parte: solo se llegaba tecleando la dirección.
-            NavItem("Importar del banco", "finance:import", icon="upload",
+            NavItem("Importar movimientos", "finance:import", icon="upload",
                     order=15, section="money"),
-            NavItem("Entra y sale", "finance:spending", icon="pie",
+            NavItem("Ingresos y gastos", "finance:spending", icon="pie",
                     order=15, section="money"),
-            NavItem("Cómo te fue", "finance:statement", icon="scale",
+            NavItem("Resumen mensual", "finance:statement", icon="scale",
                     order=11, section="money"),
-            NavItem("Cómo estás", "finance:health", icon="heart",
+            NavItem("Situación financiera", "finance:health", icon="heart",
                     order=13, section="money"),
             NavItem("Presupuesto", "finance:plans", icon="target",
                     order=12, section="money"),
-            NavItem("Dinero apartado", "finance:provisions", icon="lock",
+            NavItem("Fondos apartados", "finance:provisions", icon="lock",
                     order=16, section="money"),
-            NavItem("¿Me alcanza?", "finance:cash-flow", icon="trend",
+            NavItem("Proyección", "finance:cash-flow", icon="trend",
                     order=17, section="money"),
         )
         reg.tabs(DetailTab(

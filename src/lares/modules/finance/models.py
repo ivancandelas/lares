@@ -19,6 +19,10 @@ class CreditCard(Resource):
 
     resource_kind = "credit_card"
 
+    # El plástico existe, pero prestarlo no es algo que convenga registrar como un gesto normal.
+    can_be_lent = False
+    can_be_checked = False
+
     issuer = models.ForeignKey(
         "core.Party", verbose_name="banco", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="issued_cards",

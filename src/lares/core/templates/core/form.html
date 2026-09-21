@@ -8,8 +8,7 @@
 
   {% comment %}
     `x_data` lo pone el formulario cuando alguno de sus campos solo aplica
-    según lo que se haya elegido en otro. Sin eso, el atributo no se pinta y
-    aquí no pasa nada: la inmensa mayoría de los formularios no lo usan.
+    según lo que se haya elegido en otro. Sin eso, el atributo no se pinta.
   {% endcomment %}
   <form method="post" class="mt-8"{% if form.x_data %} x-data='{{ form.x_data }}'{% endif %}
         {% if multipart %}enctype="multipart/form-data"{% endif %}>
@@ -21,83 +20,53 @@
       </div>
     {% endif %}
 
-    {% for titulo, campos in form.groups %}
-      <fieldset class="mb-8">
-        {% if titulo %}
-          <legend class="mb-3 w-full border-b border-rule pb-1.5 text-sm font-medium">
-            {{ titulo }}
-          </legend>
-        {% endif %}
-        <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
-          {% for field in campos %}
-            {% comment %}
-              `x_show` es una condición que el formulario cuelga del campo:
-              existe y se envía, pero no se enseña mientras no aplique.
-              Preguntar la fecha de nacimiento de una ferretería no es solo
-              ruido: hace dudar de si se está rellenando bien.
+    {% comment %}
+      Arriba, lo imprescindible. Sin rótulo de bloque: un «legend» encima de
+      dos campos es una etiqueta para algo que se lee de un vistazo.
+    {% endcomment %}
+    <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      {% for titulo, campos in form.esenciales %}
+        {% for field in campos %}{% include "core/_form_fields.html" %}{% endfor %}
+      {% endfor %}
+    </div>
 
-              Va en el campo y no en `widget.attrs` a propósito: lo que se
-              pone ahí Django lo pinta como atributo del `<input>`, y acabaría
-              saliendo un `x_show="..."` en el HTML que no significa nada.
+    {% if form.cuantos_detalles %}
+      {% comment %}
+        Y el resto detrás de un desplegable. `<details>` nativo y no Alpine:
+        funciona sin JavaScript y el navegador ya sabe abrirlo al buscar
+        texto dentro.
 
-              Va con `x-cloak` porque, sin él, el campo aparece un instante
-              antes de que Alpine arranque y desaparece a la vista del usuario.
-            {% endcomment %}
-            <div{% if field.field.x_show %} x-show="{{ field.field.x_show }}" x-cloak{% endif %}{% if field.field.widget.input_type == "textarea" or field.name == "description" or field.name == "notes" %} class="sm:col-span-2"{% endif %}>
-              <label for="{{ field.id_for_label }}" class="block text-sm text-soft">
-                {{ field.label }}{% if field.field.required %} <span class="text-soon" title="obligatorio">·</span>{% endif %}
-              </label>
-              {% if field.field.quick_add %}
-                {% comment %}
-                  El «+» de al lado. Todo el estado vive en este x-data, así
-                  que dos desplegables en la misma pantalla no se pisan.
-                {% endcomment %}
-                <div class="mt-1 flex items-start gap-2"
-                     x-data="altaRapida('{{ field.field.quick_add }}', '{{ field.field.quick_preset }}', '{{ field.id_for_label }}')">
-                  <div class="min-w-0 flex-1">{{ field }}</div>
-                  <button type="button" @click="abrir()"
-                          data-alta="{{ field.id_for_label }}"
-                          title="Dar de alta uno nuevo sin salir de aquí"
-                          class="shrink-0 rounded-sm border border-rule bg-white px-2.5 py-2
-                                 text-sm text-soft hover:border-calm hover:text-calm">+</button>
+        Se abre solo si algo de dentro falló. Un error escondido detrás de un
+        desplegable cerrado es un formulario que no se puede enviar y que no
+        dice por qué.
+      {% endcomment %}
+      <details class="group mt-8 border-t border-rule pt-4"
+               {% if form.detalles_abiertos %}open{% endif %}>
+        <summary class="cursor-pointer list-none text-sm text-soft hover:text-ink">
+          <span class="inline-block transition-transform group-open:rotate-90"
+                aria-hidden="true">▸</span>
+          Añadir detalles
+          <span class="tabular-nums">({{ form.cuantos_detalles }})</span>
+        </summary>
 
-                  <div x-show="abierto" x-cloak @keydown.escape.window="cerrar()"
-                       class="fixed inset-0 z-30 flex items-start justify-center
-                              overflow-y-auto bg-ink/30 px-5 py-16">
-                    <div @click.outside="cerrar()" role="dialog" aria-modal="true"
-                         data-dialogo="{{ field.id_for_label }}"
-                         class="w-full max-w-sm rounded-sm border border-rule bg-paper p-6 shadow-lg">
-                      <div x-ref="cuerpo" x-html="html"></div>
-                      <p x-show="cargando" class="text-sm text-soft">Un momento…</p>
-                      <div class="mt-6 flex items-center gap-4 border-t border-rule pt-4">
-                        <button type="button" @click="guardar()" :disabled="cargando"
-                                data-guardar="{{ field.id_for_label }}"
-                                class="rounded-sm bg-calm px-4 py-2 text-sm font-medium
-                                       text-white hover:bg-ink disabled:opacity-50">
-                          Guardar
-                        </button>
-                        <button type="button" @click="cerrar()"
-                                class="text-sm text-soft hover:text-ink">Cancelar</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              {% else %}
-                <div class="mt-1">{{ field }}</div>
+        <div class="mt-6">
+          {% for titulo, campos in form.detalles %}
+            <fieldset class="mb-8">
+              {% if titulo %}
+                <legend class="mb-3 w-full border-b border-rule pb-1.5 text-sm font-medium">
+                  {{ titulo }}
+                </legend>
               {% endif %}
-              {% if field.help_text %}
-                <p class="mt-1 text-[13px] leading-snug text-soft">{{ field.help_text }}</p>
-              {% endif %}
-              {% for error in field.errors %}
-                <p class="mt-1 text-[13px] text-overdue">{{ error }}</p>
-              {% endfor %}
-            </div>
+              <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+                {% for field in campos %}{% include "core/_form_fields.html" %}{% endfor %}
+              </div>
+            </fieldset>
           {% endfor %}
         </div>
-      </fieldset>
-    {% endfor %}
+      </details>
+    {% endif %}
 
-    <div class="flex items-center gap-4 border-t border-rule pt-5">
+    <div class="mt-8 flex items-center gap-4 border-t border-rule pt-5">
       <button type="submit"
               class="rounded-sm bg-calm px-4 py-2.5 text-sm font-medium text-white hover:bg-ink">
         {{ submit }}
@@ -110,5 +79,6 @@
 {% endblock %}
 
 {% block scripts %}
+  <script src="{% static 'selector.js' %}"></script>
   <script src="{% static 'quickadd.js' %}"></script>
 {% endblock %}

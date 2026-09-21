@@ -137,6 +137,7 @@ urlpatterns = [
          name="api-inbox-paperless"),
 
     path("rapido/<str:key>/", views_quickadd.quick_add, name="quick-add"),
+    path("opciones/<str:key>/", views_quickadd.options, name="options"),
 
     path("cuenta/contrasena/", views_crud.password_change,
          name="password-change"),

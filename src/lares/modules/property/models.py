@@ -22,6 +22,11 @@ from lares.core.models import Resource
 class Property(Resource):
     resource_kind = "property"
 
+    # Una casa no se extravía, y dejársela a alguien es un arrendamiento:
+    # tiene su propio módulo, con contrato, renta y depósito.
+    can_be_lent = False
+    can_be_checked = False
+
     class Type(models.TextChoices):
         HOUSE = "house", "Casa"
         APARTMENT = "apartment", "Departamento"
@@ -118,6 +123,10 @@ class Service(Resource):
     """
 
     resource_kind = "service"
+
+    # «Prestar la luz» no significa nada.
+    can_be_lent = False
+    can_be_checked = False
 
     class Kind(models.TextChoices):
         WATER = "water", "Agua"

@@ -25,6 +25,11 @@
         </button>
       </form>
     {% else %}
+      {% comment %}
+        Los gestos físicos solo donde significan algo. Ofrecer «Prestar» en
+        una póliza no es solo ruido: hace dudar de si se entendió lo que se
+        estaba dando de alta. Cada tipo lo declara en su modelo.
+      {% endcomment %}
       {% if prestado_a %}
         <form method="post" action="{% url 'core:resource-return' obj.pk %}">
           {% csrf_token %}
@@ -32,18 +37,20 @@
             Me lo devolvieron
           </button>
         </form>
-      {% else %}
+      {% elif obj.can_be_lent %}
         <a href="{% url 'core:resource-lend' obj.pk %}"
            class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
           Prestar
         </a>
       {% endif %}
-      <form method="post" action="{% url 'core:resource-verify' obj.pk %}">
-        {% csrf_token %}
-        <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
-          Sigo teniéndolo
-        </button>
-      </form>
+      {% if obj.can_be_checked %}
+        <form method="post" action="{% url 'core:resource-verify' obj.pk %}">
+          {% csrf_token %}
+          <button class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-calm hover:text-calm">
+            Sigo teniéndolo
+          </button>
+        </form>
+      {% endif %}
       <a href="{% url 'core:resource-dispose' obj.pk %}"
          class="rounded-sm border border-rule px-3 py-1.5 text-sm text-soft hover:border-overdue hover:text-overdue">
         Dar de baja

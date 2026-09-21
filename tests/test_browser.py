@@ -126,6 +126,8 @@ def test_la_fecha_de_nacimiento_solo_sale_en_personas(page, live_server):
     """
     page.goto(f"{live_server.url.replace('127.0.0.1', 'localhost')}/personas/nueva/",
               wait_until="networkidle")
+    # Son campos opcionales, así que viven tras «Añadir detalles».
+    page.click("summary")
     campo = page.locator("div:has(> label[for=id_birth_date])")
 
     assert campo.is_visible(), "con «Persona» debería verse"
@@ -143,6 +145,8 @@ def test_el_saldo_inicial_solo_sale_en_cuentas_de_verdad(page, live_server):
     """«Supermercado» es una categoría: preguntarle un saldo no significa nada."""
     page.goto(f"{live_server.url.replace('127.0.0.1', 'localhost')}/cuentas/nueva/",
               wait_until="networkidle")
+    # Son campos opcionales, así que viven tras «Añadir detalles».
+    page.click("summary")
     campo = page.locator("div:has(> label[for=id_opening_balance])")
 
     assert campo.is_visible(), "una cuenta de activo sí tiene saldo"
@@ -212,6 +216,72 @@ def test_el_alta_rapida_avisa_de_lo_que_falta(page, live_server):
     assert page.locator("[data-dialogo=id_insurer]").is_visible(), \
         "no puede cerrarse sin crear"
     assert page.locator("[data-dialogo=id_insurer] #id_name").is_visible()
+
+
+@pytest.fixture
+def mucha_gente(db):
+    """Treinta contactos, creados ANTES de abrir el navegador.
+
+    Tiene que ir antes de `page` en la firma: dentro del contexto de
+    Playwright, Django rechaza cualquier consulta síncrona.
+    """
+    from lares.core.models import Household, Party
+    from lares.core.scoping import use_household
+
+    casa, _ = Household.objects.get_or_create(slug="casa",
+                                              defaults={"name": "Casa"})
+    with use_household(casa):
+        for i in range(30):
+            Party.objects.create(household=casa, name=f"Persona {i:02}")
+    return casa
+
+
+def test_con_muchas_personas_se_busca_en_vez_de_recorrer(mucha_gente, page, live_server):
+    """Un <select> con la agenda entera no es un desplegable, es una lista.
+
+    Y no solo molesta al usarlo: las doscientas etiquetas viajan en el HTML
+    de cada pantalla que use el campo.
+    """
+    base = live_server.url.replace("127.0.0.1", "localhost")
+    page.goto(f"{base}/gastos/nuevo/", wait_until="networkidle")
+    page.click("summary")          # «comercio» es opcional: vive en detalles
+
+    page.fill("[data-buscador=merchant]", "Persona 07")
+    page.wait_for_timeout(600)
+    page.click("text=Persona 07")
+
+    assert page.input_value("[data-buscador=merchant]") == "Persona 07"
+    assert page.input_value("input[type=hidden][name=merchant]")
+
+
+def test_el_buscador_dice_cuantos_hay_cuando_no_caben(mucha_gente, page, live_server):
+    """«No está entre los diez primeros» no es lo mismo que «no existe»."""
+    base = live_server.url.replace("127.0.0.1", "localhost")
+    page.goto(f"{base}/gastos/nuevo/", wait_until="networkidle")
+    page.click("summary")          # «comercio» es opcional: vive en detalles
+
+    page.fill("[data-buscador=merchant]", "Persona")
+    page.wait_for_timeout(600)
+
+    aviso = page.locator("[data-hay-mas=merchant]")
+    assert aviso.is_visible()
+    assert "30" in aviso.inner_text()
+
+
+def test_lo_creado_desde_el_buscador_queda_elegido(mucha_gente, page, live_server):
+    """En el buscador no hay <option> que añadir: va por evento."""
+    base = live_server.url.replace("127.0.0.1", "localhost")
+    page.goto(f"{base}/gastos/nuevo/", wait_until="networkidle")
+    page.click("summary")          # «comercio» es opcional: vive en detalles
+
+    page.click("button[data-alta=id_merchant]")
+    page.wait_for_selector("[data-dialogo=id_merchant] #id_name", state="visible")
+    page.fill("[data-dialogo=id_merchant] #id_name", "Ferretería El Tornillo")
+    page.click("[data-guardar=id_merchant]")
+    page.wait_for_selector("[data-dialogo=id_merchant]", state="hidden")
+
+    assert page.input_value("[data-buscador=merchant]") == "Ferretería El Tornillo"
+    assert page.input_value("input[type=hidden][name=merchant]")
 
 
 def test_la_pagina_no_lanza_errores_de_javascript(page):

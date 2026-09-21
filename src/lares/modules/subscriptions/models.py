@@ -28,6 +28,10 @@ CICLOS_AL_ANO = {"monthly": 12, "quarterly": 4, "semiannual": 2, "yearly": 1,
 class Subscription(Resource):
     resource_kind = "subscription"
 
+    # Una suscripción se cancela, no se devuelve.
+    can_be_lent = False
+    can_be_checked = False
+
     class Cycle(models.TextChoices):
         WEEKLY = "weekly", "Cada semana"
         MONTHLY = "monthly", "Cada mes"

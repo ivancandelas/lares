@@ -72,11 +72,19 @@ window.altaRapida = function (clave, preset, idSelect) {
       }
 
       const creado = await r.json();
-      const select = document.getElementById(idSelect);
-      const opcion = new Option(creado.label, creado.id, true, true);
-      select.add(opcion);
-      // Que reaccione lo que dependa de este campo (Alpine, validaciones).
-      select.dispatchEvent(new Event("change", { bubbles: true }));
+      const destino = document.getElementById(idSelect);
+      if (destino && destino.tagName === "SELECT") {
+        const opcion = new Option(creado.label, creado.id, true, true);
+        destino.add(opcion);
+        // Que reaccione lo que dependa de este campo (Alpine, validaciones).
+        destino.dispatchEvent(new Event("change", { bubbles: true }));
+      } else {
+        // Es un buscador: no hay <option> que añadir. Se avisa hacia arriba
+        // y el selector que envuelve esto lo da por elegido.
+        this.$el.dispatchEvent(new CustomEvent("lares:creado", {
+          detail: creado, bubbles: true,
+        }));
+      }
       this.cerrar();
     },
   };

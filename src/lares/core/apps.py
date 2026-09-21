@@ -27,9 +27,9 @@ class CoreConfig(AppConfig):
 
         registry.nav(
             NavItem("Bandeja", "core:inbox", icon="inbox", order=10, section="main"),
-            NavItem("Todo lo que tienes", "core:holdings", icon="box", order=5,
+            NavItem("Inventario", "core:holdings", icon="box", order=5,
                     section="holdings"),
-            NavItem("Quién debe a quién", "core:owed", icon="scale",
+            NavItem("Deudas y préstamos personales", "core:owed", icon="scale",
                     order=19, section="money"),
             NavItem("Documentos", "core:documents", icon="file", order=90,
                     section="holdings"),
@@ -37,21 +37,21 @@ class CoreConfig(AppConfig):
                     section="money"),
             NavItem("Personas", "core:parties", icon="users", order=10,
                     section="more"),
-            NavItem("Quién se encarga de qué", "core:responsibilities",
+            NavItem("Responsables", "core:responsibilities",
                     icon="users", order=12, section="more"),
-            NavItem("Qué tengo compartido", "core:shares", icon="link",
+            NavItem("Enlaces compartidos", "core:shares", icon="link",
                     order=28, section="more"),
-            NavItem("Si me pasa algo", "core:succession", icon="shield",
+            NavItem("Sucesión", "core:succession", icon="shield",
                     order=29, section="more"),
-            NavItem("El hogar", "core:household", icon="home", order=15,
+            NavItem("Hogar y miembros", "core:household", icon="home", order=15,
                     section="more"),
-            NavItem("Qué ha pasado", "core:audit", icon="history", order=18,
+            NavItem("Actividad", "core:audit", icon="history", order=18,
                     section="more"),
             NavItem("Conectores", "core:connectors", icon="plug", order=20,
                     section="more"),
             NavItem("Calendario", "core:calendar-settings", icon="calendar",
                     order=25, section="more"),
-            NavItem("Por dónde seguir", "core:onboarding", icon="compass", order=30,
+            NavItem("Primeros pasos", "core:onboarding", icon="compass", order=30,
                     section="more"),
         )
         # Quién se encarga de qué. Es una arista y no una columna porque es un
@@ -78,9 +78,10 @@ class CoreConfig(AppConfig):
         registry.related(for_party)
 
         # Lo que se puede crear al vuelo desde un desplegable, sin perder el
-        # formulario que se estaba llenando. Ver `quickadd.py`.
-        from . import quickadd
-        quickadd.poblar()
+        # formulario que se estaba llenando, y de dónde salen sus
+        # opciones cuando son muchas. Ver `pickers.py`.
+        from . import pickers
+        pickers.poblar()
 
         # Las reglas que cambian por estado y por año viven en packs/*.yaml.
         # Cambiar una fecha no debería exigir un despliegue.

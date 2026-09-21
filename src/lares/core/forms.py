@@ -132,7 +132,7 @@ class GroupedForm:
             if valor:
                 # Partido aqui y no en la plantilla: "account:expense" son dos
                 # datos, y separarlos con filtros de plantilla sale ilegible.
-                from .quickadd import parse
+                from .pickers import parse
 
                 field.quick_add, field.quick_preset = parse(valor)
 
@@ -187,6 +187,92 @@ class GroupedForm:
         # se le hubiera colgado antes. Volver a pasar es mas barato que
         # acordarse de copiar cada atributo nuevo que alguien anada.
         self._ofrecer_altas_rapidas()
+
+    # Lo que se pregunta de entrada. Vacio: los obligatorios y nada mas.
+    #
+    # Medido antes de escribir esto: para dar de alta un coche el sistema
+    # necesita DOS datos y la pantalla ensenaba DIECIOCHO. Agrupar en bloques
+    # no arregla un muro, lo parte en trozos. Lo que lo arregla es no
+    # preguntar ahora lo que se puede rellenar cuando haga falta.
+    ESENCIALES: tuple = ()
+
+    def _esenciales(self) -> list:
+        if self.ESENCIALES:
+            return [n for n in self.ESENCIALES if n in self.fields]
+        return [n for n, campo in self.fields.items() if campo.required]
+
+    def esenciales(self):
+        """Los bloques de arriba, los que se ven al abrir."""
+        return self._partir()[0]
+
+    def detalles(self):
+        """Los bloques de «Añadir detalles»."""
+        return self._partir()[1]
+
+    def detalles_abiertos(self) -> bool:
+        """Se abre solo si algo de dentro fallo.
+
+        Un error escondido detras de un desplegable cerrado es un formulario
+        que no se puede enviar y no dice por que.
+        """
+        ocultos = {c.name for _, campos in self._partir()[1] for c in campos}
+        return any(nombre in ocultos for nombre in self.errors)
+
+    def cuantos_detalles(self) -> int:
+        return sum(len(campos) for _, campos in self._partir()[1])
+
+    def _decidir_buscadores(self):
+        """Desplegable o buscador, segun cuantas opciones haya.
+
+        Se decide AQUI y no en `_estilar` porque varios formularios asignan
+        sus querysets despues de llamarlo: alli `merchant` tiene cero
+        opciones y se quedaria de desplegable con la agenda entera dentro.
+        Al pintar ya esta todo puesto.
+        """
+        from .pickers import UMBRAL_BUSCADOR
+
+        for nombre, field in self.fields.items():
+            if not getattr(field, "quick_add", None):
+                continue
+            consulta = getattr(field, "queryset", None)
+            if consulta is None:
+                continue
+            field.n_opciones = consulta.count()
+            field.buscador = field.n_opciones > UMBRAL_BUSCADOR
+            if field.buscador:
+                field.etiqueta_actual = self._etiqueta_de(nombre, consulta)
+
+    def _etiqueta_de(self, nombre, consulta) -> str:
+        """El nombre de lo que ya estaba elegido.
+
+        El buscador guarda el id en un campo oculto y ensena texto. Al
+        editar, sin esto, la caja sale vacia y parece que el campo se
+        perdio: el dato esta, pero nadie se fia de lo que no ve.
+        """
+        valor = self[nombre].value()
+        if not valor:
+            return ""
+        objeto = consulta.filter(pk=valor).first()
+        return str(objeto) if objeto else ""
+
+    def _partir(self):
+        # Memorizado: la plantilla pregunta cuatro veces -esenciales,
+        # detalles, cuantos y si abrirlo- y cada pasada cuenta opciones.
+        if getattr(self, "_bloques", None) is not None:
+            return self._bloques
+
+        self._decidir_buscadores()
+        arriba, abajo = [], []
+        esenciales = set(self._esenciales())
+        for titulo, campos in self.groups():
+            primeros = [c for c in campos if c.name in esenciales]
+            resto = [c for c in campos if c.name not in esenciales]
+            if primeros:
+                arriba.append((titulo, primeros))
+            if resto:
+                abajo.append((titulo, resto))
+        self._bloques = (arriba, abajo)
+        return self._bloques
 
     def groups(self):
         """[(titulo, [campos])] para la plantilla. Sin GROUPS, un solo bloque."""

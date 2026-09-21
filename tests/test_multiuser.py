@@ -365,9 +365,11 @@ ARMAZON = {
     # Tu propia cuenta no es un dominio del hogar: la usa cualquiera, y quien
     # tenga el dinero restringido tiene que poder cambiar su clave igual.
     "core:password-change",
-    # El alta rápida sirve a doce desplegables de ámbitos distintos, así que
-    # no tiene uno propio: mide el suyo cada llamada, según lo que se cree.
+    # El alta rápida y el buscador sirven a doce desplegables de ámbitos
+    # distintos, así que no tienen uno propio: cada llamada mide el de lo
+    # que se crea o se lista.
     "core:quick-add",
+    "core:options",
     "core:invite-accept", "core:household-switch",
     "core:document-edit", "core:inbox-file", "core:inbox-review",
     "core:inbox-restore", "core:inbox-reclassify-all",
@@ -663,3 +665,23 @@ def test_quien_solo_mira_no_crea_por_el_atajo(multi, casa, client):
     assert _sesion(client, invitado).post(
         "/rapido/party/", {"kind": "person", "name": "Alguien"}
     ).status_code == 403
+
+
+@pytest.mark.django_db
+def test_el_buscador_tampoco_lista_lo_que_no_se_puede_ver(multi, casa, client):
+    """Devolver los nombres de las cuentas es una fuga aunque la pantalla de
+    cuentas esté cerrada."""
+    hijo = _miembro(casa, "hijo@x.mx", Membership.Role.MEMBER, scopes=["tasks"])
+
+    assert _sesion(client, hijo).get("/opciones/account/").status_code == 403
+
+
+@pytest.mark.django_db
+def test_quien_solo_mira_si_puede_buscar(multi, casa, client):
+    """Mirar no es escribir: se le niega crear, no consultar."""
+    invitado = _miembro(casa, "invitado@x.mx", Membership.Role.VIEWER)
+    sesion = _sesion(client, invitado)
+
+    assert sesion.get("/opciones/party/").status_code == 200
+    assert sesion.post("/rapido/party/",
+                       {"kind": "person", "name": "X"}).status_code == 403

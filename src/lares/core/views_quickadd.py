@@ -1,4 +1,4 @@
-"""El alta rapida que se abre encima del formulario que estabas llenando.
+"""Buscar opciones para un desplegable, y crear la que falta.
 
 Dos respuestas y ninguna pantalla: `GET` devuelve el trozo de formulario que
 va dentro de la ventana, y `POST` crea y contesta en JSON lo justo para que el
@@ -9,11 +9,14 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from . import quickadd
+from . import pickers
 from .permissions import scope_of
 
+# Cuantos resultados trae el buscador de una vez.
+LIMITE = 10
 
-def _permitido(request, alta) -> bool:
+
+def _permitido(request, alta, escribir: bool = True) -> bool:
     """Crear una cuenta desde un desplegable sigue siendo crear una cuenta.
 
     Sin esto, el alta rapida seria un agujero por el que quien tiene el dinero
@@ -23,7 +26,9 @@ def _permitido(request, alta) -> bool:
     membresia = getattr(request, "membership", None)
     if membresia is None:          # self-hosted: un hogar, sin ambitos
         return True
-    if not (membresia.is_live and membresia.can_write):
+    if not membresia.is_live:
+        return False
+    if escribir and not membresia.can_write:
         return False
     return membresia.sees(alta.scope) and (
         alta.scope != "admin" or membresia.can_admin
@@ -32,7 +37,7 @@ def _permitido(request, alta) -> bool:
 
 @require_http_methods(["GET", "POST"])
 def quick_add(request, key):
-    alta = quickadd.get(key)
+    alta = pickers.get(key)
     if alta is None:
         raise Http404
     if not _permitido(request, alta):
@@ -64,5 +69,34 @@ def quick_add(request, key):
 
 def scope_de(key: str) -> str:
     """Para las pruebas: a que ambito pertenece crear esto."""
-    alta = quickadd.get(key)
+    alta = pickers.get(key)
     return alta.scope if alta else scope_of("", "core")
+
+
+@require_http_methods(["GET"])
+def options(request, key):
+    """Los que coinciden con lo tecleado, en JSON.
+
+    Devuelve pocos a proposito -diez- y dice cuantos hay en total. Ensenar
+    doscientos resultados es el mismo problema que el desplegable que estamos
+    quitando; decir "y 43 mas" es lo que distingue "no existe" de "no esta
+    entre los diez primeros".
+    """
+    alta = pickers.get(key)
+    if alta is None or alta.model is None:
+        raise Http404
+    # Se mide el ambito de LO QUE SE LISTA, igual que al crearlo: un
+    # buscador que devuelve los nombres de las cuentas es una fuga aunque no
+    # deje abrir la pantalla de cuentas.
+    if not _permitido(request, alta, escribir=False):
+        return JsonResponse({"error": "No puedes ver esto."}, status=403)
+
+    texto = (request.GET.get("q") or "").strip()
+    preset = request.GET.get("preset") or ""
+    encontrados, total = pickers.buscar(alta, request.household, preset,
+                                        texto, LIMITE)
+    return JsonResponse({
+        "results": [{"id": str(o.pk), "label": str(o)} for o in encontrados],
+        "total": total,
+        "more": total > len(encontrados),
+    })

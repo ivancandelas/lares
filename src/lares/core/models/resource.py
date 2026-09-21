@@ -36,7 +36,20 @@ class Location(HouseholdScopedModel):
 
 
 class Resource(HouseholdScopedModel):
-    """Base concreta de todo recurso. Los modulos heredan de aqui."""
+    """Base concreta de todo recurso. Los modulos heredan de aqui.
+
+    **No todo recurso es una cosa que puedas tener en la mano.** El nucleo
+    daba por hecho que si, y por eso ofrecia los mismos gestos fisicos a una
+    guitarra y a una poliza de seguros: "Prestar" una poliza no significa
+    nada, y "Sigo teniendolo" tampoco -una poliza no se pierde en una mudanza,
+    se vence-. Cada tipo dice aqui que gestos admite.
+    """
+
+    # Se le puede dejar a alguien y esperar que lo devuelva.
+    can_be_lent = True
+    # Tiene sentido preguntar "¿sigues teniendolo?". Es el gesto para lo que
+    # desaparece sin avisar; un contrato no desaparece, caduca.
+    can_be_checked = True
 
     class Status(models.TextChoices):
         PLANNED = "planned", "Planeado"

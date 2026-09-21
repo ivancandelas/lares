@@ -28,6 +28,10 @@ CENTAVO = Decimal("0.01")
 class Lease(Resource):
     resource_kind = "lease"
 
+    # Un contrato no se deja a nadie ni se extravía.
+    can_be_lent = False
+    can_be_checked = False
+
     class Direction(models.TextChoices):
         # El pronombre solo no basta: "lo rento" significa las dos cosas en
         # espanol. Las etiquetas dicen de quien es el inmueble y quien paga,

@@ -23,7 +23,7 @@ class SubscriptionsModule(LaresModule):
         reg.related(for_party)
         reg.recurring(recurring.recurring)
         reg.demo_seeder(demo.seed)
-        reg.nav(NavItem("Lo que tienes contratado", "subscriptions:list",
+        reg.nav(NavItem("Suscripciones", "subscriptions:list",
                         icon="repeat", order=18, section="money"))
         reg.widget(DashboardWidget(
             key="subscriptions.cost",

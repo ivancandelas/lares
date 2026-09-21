@@ -4,6 +4,10 @@ from .models import Vehicle
 
 
 class VehicleForm(ResourceForm):
+    # Con placas y dueño ya se puede generar el refrendo y la
+    # verificación, que es para lo que se registra un coche.
+    ESENCIALES = ("name", "plates", "owner")
+
     GROUPS = (
         ("Qué coche es", ["name", "make", "model", "year", "plates", "vin"]),
         ("De quién y dónde", ["owner", "location", "acquired_on"]),

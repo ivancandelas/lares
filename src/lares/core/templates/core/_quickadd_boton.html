@@ -1,0 +1,37 @@
+{% comment %}
+  El «+» y su ventana. Se incluye desde las dos formas de elegir -el
+  desplegable y el buscador- porque el problema que resuelve es el mismo en
+  las dos: lo que necesitas no está dado de alta.
+
+  Lleva su propio x-data para que dos campos en la misma pantalla no
+  compartan estado. Al crear algo, `quickadd.js` rellena el desplegable si lo
+  hay y, si no, lanza `lares:creado` para que lo recoja quien lo envuelva.
+{% endcomment %}
+<div x-data="altaRapida('{{ field.field.quick_add }}', '{{ field.field.quick_preset }}', '{{ field.id_for_label }}')">
+  <button type="button" @click="abrir()"
+          data-alta="{{ field.id_for_label }}"
+          title="Dar de alta uno nuevo sin salir de aquí"
+          class="shrink-0 rounded-sm border border-rule bg-white px-2.5 py-2
+                 text-sm text-soft hover:border-calm hover:text-calm">+</button>
+
+  <div x-show="abierto" x-cloak @keydown.escape.window="cerrar()"
+       class="fixed inset-0 z-30 flex items-start justify-center
+              overflow-y-auto bg-ink/30 px-5 py-16">
+    <div @click.outside="cerrar()" role="dialog" aria-modal="true"
+         data-dialogo="{{ field.id_for_label }}"
+         class="w-full max-w-sm rounded-sm border border-rule bg-paper p-6 shadow-lg">
+      <div x-ref="cuerpo" x-html="html"></div>
+      <p x-show="cargando" class="text-sm text-soft">Un momento…</p>
+      <div class="mt-6 flex items-center gap-4 border-t border-rule pt-4">
+        <button type="button" @click="guardar()" :disabled="cargando"
+                data-guardar="{{ field.id_for_label }}"
+                class="rounded-sm bg-calm px-4 py-2 text-sm font-medium
+                       text-white hover:bg-ink disabled:opacity-50">
+          Guardar
+        </button>
+        <button type="button" @click="cerrar()"
+                class="text-sm text-soft hover:text-ink">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>

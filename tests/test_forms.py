@@ -488,3 +488,96 @@ def test_el_tipo_viene_fijo_y_no_se_puede_cambiar(sesion_admin, household):
 @pytest.mark.django_db
 def test_un_alta_rapida_que_no_existe_no_abre_nada(sesion_admin, household):
     assert sesion_admin.get("/rapido/inventada/").status_code == 404
+
+
+# --- Buscador en vez de desplegable -----------------------------------------
+
+
+@pytest.mark.django_db
+def test_con_pocas_opciones_se_deja_el_desplegable_nativo(scoped):
+    """Un selector de cuatro opciones se maneja mejor con el control nativo:
+    funciona sin JavaScript y ya sabe abrirse con el teclado."""
+    from lares.core.forms import ExpenseForm
+    from lares.core.models import Account
+
+    Account.objects.create(household=scoped, name="Nómina",
+                           type=Account.Type.ASSET)
+    form = ExpenseForm(household=scoped)
+    form.esenciales()
+
+    assert not form.fields["paid_from"].buscador
+
+
+@pytest.mark.django_db
+def test_pasado_el_umbral_se_cambia_por_un_buscador(scoped):
+    from lares.core.forms import ExpenseForm
+    from lares.core.models import Party
+    from lares.core.pickers import UMBRAL_BUSCADOR
+
+    for i in range(UMBRAL_BUSCADOR + 1):
+        Party.objects.create(household=scoped, name=f"Persona {i}")
+
+    form = ExpenseForm(household=scoped)
+    form.esenciales()
+
+    assert form.fields["merchant"].buscador
+
+
+@pytest.mark.django_db
+def test_el_buscador_trae_pocos_y_dice_cuantos_hay(sesion_admin, household):
+    """Devolver doscientos resultados es el mismo problema que el desplegable
+    que estamos quitando."""
+    from lares.core.models import Party
+    from lares.core.scoping import use_household
+    from lares.core.views_quickadd import LIMITE
+
+    with use_household(household):
+        for i in range(LIMITE + 15):
+            Party.objects.create(household=household, name=f"Persona {i:02}")
+
+    datos = sesion_admin.get("/opciones/party/?q=Persona").json()
+
+    assert len(datos["results"]) == LIMITE
+    assert datos["total"] == LIMITE + 15
+    assert datos["more"] is True
+
+
+@pytest.mark.django_db
+def test_el_buscador_respeta_el_tipo_del_desplegable(sesion_admin, household):
+    """Desde «banco» no pueden salir personas."""
+    from lares.core.models import Party
+    from lares.core.scoping import use_household
+
+    with use_household(household):
+        Party.objects.create(household=household, name="BBVA",
+                             kind=Party.Kind.ORGANIZATION)
+        Party.objects.create(household=household, name="Beto",
+                             kind=Party.Kind.PERSON)
+
+    datos = sesion_admin.get(
+        "/opciones/party/?preset=organization&q=B").json()
+    nombres = [r["label"] for r in datos["results"]]
+
+    assert "BBVA" in nombres
+    assert "Beto" not in nombres
+
+
+@pytest.mark.django_db
+def test_al_editar_el_buscador_ensena_el_nombre_y_no_el_id(scoped):
+    """Sin esto la caja sale vacía al editar y parece que el dato se perdió."""
+    from lares.core.models import Party
+    from lares.core.pickers import UMBRAL_BUSCADOR
+    from lares.modules.insurance.forms import PolicyForm
+    from lares.modules.insurance.models import Policy
+
+    for i in range(UMBRAL_BUSCADOR + 1):
+        Party.objects.create(household=scoped, name=f"Relleno {i}")
+    gnp = Party.objects.create(household=scoped, name="GNP",
+                               kind=Party.Kind.ORGANIZATION)
+    poliza = Policy.objects.create(household=scoped, kind="policy",
+                                   name="Seguro", insurer=gnp)
+
+    form = PolicyForm(instance=poliza, household=scoped)
+    form.esenciales()
+
+    assert form.fields["insurer"].etiqueta_actual == "GNP"
