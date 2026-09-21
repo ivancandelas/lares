@@ -135,22 +135,27 @@
     <main class="flex-1 py-8">{% block content %}{% endblock %}</main>
 
     {% comment %}
-      La versión va en el pie de TODAS las pantallas, no solo en «El hogar».
-      Quien se autohospeda actualiza a mano: la primera pregunta después de
-      actualizar es «¿estoy viendo lo nuevo?», y tener que navegar a una
-      pantalla concreta para responderla la convierte en una duda permanente.
+      La versión va en el pie de TODAS las pantallas de dentro, no solo en «El
+      hogar». Quien se autohospeda actualiza a mano: la primera pregunta
+      después de actualizar es «¿estoy viendo lo nuevo?», y tener que navegar a
+      una pantalla concreta para responderla la convierte en una duda
+      permanente.
+
+      Pero SOLO habiendo entrado. Antes de la sesión, el pie decía el nombre del
+      hogar, el lema y el número de versión a cualquiera que abriera la
+      dirección. La versión es la peor de las tres: dice exactamente contra qué
+      lista de fallos conocidos probar. Quien todavía no se ha identificado no
+      necesita saber nada de esta instalación.
     {% endcomment %}
-    <footer class="flex items-baseline justify-between gap-4 border-t border-rule py-4 text-xs text-soft">
-      <span>{{ current_household.name|default:product_tagline }}</span>
-      {% if user.is_authenticated %}
+    {% if user.is_authenticated %}
+      <footer class="flex items-baseline justify-between gap-4 border-t border-rule py-4 text-xs text-soft">
+        <span>{{ current_household.name|default:product_tagline }}</span>
         <a href="{% url 'core:household' %}" class="shrink-0 hover:text-ink"
            title="Versión que corre ahora mismo">
           {{ product_name }} <span class="tabular-nums">{{ product_version }}</span>
         </a>
-      {% else %}
-        <span class="shrink-0">{{ product_name }} <span class="tabular-nums">{{ product_version }}</span></span>
-      {% endif %}
-    </footer>
+      </footer>
+    {% endif %}
   </div>
   <script>
     if ("serviceWorker" in navigator) {

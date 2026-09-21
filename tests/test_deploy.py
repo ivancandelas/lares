@@ -105,3 +105,26 @@ def test_hay_respaldo_cuando_no_existe_el_release(script):
     # Y si de verdad no hay ninguna, se dice qué hacer en vez de morir con el
     # código de salida de curl.
     assert "sin_versiones" in texto
+
+
+@pytest.mark.django_db
+def test_salud_no_dice_la_version_a_cualquiera(client):
+    """La versión exacta es lo primero que busca quien va a atacar esto.
+
+    Hacia dentro sí se dice: el actualizador la necesita para distinguir
+    «levantó» de «levantó lo nuevo». Desde fuera, `ok` y nada más.
+    """
+    from django.conf import settings
+
+    de_dentro = client.get("/salud", REMOTE_ADDR="127.0.0.1").json()
+    assert de_dentro["version"] == settings.VERSION
+
+    # Detrás del proxy la dirección de origen puede seguir siendo loopback -si
+    # el proxy vive en la misma máquina-, así que lo que decide es la cabecera
+    # que el proxy añade al reenviar.
+    de_fuera = client.get("/salud", REMOTE_ADDR="127.0.0.1",
+                          HTTP_X_FORWARDED_FOR="203.0.113.7").json()
+    assert de_fuera == {"ok": True}
+
+    remoto = client.get("/salud", REMOTE_ADDR="192.168.1.50").json()
+    assert remoto == {"ok": True}

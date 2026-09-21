@@ -4,11 +4,8 @@
 {% block content %}
 <div class="mx-auto max-w-sm py-12">
   <h1 class="text-3xl font-light tracking-tight">{{ product_name }}</h1>
-  <p class="mt-2 max-w-[38ch] text-[15px] leading-relaxed text-soft">
-    Lo que tienes, lo que debes y lo que vence. Todo en un sitio que es tuyo.
-  </p>
 
-  <form method="post" class="mt-10 space-y-5">
+  <form method="post" class="mt-8 space-y-5">
     {% csrf_token %}
     {% if form.errors %}
       <p class="border-l-2 border-overdue pl-3 text-sm text-overdue">

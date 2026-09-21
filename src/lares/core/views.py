@@ -475,6 +475,23 @@ def audit_view(request):
     })
 
 
+def _peticion_de_la_propia_maquina(request) -> bool:
+    """¿Viene de dentro de la máquina, sin pasar por el proxy?
+
+    No basta con mirar la dirección de origen: si el proxy corre en este mismo
+    equipo, todo lo que llega de fuera aparece también como 127.0.0.1. Lo que
+    distingue una cosa de la otra son las cabeceras que el proxy añade siempre
+    al reenviar. Sin ellas y desde loopback, es el healthcheck o el
+    actualizador llamando a la puerta de al lado.
+    """
+    if any(c in request.META for c in ("HTTP_X_FORWARDED_FOR",
+                                       "HTTP_X_FORWARDED_PROTO",
+                                       "HTTP_X_FORWARDED_HOST",
+                                       "HTTP_FORWARDED")):
+        return False
+    return request.META.get("REMOTE_ADDR") in ("127.0.0.1", "::1")
+
+
 @login_not_required
 def health(request):
     """Si esto contesta, la aplicación está en pie. Lo mínimo y nada más.
@@ -482,14 +499,19 @@ def health(request):
     Lo usan el `healthcheck` de Docker y la actualización, que necesita saber
     si lo que acaba de levantar responde antes de dar el cambio por bueno.
 
-    Dice la versión a propósito: sin eso, «actualicé» y «está corriendo lo
-    nuevo» son dos cosas distintas y no hay forma de comprobar la segunda. No
-    dice nada más: ni cuántos hogares hay, ni si la base va bien, porque eso ya
-    es información de dentro.
+    La versión se dice **solo hacia dentro**: desde la propia máquina o a quien
+    ya se identificó. Es el dato que la actualización necesita -sin él,
+    «actualicé» y «está corriendo lo nuevo» son dos cosas distintas y no hay
+    forma de comprobar la segunda-, pero también es lo primero que busca quien
+    va a atacar la instalación, porque convierte una lista de fallos conocidos
+    en un plan. Desde fuera, `ok` y nada más.
     """
     from django.conf import settings
 
-    return JsonResponse({"ok": True, "version": settings.VERSION})
+    cuerpo = {"ok": True}
+    if _peticion_de_la_propia_maquina(request) or request.user.is_authenticated:
+        cuerpo["version"] = settings.VERSION
+    return JsonResponse(cuerpo)
 
 
 @login_not_required
