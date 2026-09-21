@@ -1,6 +1,6 @@
 [project]
 name = "lares"
-version = "0.7.6"
+version = "0.7.7"
 description = "Lares - plataforma de gestion de recursos personales y del hogar (Personal Resource Planning, self-hosted)."
 readme = "README.md"
 requires-python = ">=3.12"
